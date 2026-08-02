@@ -1,0 +1,6 @@
+@domix_server_HostAddress = http://localhost:5222
+
+GET {{domix_server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

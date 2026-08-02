@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  # שער הכניסה (Nginx + React)
+  nginx-gateway:
+    build:
+      context: .
+      dockerfile: domix-client/Dockerfile # או ה-Dockerfile הראשי שבנית עבור Nginx וקליינט יחד
+    ports:
+      - "80:80"
+    depends_on:
+      - auth-server
+      - domix-server
+    networks:
+      - app-network
+
+  # שרת אימות
+  auth-server:
+    build:
+      context: ./auth-server
+      dockerfile: Dockerfile
+    environment:
+      - PORT=5000
+    networks:
+      - app-network
+
+  # שרת רגיל המתחבר לדאטה-בייס
+  domix-server:
+    build:
+      context: ./domix-server
+      dockerfile: Dockerfile
+    environment:
+      - PORT=8080
+      # - DB_CONNECTION_STRING=... (הגדרות חיבור למסד הנתונים שלך)
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
