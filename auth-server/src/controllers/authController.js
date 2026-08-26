@@ -53,6 +53,7 @@ export async function google(req, res) {
       accessToken: result.accessToken
     });
   } catch (err) {
+    console.error("[DEBUG google login]", err);
     res.status(400).json({ code: err.message });
   }
 }

@@ -1,0 +1,44 @@
+using Serilog;
+using serverApi.Extensions;
+using serverApi.Data;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// הגדרת לוגים
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+builder.Host.UseSerilog();
+
+// הזרקת שירותים (Dependencies)
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// הזרקת Infrastructure ו-Services מותאמים
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplicationServices();
+
+var app = builder.Build();
+
+// הגדרת ה-Middleware pipeline
+app.ConfigurePipeline();
+
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.MapControllers();
+
+// נקודת בדיקת תקינות בסיסית
+app.MapGet("/", async (ApartmentContext db) =>
+{
+    var canConnect = await db.Database.CanConnectAsync();
+    return Results.Ok(new { status = canConnect ? "ok" : "db_error", time = DateTime.UtcNow });
+});
+
+app.Run();

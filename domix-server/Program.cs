@@ -1,41 +1,53 @@
-var builder = WebApplication.CreateBuilder(args);
+using FluentValidation.AspNetCore;
+using Serilog;
+using serverApi.Data;
+using serverApi.Extensions;
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+DotNetEnv.Env.Load();
+
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()
+    .WriteTo.File("logs/log-.txt", rollingInterval: RollingInterval.Day)
+    .CreateLogger();
+
+var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog();
+
+builder.Services.AddControllers();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddApplicationServices();
+builder.Services.AddAppOptions(builder.Configuration);
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// No EF Core migrations exist yet in this project — this creates the schema
+// from the current model on first boot against a fresh database. Replace
+// with `dotnet ef migrations add InitialCreate` + `db.Database.Migrate()`
+// once migrations are introduced; EnsureCreated and Migrate must not be mixed.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<ApartmentContext>();
+    await db.Database.EnsureCreatedAsync();
+}
+
+app.ConfigurePipeline();
+
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
-app.UseHttpsRedirection();
+app.MapControllers();
 
-var summaries = new[]
+app.MapGet("/", async (ApartmentContext db) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var canConnect = await db.Database.CanConnectAsync();
+    return Results.Ok(new { status = canConnect ? "ok" : "db_error", time = DateTime.UtcNow });
+});
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

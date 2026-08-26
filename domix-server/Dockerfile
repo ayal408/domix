@@ -1,20 +1,13 @@
-# --- שלב ה-Build ---
+# Use the .NET 10 SDK image for building
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-
-# העתקת קובץ הפרויקט וביצוע שחזור חבילות
-COPY ["domix-server.vbproj", "domix-server/"]
-RUN dotnet restore "domix-server/domix-server.vbproj"
-
-# העתקת כל שאר הקוד וביצוע Publish
+COPY ["domix-server.csproj", "./"]
+RUN dotnet restore
 COPY . .
-WORKDIR "/src/domix-server"
 RUN dotnet publish -c Release -o /app/publish
 
-# --- שלב ה-Runtime ---
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+# Use the .NET 10 runtime image for the final container
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 COPY --from=build /app/publish .
-
-EXPOSE 8080
 ENTRYPOINT ["dotnet", "domix-server.dll"]

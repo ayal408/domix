@@ -1,11 +1,11 @@
-version: '3.8'
+
 
 services:
-  # שער הכניסה (Nginx + React)
+
   nginx-gateway:
     build:
-      context: .
-      dockerfile: domix-client/Dockerfile
+      context: ./domix-client
+      dockerfile: Dockerfile
     ports:
       - "${NGINX_PORT:-80}:80"
     depends_on:
@@ -24,7 +24,13 @@ services:
     ports:
       - "${AUTH_SERVER_PORT:-5000}:5000"
     environment:
+      # ./auth-server/.env holds the local-dev value (http://localhost:8080);
+      # this override swaps it for the container-network hostname automatically
+      # whenever the stack runs via docker compose.
       - PORT=${AUTH_SERVER_PORT:-5000}
+      - DATA_SERVICE_URL=http://domix-server:8080
+    depends_on:
+      - domix-server
     networks:
       - app-network
 
@@ -38,10 +44,39 @@ services:
     ports:
       - "${DOMIX_SERVER_PORT:-8080}:8080"
     environment:
+      # ./domix-server/.env holds the local-dev value (Host=localhost); this
+      # override swaps it for the container-network hostname automatically
+      # whenever the stack runs via docker compose.
       - PORT=${DOMIX_SERVER_PORT:-8080}
+      - DEFAULT_CONNECTION=Host=postgres;Port=5432;Database=${POSTGRES_DB:-domixdb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-domixdb}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-domixdb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  postgres-data:

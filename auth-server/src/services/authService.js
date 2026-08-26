@@ -9,7 +9,9 @@ import { mapUser } from "../utils/mapper.js";
 import {
   lookupUser,
   createUser,
-  linkGoogle
+  linkGoogle,
+  verifyPassword,
+  getUserById
 } from "../utils/userClient.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -19,13 +21,9 @@ function generateUsername(email) {
 }
 
 export async function login(userName, password) {
-  const user = await lookupUser({ username: userName });
-
-  if (!user) throw new Error("USER_NOT_FOUND");
-  if (!user.passwordHash) throw new Error("NO_PASSWORD_ACCOUNT");
-
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  if (!ok) throw new Error("INVALID_PASSWORD");
+  // The data API verifies the password itself and never returns the hash —
+  // see domix-server AuthController.VerifyPassword.
+  const user = await verifyPassword(userName, password);
 
   const accessToken = createAccessToken(user);
   const refreshToken = createRefreshToken(user);
@@ -112,9 +110,7 @@ export async function refresh(req, res) {
   try {
     const payload = verifyRefreshToken(refreshToken);
 
-    const user = await lookupUser({
-      userId: payload.userId
-    });
+    const user = await getUserById(payload.userId);
 
     if (!user) {
       return res.sendStatus(401);

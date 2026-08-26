@@ -20,6 +20,10 @@ lerna-debug.log*
 dist/
 dist-ssr/
 *.local
+*.tsbuildinfo
+
+# Serilog file sink output (domix-server/Program.cs)
+domix-server/logs/
 
 # --- Environment & Secret Files ---
 .env
@@ -35,3 +39,5 @@ dist-ssr/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+.tmp.driveupload
+.tmp.drivedownload

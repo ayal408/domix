@@ -1,111 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * Design tokens, resolved from the two attributes `useThemeStore` (see
+ * stores/theme.store.ts) writes on <html>: `data-theme` (light|dark) and
+ * `data-palette` (violet|ocean|emerald|sunset|rose). Every colour Tailwind
+ * utility below (`bg-background`, `text-foreground`, `bg-primary`, ...) reads
+ * one of these custom properties, so switching either attribute is a single
+ * paint with no React re-render and no flash on load (theme is applied by
+ * `initTheme()` before the app mounts).
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --color-background: #f7f8fa;
+  --color-foreground: #14151a;
+  --color-muted: #6b7280;
+  --color-card: #ffffff;
+  --color-card-muted: #f1f2f5;
+  --color-border: #e3e5ea;
+  --color-ring-offset: #ffffff;
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+  --color-danger: #dc2626;
+  --color-danger-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-warning: #d97706;
+  --color-warning-bg: #fffbeb;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-primary-foreground: #ffffff;
+  --color-ring: #a78bfa;
+  --color-primary-glow: rgba(124, 58, 237, 0.35);
 
-  @media (max-width: 1024px) {
-    font-size: 16px;
+  /* Fixed brand mark — stays violet-to-emerald regardless of the active palette, so the wordmark reads as "DOMIX" no matter what accent the viewer picked. */
+  --gradient-brand: linear-gradient(90deg, #7c3aed, #10b981);
+
+  --shadow-card: 0 1px 2px rgba(15, 15, 20, 0.06);
+  --shadow-card-hover: 0 12px 24px -8px rgba(15, 15, 20, 0.18);
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  --color-background: #0e0f13;
+  --color-foreground: #f3f4f6;
+  --color-muted: #9aa0ab;
+  --color-card: #171922;
+  --color-card-muted: #1f222c;
+  --color-border: #2b2e38;
+  --color-ring-offset: #171922;
+
+  --color-danger: #f87171;
+  --color-danger-bg: rgba(248, 113, 113, 0.12);
+  --color-success: #4ade80;
+  --color-success-bg: rgba(74, 222, 128, 0.12);
+  --color-warning: #fbbf24;
+  --color-warning-bg: rgba(251, 191, 36, 0.12);
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 16px 32px -8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
+
+  color-scheme: dark;
+}
+
+:root[data-palette='violet'] {
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-ring: #a78bfa;
+  --color-primary-glow: rgba(124, 58, 237, 0.35);
+}
+:root[data-palette='ocean'] {
+  --color-primary: #0ea5e9;
+  --color-primary-hover: #0284c7;
+  --color-ring: #38bdf8;
+  --color-primary-glow: rgba(14, 165, 233, 0.35);
+}
+:root[data-palette='emerald'] {
+  --color-primary: #10b981;
+  --color-primary-hover: #059669;
+  --color-ring: #34d399;
+  --color-primary-glow: rgba(16, 185, 129, 0.35);
+}
+:root[data-palette='sunset'] {
+  --color-primary: #f97316;
+  --color-primary-hover: #ea580c;
+  --color-ring: #fb923c;
+  --color-primary-glow: rgba(249, 115, 22, 0.35);
+}
+:root[data-palette='rose'] {
+  --color-primary: #e11d48;
+  --color-primary-hover: #be123c;
+  --color-ring: #fb7185;
+  --color-primary-glow: rgba(225, 29, 72, 0.35);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
   }
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  html {
+    text-rendering: optimizeLegibility;
   }
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+  body {
+    @apply antialiased;
+    min-height: 100svh;
+    margin: 0;
+    font-family: var(--font-sans);
+    background-color: var(--color-background);
+    color: var(--color-foreground);
   }
-}
 
-body {
-  margin: 0;
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
-}
-
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+  #root {
+    display: flex;
+    min-height: 100svh;
+    flex-direction: column;
   }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+  ::selection {
+    background-color: var(--color-primary);
+    color: var(--color-primary-foreground);
   }
-}
-p {
-  margin: 0;
-}
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  /* Consistent, visible keyboard focus ring everywhere, mouse users unaffected. */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
 }
