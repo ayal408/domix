@@ -69,6 +69,12 @@ const en = {
     orDivider: 'or',
     googleUnavailable: "Google sign-in isn't available right now.",
   },
+  home: {
+    title: 'Find your next home with DOMIX',
+    description: 'Browse apartment listings, compare prices, and connect with owners directly. Sign in or create an account to get started.',
+    createAccount: 'Create an account',
+    signIn: 'Sign in',
+  },
   apartments: {
     catalogTitle: 'Find your next home',
     catalogSubtitle: 'Browse current listings across every city.',
@@ -405,6 +411,12 @@ const he: typeof en = {
     signedInAs: 'מחובר בתור {{name}}',
     orDivider: 'או',
     googleUnavailable: 'ההתחברות עם Google אינה זמינה כרגע.',
+  },
+  home: {
+    title: 'מצאו את הבית הבא שלכם עם DOMIX',
+    description: 'עיינו בדירות למכירה ולהשכרה, השוו מחירים והתחברו ישירות עם בעלי הדירות. התחברו או צרו חשבון כדי להתחיל.',
+    createAccount: 'יצירת חשבון',
+    signIn: 'התחברות',
   },
   apartments: {
     catalogTitle: 'מצאו את הבית הבא שלכם',
@@ -743,6 +755,12 @@ const es: typeof en = {
     orDivider: 'o',
     googleUnavailable: 'El inicio de sesión con Google no está disponible en este momento.',
   },
+  home: {
+    title: 'Encuentra tu próximo hogar con DOMIX',
+    description: 'Explora anuncios de apartamentos, compara precios y contacta directamente con los propietarios. Inicia sesión o crea una cuenta para empezar.',
+    createAccount: 'Crear una cuenta',
+    signIn: 'Iniciar sesión',
+  },
   apartments: {
     catalogTitle: 'Encuentra tu próximo hogar',
     catalogSubtitle: 'Explora los anuncios disponibles en todas las ciudades.',
@@ -1079,6 +1097,12 @@ const fr: typeof en = {
     signedInAs: 'Connecté en tant que {{name}}',
     orDivider: 'ou',
     googleUnavailable: "La connexion avec Google n'est pas disponible pour le moment.",
+  },
+  home: {
+    title: 'Trouvez votre prochain logement avec DOMIX',
+    description: "Parcourez les annonces d'appartements, comparez les prix et contactez directement les propriétaires. Connectez-vous ou créez un compte pour commencer.",
+    createAccount: 'Créer un compte',
+    signIn: 'Se connecter',
   },
   apartments: {
     catalogTitle: 'Trouvez votre prochain logement',

@@ -10,6 +10,7 @@ import { lazyWithReload } from '@/lib/lazyWithReload'
 import { Spinner } from '@/components/ui/Spinner'
 import './i18n'
 
+const HomePage = lazyWithReload(() => import('@/pages/HomePage'))
 const ApartmentsCatalogPage = lazyWithReload(() => import('@/features/apartments/ApartmentsCatalogPage'))
 const ApartmentDetailPage = lazyWithReload(() => import('@/features/apartments/ApartmentDetailPage'))
 const MapPage = lazyWithReload(() => import('@/features/map/MapPage'))
@@ -32,6 +33,18 @@ function PageFallback() {
       <Spinner className="h-8 w-8 text-primary" />
     </div>
   )
+}
+
+/**
+ * `ApartmentsCatalogPage` calls endpoints that require authentication, so an
+ * anonymous visitor hitting `/` would only see 401s. Route them to the public
+ * landing page instead; renders nothing while the session is still being
+ * restored, matching `ProtectedRoute`'s no-flash behavior.
+ */
+function IndexRoute() {
+  const status = useAuthStore((state) => state.status)
+  if (status === 'initializing') return null
+  return status === 'authenticated' ? <ApartmentsCatalogPage /> : <HomePage />
 }
 
 export default function App() {
@@ -72,7 +85,7 @@ export default function App() {
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route element={<AppShell />}>
-          <Route index element={<ApartmentsCatalogPage />} />
+          <Route index element={<IndexRoute />} />
           <Route path="apartments/:apartmentId" element={<ApartmentDetailPage />} />
           <Route path="map" element={<MapPage />} />
           <Route path="mortgage-calculator" element={<MortgageCalculatorPage />} />
