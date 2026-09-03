@@ -18,6 +18,21 @@ namespace serverApi.Models
         public string? ProfileColor { get; set; }
         public DateTime JoiningDate { get; set; } = DateTime.UtcNow;
 
+        public bool IsEmailVerified { get; set; } = false;
+        public string? EmailVerificationToken { get; set; }
+        public DateTime? EmailVerificationTokenExpiresAt { get; set; }
+
+        public bool IsBlocked { get; set; } = false;
+
+        public string? PasswordResetToken { get; set; }
+        public DateTime? PasswordResetTokenExpiresAt { get; set; }
+
+        /// <summary>"light" | "dark" | "system" | null (unset — client falls back to its own default).</summary>
+        public string? ThemePreference { get; set; }
+
+        /// <summary>Notifications created after this time count as unread. Null means none have ever been seen.</summary>
+        public DateTime? NotificationsSeenAt { get; set; }
+
         public List<Appointment> Appointments { get; set; } = new();
         public List<Apartment> Apartments { get; set; } = new();
         public List<SearchRequest> SearchRequests { get; set; } = new();

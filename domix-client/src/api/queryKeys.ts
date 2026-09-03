@@ -12,6 +12,7 @@ export const queryKeys = {
 
   users: {
     all: ['users'] as const,
+    list: () => ['users', 'list'] as const,
     detail: (userId: Guid) => ['users', 'detail', userId] as const,
     lookup: (query: Record<string, string | undefined>) => ['users', 'lookup', query] as const,
   },
@@ -22,6 +23,12 @@ export const queryKeys = {
     search: (query: ApartmentSearchQuery) => ['apartments', 'search', query] as const,
     cities: () => ['apartments', 'cities'] as const,
     detail: (apartmentId: Guid) => ['apartments', 'detail', apartmentId] as const,
+  },
+
+  address: {
+    all: ['address'] as const,
+    cities: (query: string) => ['address', 'cities', query] as const,
+    streets: (city: string, query: string) => ['address', 'streets', city, query] as const,
   },
 
   images: {
@@ -44,6 +51,20 @@ export const queryKeys = {
   savedSearches: {
     all: ['savedSearches'] as const,
     list: () => ['savedSearches', 'list'] as const,
+  },
+
+  notifications: {
+    all: ['notifications'] as const,
+    feed: () => ['notifications', 'feed'] as const,
+  },
+
+  support: {
+    all: ['support'] as const,
+    list: () => ['support', 'list'] as const,
+  },
+
+  analytics: {
+    summary: ['analytics', 'summary'] as const,
   },
 
   ops: {

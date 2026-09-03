@@ -6,6 +6,7 @@ import type {
   CreateApartmentRequest,
   Guid,
   RateApartmentRequest,
+  SetApartmentStatusRequest,
   UpdateApartmentRequest,
 } from '@/types/api'
 
@@ -92,5 +93,18 @@ export async function deleteApartment(apartmentId: Guid): Promise<void> {
  */
 export async function rateApartment(apartmentId: Guid, payload: RateApartmentRequest): Promise<Apartment> {
   const { data } = await dataClient.post<Apartment>(apiEndpoints.apartments.rate(apartmentId), payload)
+  return data
+}
+
+/**
+ * Marks a listing Available/Rented/Sold. Rented/Sold listings drop out of
+ * search and the public catalog but are never deleted — the same
+ * ownership-or-privileged rule as update/delete applies (403/404).
+ */
+export async function setApartmentStatus(
+  apartmentId: Guid,
+  payload: SetApartmentStatusRequest,
+): Promise<Apartment> {
+  const { data } = await dataClient.patch<Apartment>(apiEndpoints.apartments.setStatus(apartmentId), payload)
   return data
 }

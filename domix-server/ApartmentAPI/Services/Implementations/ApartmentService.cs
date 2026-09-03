@@ -30,6 +30,16 @@ namespace serverApi.Services.Implementations
             return apartments.Select(ToDTO);
         }
 
+        public async Task<ApartmentDTO?> GetApartmentByIdAsync(Guid apartmentId, CancellationToken cancellationToken = default)
+        {
+            var apartment = await _context.Apartments
+                .Include(a => a.ApartmentImages)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId, cancellationToken);
+
+            return apartment == null ? null : ToDTO(apartment);
+        }
+
         public async Task<IEnumerable<string>> GetCitiesAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Apartments
@@ -82,6 +92,10 @@ namespace serverApi.Services.Implementations
             bool? parking,
             bool? elevator)
         {
+            // Rented/Sold listings are "removed from the pool" without being deleted:
+            // they never surface through search or saved-search alert matching.
+            query = query.Where(a => a.Status == ApartmentStatus.Available);
+
             if (!string.IsNullOrWhiteSpace(city))
                 query = query.Where(a => a.city.Contains(city));
 
@@ -134,7 +148,8 @@ namespace serverApi.Services.Implementations
                 PropertyType = dto.PropertyType,
                 dateInsert = DateTime.UtcNow,
                 date = DateTime.UtcNow,
-                status = true,
+                Status = ApartmentStatus.Available,
+                IsAnonymous = dto.IsAnonymous,
                 Latitude = lat,
                 Longitude = lng
             };
@@ -179,8 +194,8 @@ namespace serverApi.Services.Implementations
             apartment.elevator = dto.elevator;
             apartment.Parking = dto.Parking;
             apartment.PropertyType = dto.PropertyType;
-            if (dto.status.HasValue)
-                apartment.status = dto.status.Value;
+            if (dto.IsAnonymous.HasValue)
+                apartment.IsAnonymous = dto.IsAnonymous.Value;
 
             if (locationChanged)
             {
@@ -240,11 +255,35 @@ namespace serverApi.Services.Implementations
             return ToDTO(apartment);
         }
 
+        public async Task<ApartmentDTO?> SetApartmentStatusAsync(Guid apartmentId, ApartmentStatus status, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
+        {
+            var apartment = await _context.Apartments
+                .Include(a => a.ApartmentImages)
+                .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId, cancellationToken);
+
+            if (apartment == null)
+                return null;
+
+            if (apartment.UserId != userId && !isPrivileged)
+            {
+                _logger.LogWarning("User {UserId} attempted to change status of apartment {ApartmentId} owned by {OwnerId}", userId, apartmentId, apartment.UserId);
+                throw new UnauthorizedAccessException("You do not own this apartment.");
+            }
+
+            apartment.Status = status;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("Apartment {ApartmentId} status set to {Status} by user {UserId}", apartmentId, status, userId);
+
+            return ToDTO(apartment);
+        }
+
         internal static ApartmentDTO ToDTO(Apartment a) => new ApartmentDTO
         {
             ApartmentId = a.ApartmentId,
             UserId = a.UserId,
-            status = a.status,
+            Status = a.Status,
+            IsAnonymous = a.IsAnonymous,
             price = a.price,
             date = a.date,
             city = a.city,

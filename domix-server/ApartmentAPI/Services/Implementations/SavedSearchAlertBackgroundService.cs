@@ -95,7 +95,7 @@ namespace serverApi.Services.Implementations
 
                     if (!string.IsNullOrWhiteSpace(user?.EmailAddress))
                     {
-                        var html = BuildDigestHtml(savedSearch.Name, matches);
+                        var html = BuildDigestHtml(savedSearch.Name, matches, _configuration);
                         await emailService.SendEmailAsync(user.EmailAddress, $"DOMIX — {matches.Count} new match(es) for \"{savedSearch.Name}\"", html, cancellationToken);
                     }
 
@@ -108,19 +108,27 @@ namespace serverApi.Services.Implementations
             }
         }
 
-        private static string BuildDigestHtml(string searchName, IReadOnlyCollection<Models.DTOs.ApartmentDTO> matches)
+        private static string BuildDigestHtml(string searchName, IReadOnlyCollection<Models.DTOs.ApartmentDTO> matches, IConfiguration configuration)
         {
+            var encodedName = System.Net.WebUtility.HtmlEncode(searchName);
             var sb = new StringBuilder();
-            sb.Append("<h2>New listings for \"").Append(searchName).Append("\"</h2><ul>");
+            sb.Append("<p>New listings matched your saved search \"").Append(encodedName).Append("\":</p>");
+            sb.Append("<ul style=\"margin:0;padding-inline-start:20px;\">");
             foreach (var apartment in matches)
             {
-                sb.Append("<li>")
-                  .Append(apartment.city).Append(" · ").Append(apartment.area)
+                sb.Append("<li style=\"margin-bottom:6px;\">")
+                  .Append(System.Net.WebUtility.HtmlEncode(apartment.city)).Append(" · ").Append(System.Net.WebUtility.HtmlEncode(apartment.area))
                   .Append(" — ").Append(apartment.price).Append(" ₪")
                   .Append("</li>");
             }
             sb.Append("</ul>");
-            return sb.ToString();
+
+            var clientAppUrl = (configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+            return EmailTemplates.Render(
+                $"New matches for \"{encodedName}\"",
+                sb.ToString(),
+                "View your saved searches",
+                $"{clientAppUrl}/saved-searches");
         }
     }
 }

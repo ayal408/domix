@@ -110,6 +110,63 @@ namespace serverApi.Controllers
             }
         }
 
+        // ================= LIST ALL (ADMIN) =================
+        [Authorize(Policy = "ManagerOrAdmin")]
+        [HttpGet("all")]
+        public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
+        {
+            var users = await _userService.GetAllUsersAsync(cancellationToken);
+            return Ok(users);
+        }
+
+        // ================= BLOCK / UNBLOCK (ADMIN) =================
+        [Authorize(Policy = "AdminOnly")]
+        [HttpPatch("{id}/block")]
+        public async Task<IActionResult> Block(Guid id, CancellationToken cancellationToken)
+        {
+            var user = await _userService.SetBlockedAsync(id, true, cancellationToken);
+            return user == null ? NotFound() : Ok(user);
+        }
+
+        [Authorize(Policy = "AdminOnly")]
+        [HttpPatch("{id}/unblock")]
+        public async Task<IActionResult> Unblock(Guid id, CancellationToken cancellationToken)
+        {
+            var user = await _userService.SetBlockedAsync(id, false, cancellationToken);
+            return user == null ? NotFound() : Ok(user);
+        }
+
+        // ================= UPDATE THEME PREFERENCE =================
+        [Authorize]
+        [HttpPatch("theme")]
+        public async Task<IActionResult> UpdateTheme([FromBody] UpdateThemePreferenceDto dto, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { code = "Missing or invalid userId claim" });
+
+            var updated = await _userService.UpdateThemePreferenceAsync(userId, dto?.ThemePreference, cancellationToken);
+            return updated == null ? NotFound() : Ok(updated);
+        }
+
+        // ================= DELETE ACCOUNT =================
+        [Authorize]
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteAccount(Guid id, CancellationToken cancellationToken)
+        {
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var callerId))
+                return Unauthorized(new { code = "Missing or invalid userId claim" });
+
+            var isSelf = callerId == id;
+            var isAdmin = User.IsInRole("Admin");
+            if (!isSelf && !isAdmin)
+                return Forbid();
+
+            var deleted = await _userService.DeleteAccountAsync(id, cancellationToken);
+            return deleted ? NoContent() : NotFound();
+        }
+
         // ================= UPDATE PROFILE IMAGE =================
         [Authorize]
         [HttpPut("profile-image")]

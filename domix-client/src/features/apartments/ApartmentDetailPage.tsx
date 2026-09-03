@@ -124,7 +124,9 @@ export default function ApartmentDetailPage() {
             </div>
           )}
         </div>
-        {!apartment.status && <Badge tone="neutral">{t('apartments.card.inactive')}</Badge>}
+        {apartment.status !== 'Available' && (
+          <Badge tone="neutral">{t(`admin.apartments.status.${apartment.status}`)}</Badge>
+        )}
       </div>
 
       <dl className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 sm:grid-cols-4">
@@ -139,7 +141,12 @@ export default function ApartmentDetailPage() {
         <Stat label={t('apartments.fields.parking')} value={apartment.parking ? t('common.yes') : t('common.no')} />
       </dl>
 
-      <OwnerProfileCard ownerId={apartment.userId} currentApartmentId={apartment.apartmentId} />
+      <OwnerProfileCard
+        ownerId={apartment.userId}
+        currentApartmentId={apartment.apartmentId}
+        isAnonymous={apartment.isAnonymous}
+        listingAddress={`${apartment.address}, ${apartment.city}`}
+      />
 
       {apartment.description && (
         <div>

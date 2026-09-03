@@ -15,8 +15,8 @@ function emptyToUndefined<T extends z.ZodTypeAny>(schema: T) {
 /**
  * Shared by the create and edit forms — mirrors `CreateApartmentDTO` /
  * `UpdateApartmentDTO` on the backend (see domix-server ApartmentDTO.cs).
- * `status` only applies on edit (create always starts live); the field is
- * optional here and simply omitted from the create payload.
+ * Listing status (Available/Rented/Sold) is changed separately via the
+ * dedicated status action, not through this form.
  */
 export const apartmentFormSchema = z.object({
   city: z.string().trim().min(1, 'City is required').max(100, 'City is too long'),
@@ -36,7 +36,7 @@ export const apartmentFormSchema = z.object({
   elevator: z.boolean().optional(),
   parking: z.boolean().optional(),
   propertyType: emptyToUndefined(z.enum(PROPERTY_TYPES)),
-  status: z.boolean().optional(),
+  isAnonymous: z.boolean().optional(),
 })
 
 /** Parsed/coerced shape — what `onSubmit` receives and what the API mappers below consume. */
@@ -57,7 +57,7 @@ export const APARTMENT_FORM_DEFAULTS: ApartmentFormValues = {
   elevator: false,
   parking: false,
   propertyType: undefined,
-  status: true,
+  isAnonymous: false,
 }
 
 export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues {
@@ -74,7 +74,7 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
     elevator: apartment.elevator ?? false,
     parking: apartment.parking ?? false,
     propertyType: (apartment.propertyType as ApartmentFormValues['propertyType']) ?? undefined,
-    status: apartment.status,
+    isAnonymous: apartment.isAnonymous,
   }
 }
 
@@ -92,13 +92,13 @@ export function toCreateApartmentRequest(values: ApartmentFormValues): CreateApa
     elevator: values.elevator ?? null,
     parking: values.parking ?? null,
     propertyType: values.propertyType ?? null,
+    isAnonymous: values.isAnonymous ?? false,
   }
 }
 
 export function toUpdateApartmentRequest(values: ApartmentFormValues): UpdateApartmentRequest {
   return {
     ...toCreateApartmentRequest(values),
-    status: values.status,
   }
 }
 

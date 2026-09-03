@@ -11,11 +11,13 @@ namespace serverApi.Controllers
     public class ApartmentController : ControllerBase
     {
         private readonly IApartmentService _apartmentService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<ApartmentController> _logger;
 
-        public ApartmentController(IApartmentService apartmentService, ILogger<ApartmentController> logger)
+        public ApartmentController(IApartmentService apartmentService, IConfiguration configuration, ILogger<ApartmentController> logger)
         {
             _apartmentService = apartmentService;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -182,6 +184,91 @@ namespace serverApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
+        }
+
+        // PATCH: api/Apartment/{id}/status
+        [HttpPatch("{id}/status")]
+        public async Task<IActionResult> SetStatus(Guid id, [FromBody] SetApartmentStatusDTO dto, CancellationToken cancellationToken)
+        {
+            if (dto == null)
+                return BadRequest("Invalid request payload.");
+
+            var userIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (!Guid.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("Unauthorized apartment status change attempt: Invalid or missing user ID claim.");
+                return Unauthorized("User identity is invalid.");
+            }
+
+            try
+            {
+                var result = await _apartmentService.SetApartmentStatusAsync(id, dto.Status, userId, IsPrivileged(), cancellationToken);
+                if (result == null)
+                    return NotFound();
+
+                return Ok(result);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
+        }
+
+        // GET: api/Apartment/{id}/og
+        /// <summary>
+        /// A tiny anonymous HTML page carrying Open Graph tags for one listing — nginx routes social
+        /// crawlers (WhatsApp, Facebook, etc.) here for /apartments/{id} instead of the SPA shell,
+        /// since those bots read og:* meta tags but don't execute JS. Real visitors never see this;
+        /// they get the normal React app from the same nginx location for every other User-Agent.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpGet("{id}/og")]
+        public async Task<IActionResult> GetOgPreview(Guid id, CancellationToken cancellationToken)
+        {
+            var apartment = await _apartmentService.GetApartmentByIdAsync(id, cancellationToken);
+            if (apartment == null)
+                return NotFound();
+
+            var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+            var listingUrl = $"{clientAppUrl}/apartments/{id}";
+
+            var title = $"{apartment.price:N0} ₪ · {apartment.city}, {apartment.area}";
+            var descriptionParts = new List<string>();
+            if (apartment.SumOfRooms is int rooms) descriptionParts.Add($"{rooms} rooms");
+            if (apartment.SquareMeters is int sqm) descriptionParts.Add($"{sqm} m²");
+            descriptionParts.Add(apartment.address);
+            var description = string.Join(" · ", descriptionParts);
+
+            var imageUrl = apartment.ApartmentImages?.FirstOrDefault()?.ImageUrl;
+            var absoluteImageUrl = string.IsNullOrEmpty(imageUrl) ? null : $"{clientAppUrl}{imageUrl}";
+
+            string Enc(string value) => System.Net.WebUtility.HtmlEncode(value);
+
+            var imageTag = absoluteImageUrl != null
+                ? $"""<meta property="og:image" content="{Enc(absoluteImageUrl)}"><meta name="twitter:card" content="summary_large_image">"""
+                : """<meta name="twitter:card" content="summary">""";
+
+            var html = $"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                <meta charset="utf-8">
+                <title>{Enc(title)} | DOMIX</title>
+                <meta property="og:type" content="website">
+                <meta property="og:title" content="{Enc(title)}">
+                <meta property="og:description" content="{Enc(description)}">
+                <meta property="og:url" content="{Enc(listingUrl)}">
+                <meta property="og:site_name" content="DOMIX">
+                {imageTag}
+                </head>
+                <body>
+                <p><a href="{Enc(listingUrl)}">View this listing on DOMIX</a></p>
+                </body>
+                </html>
+                """;
+
+            return Content(html, "text/html");
         }
 
         /// <summary>Admin/Manager may act on listings they don't own; regular users may only act on their own.</summary>

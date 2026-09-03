@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher'
+import { NotificationBell } from '@/components/layout/NotificationBell'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 import { env } from '@/config/env'
+import { base64ToImageSrc, initialsOf } from '@/lib/sanitize'
 
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -38,45 +40,39 @@ export function Header() {
           >
             {env.appName}
           </NavLink>
-          <nav className="hidden items-center gap-1 sm:flex">
-            <NavLink to="/" end className={navLinkClasses}>
-              {t('nav.home')}
-            </NavLink>
-            <NavLink to="/map" className={navLinkClasses}>
-              {t('nav.map')}
-            </NavLink>
-            <NavLink to="/mortgage-calculator" className={navLinkClasses}>
-              {t('nav.mortgageCalculator')}
-            </NavLink>
-            <NavLink to="/compare" className={navLinkClasses}>
-              {t('nav.compare')}
-            </NavLink>
-            {status === 'authenticated' && (
+          {status === 'authenticated' && (
+            <nav className="hidden items-center gap-1 sm:flex">
+              <NavLink to="/" end className={navLinkClasses}>
+                {t('nav.home')}
+              </NavLink>
+              <NavLink to="/map" className={navLinkClasses}>
+                {t('nav.map')}
+              </NavLink>
+              <NavLink to="/mortgage-calculator" className={navLinkClasses}>
+                {t('nav.mortgageCalculator')}
+              </NavLink>
+              <NavLink to="/compare" className={navLinkClasses}>
+                {t('nav.compare')}
+              </NavLink>
               <NavLink to="/favorites" className={navLinkClasses}>
                 {t('nav.favorites')}
               </NavLink>
-            )}
-            {status === 'authenticated' && (
               <NavLink to="/saved-searches" className={navLinkClasses}>
                 {t('nav.savedSearches')}
               </NavLink>
-            )}
-            {status === 'authenticated' && (
               <NavLink to="/messages" className={navLinkClasses}>
                 {t('nav.messages')}
               </NavLink>
-            )}
-            {status === 'authenticated' && (
               <NavLink to="/my-apartments" className={navLinkClasses}>
                 {t('nav.myApartments')}
               </NavLink>
-            )}
-            {isAdmin && (
-              <NavLink to="/admin/apartments" className={navLinkClasses}>
-                {t('nav.admin')}
-              </NavLink>
-            )}
-          </nav>
+              {isAdmin && (
+                <NavLink to="/admin/apartments" className={navLinkClasses}>
+                  {t('nav.admin')}
+                </NavLink>
+              )}
+            </nav>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5">
@@ -85,11 +81,12 @@ export function Header() {
 
           {status === 'authenticated' && user ? (
             <div className="ms-1 flex items-center gap-2">
-              <NavLink
-                to="/account"
-                className="hidden max-w-[10rem] truncate text-sm text-muted hover:text-foreground sm:inline"
-              >
-                {user.userName}
+              <NotificationBell />
+              <NavLink to="/account" className="flex items-center gap-2" aria-label={t('nav.myAccount')}>
+                <UserAvatar user={user} />
+                <span className="hidden max-w-[10rem] truncate text-sm text-muted hover:text-foreground sm:inline">
+                  {user.userName}
+                </span>
               </NavLink>
               <Button variant="secondary" size="sm" onClick={handleSignOut}>
                 {t('nav.logout')}
@@ -108,50 +105,51 @@ export function Header() {
         </div>
       </div>
 
-      <nav className="flex items-center gap-1 border-t border-border px-4 py-1.5 sm:hidden">
-        <NavLink to="/" end className={navLinkClasses}>
-          {t('nav.home')}
-        </NavLink>
-        <NavLink to="/map" className={navLinkClasses}>
-          {t('nav.map')}
-        </NavLink>
-        <NavLink to="/mortgage-calculator" className={navLinkClasses}>
-          {t('nav.mortgageCalculator')}
-        </NavLink>
-        <NavLink to="/compare" className={navLinkClasses}>
-          {t('nav.compare')}
-        </NavLink>
-        {status === 'authenticated' && (
+      {status === 'authenticated' && (
+        <nav className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-1.5 sm:hidden">
+          <NavLink to="/" end className={navLinkClasses}>
+            {t('nav.home')}
+          </NavLink>
+          <NavLink to="/map" className={navLinkClasses}>
+            {t('nav.map')}
+          </NavLink>
+          <NavLink to="/mortgage-calculator" className={navLinkClasses}>
+            {t('nav.mortgageCalculator')}
+          </NavLink>
+          <NavLink to="/compare" className={navLinkClasses}>
+            {t('nav.compare')}
+          </NavLink>
           <NavLink to="/account" className={navLinkClasses}>
             {t('nav.myAccount')}
           </NavLink>
-        )}
-        {status === 'authenticated' && (
           <NavLink to="/favorites" className={navLinkClasses}>
             {t('nav.favorites')}
           </NavLink>
-        )}
-        {status === 'authenticated' && (
           <NavLink to="/saved-searches" className={navLinkClasses}>
             {t('nav.savedSearches')}
           </NavLink>
-        )}
-        {status === 'authenticated' && (
           <NavLink to="/messages" className={navLinkClasses}>
             {t('nav.messages')}
           </NavLink>
-        )}
-        {status === 'authenticated' && (
           <NavLink to="/my-apartments" className={navLinkClasses}>
             {t('nav.myApartments')}
           </NavLink>
-        )}
-        {isAdmin && (
-          <NavLink to="/admin/apartments" className={navLinkClasses}>
-            {t('nav.admin')}
-          </NavLink>
-        )}
-      </nav>
+          {isAdmin && (
+            <NavLink to="/admin/apartments" className={navLinkClasses}>
+              {t('nav.admin')}
+            </NavLink>
+          )}
+        </nav>
+      )}
     </header>
+  )
+}
+
+function UserAvatar({ user }: { user: { userName: string; profileImageBase64?: string | null } }) {
+  const avatar = base64ToImageSrc(user.profileImageBase64)
+  return (
+    <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-card-muted text-[11px] font-semibold text-muted">
+      {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initialsOf(user.userName)}
+    </span>
   )
 }

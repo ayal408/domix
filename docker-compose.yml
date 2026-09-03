@@ -6,6 +6,8 @@ services:
     build:
       context: ./domix-client
       dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID:-}
     ports:
       - "${NGINX_PORT:-80}:80"
     depends_on:
@@ -39,6 +41,10 @@ services:
     build:
       context: ./domix-server
       dockerfile: Dockerfile
+      args:
+        # Local dev only — see the Dockerfile's TRUST_LOCAL_DEV_CA comment. A real deployment
+        # (Render, etc.) builds the image without this, so it never trusts this CA.
+        TRUST_LOCAL_DEV_CA: "true"
     env_file:
       - ./domix-server/.env
     ports:
@@ -49,6 +55,10 @@ services:
       # whenever the stack runs via docker compose.
       - PORT=${DOMIX_SERVER_PORT:-8080}
       - DEFAULT_CONNECTION=Host=postgres;Port=5432;Database=${POSTGRES_DB:-domixdb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      # ApartmentImageService writes uploads to wwwroot/images/ on local disk — without a named
+      # volume here, every uploaded photo is lost the next time this container is rebuilt/recreated.
+      - domix-server-images:/app/wwwroot/images
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,3 +90,4 @@ networks:
 
 volumes:
   postgres-data:
+  domix-server-images:

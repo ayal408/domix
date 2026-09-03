@@ -13,7 +13,7 @@ describe('apartmentFormSchema', () => {
     sumOfBeds: '',
     floor: '',
     elevator: false,
-    status: true,
+    isAnonymous: false,
   }
 
   it('accepts a fully valid submission', () => {

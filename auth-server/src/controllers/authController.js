@@ -69,3 +69,39 @@ export async function refresh(req, res) {
 export function logout(req, res) {
   authService.logout(req, res);
 }
+
+export async function verifyEmail(req, res) {
+  try {
+    await authService.verifyEmail(req.body.token);
+    res.json({ verified: true });
+  } catch (err) {
+    res.status(400).json({ code: err.message });
+  }
+}
+
+export async function resendVerification(req, res) {
+  try {
+    await authService.resendVerificationEmail(req.user.userId);
+    res.json({ sent: true });
+  } catch (err) {
+    res.status(400).json({ code: err.message });
+  }
+}
+
+export async function forgotPassword(req, res) {
+  try {
+    await authService.forgotPassword(req.body.email);
+  } catch {
+    // Swallowed deliberately — always 200, so this can't be used to enumerate registered emails.
+  }
+  res.json({ sent: true });
+}
+
+export async function resetPassword(req, res) {
+  try {
+    await authService.resetPassword(req.body.token, req.body.newPassword);
+    res.json({ reset: true });
+  } catch (err) {
+    res.status(400).json({ code: err.message });
+  }
+}

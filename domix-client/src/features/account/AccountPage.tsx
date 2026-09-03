@@ -1,8 +1,8 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/auth.store'
-import { useUpdateProfileImage } from '@/hooks/useUser'
+import { useUpdateProfileImage, useDeleteAccount } from '@/hooks/useUser'
 import { useApartments } from '@/hooks/useApartments'
 import { useToastStore } from '@/stores/toast.store'
 import { errorTranslationKey, toApiError } from '@/api/errors'
@@ -11,11 +11,12 @@ import { formatDate } from '@/lib/format'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher'
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_BYTES = 4 * 1024 * 1024
+const MAX_BYTES = 10 * 1024 * 1024
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -28,10 +29,14 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 export default function AccountPage() {
   const { t, i18n } = useTranslation()
+  const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
+  const signOut = useAuthStore((state) => state.signOut)
   const updateImage = useUpdateProfileImage()
+  const deleteAccount = useDeleteAccount()
   const pushToast = useToastStore((state) => state.push)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
   const { data: apartments } = useApartments()
   const ownedCount = useMemo(
     () => apartments?.filter((apartment) => apartment.userId === user?.userId).length ?? 0,
@@ -39,6 +44,19 @@ export default function AccountPage() {
   )
 
   if (!user) return null
+
+  async function handleDeleteAccount() {
+    if (!user) return
+    try {
+      await deleteAccount.mutateAsync(user.userId)
+      await signOut()
+      navigate('/', { replace: true })
+    } catch (error) {
+      const apiError = toApiError(error)
+      pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
+      setIsDeleteOpen(false)
+    }
+  }
 
   const avatar = base64ToImageSrc(user.profileImageBase64)
 
@@ -133,6 +151,31 @@ export default function AccountPage() {
           <ThemeSwitcher />
         </div>
       </Card>
+
+      <Card className="flex flex-col gap-3 border-danger/40 p-6">
+        <h2 className="text-base font-semibold text-danger">{t('account.dangerZone')}</h2>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-foreground">{t('account.deleteAccount')}</p>
+            <p className="mt-0.5 text-xs text-muted">{t('account.deleteAccountDescription')}</p>
+          </div>
+          <Button variant="danger" onClick={() => setIsDeleteOpen(true)}>
+            {t('account.deleteAccount')}
+          </Button>
+        </div>
+      </Card>
+
+      <ConfirmDialog
+        open={isDeleteOpen}
+        title={t('account.deleteConfirmTitle')}
+        description={t('account.deleteConfirmDescription')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        destructive
+        loading={deleteAccount.isPending}
+        onConfirm={handleDeleteAccount}
+        onCancel={() => setIsDeleteOpen(false)}
+      />
     </div>
   )
 }

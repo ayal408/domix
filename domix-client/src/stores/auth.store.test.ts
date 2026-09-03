@@ -20,6 +20,7 @@ const authUser: AuthUser = {
   googleId: null,
   registrationMethod: 'Password',
   profileImageBase64: null,
+  isEmailVerified: true,
 }
 
 const fullProfile: UserResponse = {
@@ -33,6 +34,8 @@ const fullProfile: UserResponse = {
   joiningDate: '2024-01-01T00:00:00Z',
   profileColor: null,
   profileImageBase64: null,
+  isEmailVerified: true,
+  isBlocked: false,
 }
 
 const session: AuthSessionResponse = { user: authUser, accessToken: 'access-token' }

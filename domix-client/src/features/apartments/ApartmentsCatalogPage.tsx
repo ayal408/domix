@@ -88,9 +88,12 @@ export default function ApartmentsCatalogPage() {
   const { data, isLoading, isError, refetch } = isSearching ? searchResults : allApartments
 
   const listings = useMemo(() => {
-    const base = data ?? []
+    // `useApartments()` is the unfiltered dataset shared with the admin/my-apartments tables, so
+    // Rented/Sold listings must be dropped here for the public browse view. Server-side search
+    // (`isSearching`) already excludes them.
+    const base = (data ?? []).filter((apartment) => isSearching || apartment.status === 'Available')
     return ownerId ? base.filter((apartment) => apartment.userId === ownerId) : base
-  }, [data, ownerId])
+  }, [data, ownerId, isSearching])
 
   function handleSearchSubmit(values: ApartmentSearchFormValues) {
     const query = toSearchQuery(values)

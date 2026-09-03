@@ -61,29 +61,16 @@ namespace serverApi.Services.Implementations
             {
                 try
                 {
-                    var frontendUrl = _configuration["FRONTEND_URL"] ?? Environment.GetEnvironmentVariable("FRONTEND_URL");
-                    var templatePath = Path.Combine(AppContext.BaseDirectory, "EmailTemplates", "NewMessage.html");
-                    
-                    string template;
-                    if (File.Exists(templatePath))
-                    {
-                        template = await File.ReadAllTextAsync(templatePath, cancellationToken);
-                    }
-                    else
-                    {
-                        template = "<p>New message from {{SenderName}}: {{Message}}</p>";
-                    }
+                    var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+                    var encodedName = System.Net.WebUtility.HtmlEncode(sender.UserName);
+                    var body = $"<p>You have a new message from {encodedName}:</p>" +
+                               $"<p style=\"white-space:pre-wrap\">{System.Net.WebUtility.HtmlEncode(dto.Content)}</p>";
 
-                    template = template
-                        .Replace("{{SenderName}}", sender.UserName)
-                        .Replace("{{SenderEmail}}", sender.EmailAddress)
-                        .Replace("{{SenderPhone}}", sender.PhoneNumber ?? string.Empty)
-                        .Replace("{{Message}}", dto.Content)
-                        .Replace("{{CreatedAt}}", DateTime.Now.ToString("dd/MM/yyyy HH:mm"))
-                        .Replace("{{SenderProfileUrl}}", $"{frontendUrl}/user/{sender.UserId}")
-                        .Replace("{{frontedUrl}}", $"{frontendUrl}");
-
-                    await _emailService.SendEmailAsync(owner.EmailAddress, "DOMIX", template, cancellationToken);
+                    await _emailService.SendEmailAsync(
+                        owner.EmailAddress,
+                        "New DOMIX message",
+                        EmailTemplates.Render($"New message from {encodedName}", body, "Reply on DOMIX", $"{clientAppUrl}/messages"),
+                        cancellationToken);
                 }
                 catch (Exception ex)
                 {

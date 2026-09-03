@@ -74,6 +74,9 @@ export default function LoginPage() {
             error={errors.password?.message}
             {...register('password')}
           />
+          <Link to="/forgot-password" className="-mt-2 w-fit text-sm font-medium text-primary hover:underline">
+            {t('auth.forgotPassword.link')}
+          </Link>
           {formError && (
             <p role="alert" className="text-sm font-medium text-danger">
               {formError}

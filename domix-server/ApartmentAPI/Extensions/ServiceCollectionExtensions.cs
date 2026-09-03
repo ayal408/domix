@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using serverApi.Data;
@@ -9,6 +10,7 @@ using serverApi.Services;
 using serverApi.Services.Implementations;
 using serverApi.Services.Interfaces;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace serverApi.Extensions
 {
@@ -54,6 +56,23 @@ namespace serverApi.Extensions
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
                         ClockSkew = TimeSpan.Zero
                     };
+
+                    // The browser's WebSocket API can't set an Authorization header, so SignalR's
+                    // JS client sends the token as a query param instead — accept it there, but only
+                    // for the hub path (every other endpoint still requires a real Authorization header).
+                    options.Events = new JwtBearerEvents
+                    {
+                        OnMessageReceived = context =>
+                        {
+                            var accessToken = context.Request.Query["access_token"];
+                            var path = context.HttpContext.Request.Path;
+                            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/api/hubs"))
+                            {
+                                context.Token = accessToken;
+                            }
+                            return Task.CompletedTask;
+                        }
+                    };
                 });
 
             // Populates ClaimTypes.Role from the database on every request — the
@@ -76,23 +95,51 @@ namespace serverApi.Extensions
                     policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
             });
 
+            // The chat endpoint is open to anonymous visitors and each request is a
+            // real, billed Gemini API call — bound abuse/cost with a per-IP window
+            // rather than relying on [Authorize].
+            services.AddRateLimiter(options =>
+            {
+                options.AddPolicy("chat", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+                options.OnRejected = async (context, cancellationToken) =>
+                {
+                    context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+                    await context.HttpContext.Response.WriteAsync(
+                        "Too many chat requests. Please wait a moment and try again.", cancellationToken);
+                };
+            });
+
             return services;
         }
 
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
+            services.AddMemoryCache();
+            services.AddSignalR();
             services.AddScoped<IImageService, ImageService>();
             services.AddSingleton<GoogleOAuthService>();
             services.AddScoped<IEmailService, EmailService>();
 
             services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
+            services.AddHttpClient<IIsraeliAddressService, IsraeliAddressService>();
             services.AddScoped<IApartmentService, ApartmentService>();
             services.AddScoped<IApartmentImageService, ApartmentImageService>();
             services.AddScoped<IUserService, UserService>();
             services.AddScoped<IHealthService, HealthService>();
             services.AddScoped<IMessageService, MessageService>();
+            services.AddScoped<IChatService, ChatService>();
             services.AddScoped<IFavoriteService, FavoriteService>();
             services.AddScoped<ISavedSearchService, SavedSearchService>();
+            services.AddScoped<ISupportService, SupportService>();
+            services.AddScoped<IAnalyticsService, AnalyticsService>();
+            services.AddScoped<INotificationService, NotificationService>();
             services.AddHostedService<SavedSearchAlertBackgroundService>();
             return services;
         }

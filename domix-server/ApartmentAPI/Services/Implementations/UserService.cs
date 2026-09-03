@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.WebUtilities;
 using serverApi.Data;
 using serverApi.Models;
 using serverApi.Models.DTOs;
@@ -15,12 +17,18 @@ namespace serverApi.Services.Implementations
 {
     public class UserService : IUserService
     {
+        private static readonly TimeSpan VerificationTokenLifetime = TimeSpan.FromHours(24);
+
         private readonly ApartmentContext _context;
+        private readonly IEmailService _emailService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<UserService> _logger;
 
-        public UserService(ApartmentContext context, ILogger<UserService> logger)
+        public UserService(ApartmentContext context, IEmailService emailService, IConfiguration configuration, ILogger<UserService> logger)
         {
             _context = context;
+            _emailService = emailService;
+            _configuration = configuration;
             _logger = logger;
         }
 
@@ -90,6 +98,15 @@ namespace serverApi.Services.Implementations
             }
 
             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(dto.UserName.Trim().ToLower()));
+
+            // A Google sign-in already proves the address is reachable — password accounts still
+            // need to click a link we email them before IsEmailVerified flips to true.
+            var isGoogleVerified = dto.RegistrationMethod == "Google";
+
+            // Bootstraps the very first account as Admin — there is no seed data and no other way to
+            // reach the admin panel on a fresh database. Every account after it defaults to "User".
+            var isFirstUser = !await _context.Users.AnyAsync(cancellationToken);
+
             var newUser = new User
             {
                 UserId = Guid.NewGuid(),
@@ -100,16 +117,171 @@ namespace serverApi.Services.Implementations
                 PasswordHash = dto.PasswordHash,
                 GoogleId = dto.GoogleId,
                 JoiningDate = DateTime.UtcNow,
-                Role = "User",
+                Role = isFirstUser ? "Admin" : "User",
                 ProfileImage = imageBytes,
                 ProfileColor = $"#{hash[0]:X2}{hash[1]:X2}{hash[2]:X2}",
+                IsEmailVerified = isGoogleVerified,
             };
+
+            if (!isGoogleVerified && !string.IsNullOrWhiteSpace(dto.EmailAddress))
+            {
+                newUser.EmailVerificationToken = GenerateSecureToken();
+                newUser.EmailVerificationTokenExpiresAt = DateTime.UtcNow.Add(VerificationTokenLifetime);
+            }
 
             _context.Users.Add(newUser);
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User {UserId} created successfully.", newUser.UserId);
+
+            if (newUser.EmailVerificationToken != null)
+                await SendVerificationEmailAsync(newUser, cancellationToken);
+
             return ToDto(newUser);
+        }
+
+        public async Task<bool> VerifyEmailAsync(string token, CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+                return false;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailVerificationToken == token, cancellationToken);
+            if (user == null || user.EmailVerificationTokenExpiresAt is null || user.EmailVerificationTokenExpiresAt < DateTime.UtcNow)
+                return false;
+
+            user.IsEmailVerified = true;
+            user.EmailVerificationToken = null;
+            user.EmailVerificationTokenExpiresAt = null;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User {UserId} verified their email.", user.UserId);
+            return true;
+        }
+
+        public async Task<bool> ResendVerificationEmailAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
+            if (user == null || user.IsEmailVerified || string.IsNullOrWhiteSpace(user.EmailAddress))
+                return false;
+
+            user.EmailVerificationToken = GenerateSecureToken();
+            user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.Add(VerificationTokenLifetime);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            await SendVerificationEmailAsync(user, cancellationToken);
+            return true;
+        }
+
+        private static string GenerateSecureToken() => WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32));
+
+        public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress == email, cancellationToken);
+            // Deliberately silent on a miss — the caller (AuthController) always returns 200 either
+            // way, so this can't be used to enumerate registered emails.
+            if (user == null || string.IsNullOrWhiteSpace(user.EmailAddress))
+                return;
+
+            user.PasswordResetToken = GenerateSecureToken();
+            user.PasswordResetTokenExpiresAt = DateTime.UtcNow.Add(VerificationTokenLifetime);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+            var resetLink = $"{clientAppUrl}/reset-password?token={Uri.EscapeDataString(user.PasswordResetToken)}";
+
+            try
+            {
+                await _emailService.SendEmailAsync(
+                    user.EmailAddress!,
+                    "Reset your DOMIX password",
+                    EmailTemplates.Render(
+                        "Reset your password",
+                        $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.UserName)},</p>" +
+                        "<p>We got a request to reset your DOMIX password. Click below to choose a new one — this link expires in 24 hours.</p>" +
+                        "<p>If you didn't request this, you can safely ignore this email.</p>",
+                        "Reset my password",
+                        resetLink),
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to user {UserId}.", user.UserId);
+            }
+        }
+
+        public async Task<bool> ResetPasswordAsync(string token, string passwordHash, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.PasswordResetToken == token, cancellationToken);
+            if (user == null || user.PasswordResetTokenExpiresAt is null || user.PasswordResetTokenExpiresAt < DateTime.UtcNow)
+                return false;
+
+            user.PasswordHash = passwordHash;
+            // A Google-only account that resets its password gains a password login too, same as
+            // LinkPasswordAsync — it must not silently downgrade a linked account back to Google-only.
+            if (user.RegistrationMethod == "Google")
+                user.RegistrationMethod = "Password+Google";
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiresAt = null;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User {UserId} reset their password.", user.UserId);
+            return true;
+        }
+
+        public async Task<UserResponseDto?> UpdateThemePreferenceAsync(Guid userId, string? themePreference, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
+            if (user == null) return null;
+
+            user.ThemePreference = themePreference;
+            await _context.SaveChangesAsync(cancellationToken);
+            return ToDto(user);
+        }
+
+        public async Task<bool> DeleteAccountAsync(Guid userId, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
+            if (user == null) return false;
+
+            // Every other FK to Users cascades (Apartments, Messages, Favorites, SavedSearches,
+            // RefreshTokens, SearchRequests) or SETs NULL (SupportTickets, Notifications) — this is
+            // the one Restrict relationship, so it must be cleared explicitly or the delete below
+            // fails at the database level.
+            var ownAppointments = _context.Appointments.Where(a => a.UserId == userId);
+            _context.Appointments.RemoveRange(ownAppointments);
+
+            _context.Users.Remove(user);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User {UserId} account deleted.", userId);
+            return true;
+        }
+
+        private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)
+        {
+            var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+            var verifyLink = $"{clientAppUrl}/verify-email?token={Uri.EscapeDataString(user.EmailVerificationToken!)}";
+
+            try
+            {
+                await _emailService.SendEmailAsync(
+                    user.EmailAddress!,
+                    "Confirm your DOMIX email address",
+                    EmailTemplates.Render(
+                        "Confirm your email",
+                        $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.UserName)},</p>" +
+                        "<p>Please confirm your email address to finish setting up your DOMIX account. This link expires in 24 hours.</p>",
+                        "Verify my email",
+                        verifyLink),
+                    cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                // Same tolerance as MessageService's notification email: the account still exists
+                // and can request a fresh link via resend-verification, so this must not fail the
+                // caller's request (registration or resend) just because mail delivery is down.
+                _logger.LogError(ex, "Failed to send verification email to user {UserId}.", user.UserId);
+            }
         }
 
         public async Task<User?> LinkGoogleAsync(LinkGoogleDto dto, CancellationToken cancellationToken = default)
@@ -170,6 +342,9 @@ namespace serverApi.Services.Implementations
             if (user == null)
                 return new VerifyPasswordResult { Outcome = PasswordVerifyOutcome.UserNotFound };
 
+            if (user.IsBlocked)
+                return new VerifyPasswordResult { Outcome = PasswordVerifyOutcome.Blocked };
+
             if (string.IsNullOrEmpty(user.PasswordHash))
                 return new VerifyPasswordResult { Outcome = PasswordVerifyOutcome.NoPasswordAccount };
 
@@ -177,6 +352,29 @@ namespace serverApi.Services.Implementations
                 return new VerifyPasswordResult { Outcome = PasswordVerifyOutcome.InvalidPassword };
 
             return new VerifyPasswordResult { Outcome = PasswordVerifyOutcome.Success, User = ToDto(user) };
+        }
+
+        public async Task<IEnumerable<UserResponseDto>> GetAllUsersAsync(CancellationToken cancellationToken = default)
+        {
+            var users = await _context.Users
+                .AsNoTracking()
+                .OrderByDescending(u => u.JoiningDate)
+                .ToListAsync(cancellationToken);
+
+            return users.Select(ToDto);
+        }
+
+        public async Task<UserResponseDto?> SetBlockedAsync(Guid userId, bool isBlocked, CancellationToken cancellationToken = default)
+        {
+            var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
+            if (user == null)
+                return null;
+
+            user.IsBlocked = isBlocked;
+            await _context.SaveChangesAsync(cancellationToken);
+
+            _logger.LogInformation("User {UserId} {Action}.", userId, isBlocked ? "blocked" : "unblocked");
+            return ToDto(user);
         }
 
         private byte[] GenerateIdenticon(string input, int size = 256)
@@ -245,7 +443,10 @@ namespace serverApi.Services.Implementations
                 RegistrationMethod = user.RegistrationMethod,
                 ProfileImageBase64 = user.ProfileImage != null
                     ? Convert.ToBase64String(user.ProfileImage)
-                    : null
+                    : null,
+                IsEmailVerified = user.IsEmailVerified,
+                IsBlocked = user.IsBlocked,
+                ThemePreference = user.ThemePreference,
             };
         }
 

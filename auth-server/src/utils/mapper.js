@@ -7,6 +7,7 @@ export function mapUser(user, token) {
     googleId: user.googleId ?? null,
     registrationMethod: user.registrationMethod,
     profileImageBase64: user.profileImageBase64 ?? null,
+    isEmailVerified: user.isEmailVerified ?? false,
     token
   };
 }

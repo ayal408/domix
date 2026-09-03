@@ -78,8 +78,55 @@ namespace serverApi.Controllers
                 PasswordVerifyOutcome.UserNotFound => NotFound(new { code = "USER_NOT_FOUND" }),
                 PasswordVerifyOutcome.NoPasswordAccount => BadRequest(new { code = "NO_PASSWORD_ACCOUNT" }),
                 PasswordVerifyOutcome.InvalidPassword => Unauthorized(new { code = "INVALID_PASSWORD" }),
+                PasswordVerifyOutcome.Blocked => StatusCode(StatusCodes.Status403Forbidden, new { code = "ACCOUNT_BLOCKED" }),
                 _ => StatusCode(500),
             };
+        }
+
+        // ================= VERIFY EMAIL =================
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail([FromBody] VerifyEmailDto dto, CancellationToken cancellationToken)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Token))
+                return BadRequest(new { code = "INVALID_REQUEST" });
+
+            var verified = await _userService.VerifyEmailAsync(dto.Token, cancellationToken);
+            return verified ? Ok() : BadRequest(new { code = "INVALID_OR_EXPIRED_TOKEN" });
+        }
+
+        // ================= RESEND VERIFICATION =================
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> ResendVerification([FromBody] ResendVerificationEmailDto dto, CancellationToken cancellationToken)
+        {
+            if (dto == null || dto.UserId == Guid.Empty)
+                return BadRequest(new { code = "INVALID_REQUEST" });
+
+            var sent = await _userService.ResendVerificationEmailAsync(dto.UserId, cancellationToken);
+            return sent ? Ok() : BadRequest(new { code = "ALREADY_VERIFIED_OR_NOT_FOUND" });
+        }
+
+        // ================= FORGOT PASSWORD =================
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto dto, CancellationToken cancellationToken)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Email))
+                return BadRequest(new { code = "INVALID_REQUEST" });
+
+            // Always 200 regardless of whether the email matches an account — see
+            // UserService.RequestPasswordResetAsync.
+            await _userService.RequestPasswordResetAsync(dto.Email, cancellationToken);
+            return Ok();
+        }
+
+        // ================= RESET PASSWORD =================
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto dto, CancellationToken cancellationToken)
+        {
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Token) || string.IsNullOrWhiteSpace(dto.PasswordHash))
+                return BadRequest(new { code = "INVALID_REQUEST" });
+
+            var reset = await _userService.ResetPasswordAsync(dto.Token, dto.PasswordHash, cancellationToken);
+            return reset ? Ok() : BadRequest(new { code = "INVALID_OR_EXPIRED_TOKEN" });
         }
     }
 }

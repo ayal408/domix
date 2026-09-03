@@ -51,6 +51,8 @@ function fallbackProfile(session: AuthSessionResponse): UserResponse {
     joiningDate: new Date().toISOString(),
     profileColor: null,
     profileImageBase64: user.profileImageBase64,
+    isEmailVerified: user.isEmailVerified,
+    isBlocked: false,
   }
 }
 

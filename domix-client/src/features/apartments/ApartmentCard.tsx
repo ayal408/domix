@@ -57,9 +57,9 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
             <BuildingIcon />
           </div>
         )}
-        {!apartment.status && (
+        {apartment.status !== 'Available' && (
           <span className="absolute end-2 top-2">
-            <Badge tone="neutral">{t('apartments.card.inactive')}</Badge>
+            <Badge tone="neutral">{t(`admin.apartments.status.${apartment.status}`)}</Badge>
           </span>
         )}
         {isAuthenticated && (

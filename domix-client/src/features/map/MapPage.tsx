@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
+import Supercluster from 'supercluster'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import 'leaflet/dist/leaflet.css'
 import { useApartments } from '@/hooks/useApartments'
-import { apartmentMarkerIcon, userMarkerIcon } from '@/features/map/markerIcon'
+import { apartmentMarkerIcon, clusterMarkerIcon, userMarkerIcon } from '@/features/map/markerIcon'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -119,32 +120,114 @@ export default function MapPage() {
             </Marker>
           )}
 
-          {listings.map((apartment) => (
-            <Marker
-              key={apartment.apartmentId}
-              position={[apartment.latitude, apartment.longitude]}
-              icon={apartmentMarkerIcon(apartment.apartmentId === selectedId)}
-              eventHandlers={{ click: () => setSelectedId(apartment.apartmentId) }}
-            >
-              <Popup>
-                <div className="flex flex-col gap-0.5">
-                  <strong>{formatCurrency(apartment.price, i18n.language)}</strong>
-                  <span>
-                    {apartment.address}, {apartment.city}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/apartments/${apartment.apartmentId}`)}
-                    className="mt-1 text-start text-primary underline"
-                  >
-                    {t('apartments.card.viewDetails')}
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
+          <ClusterMarkers apartments={listings} selectedId={selectedId} onSelect={setSelectedId} />
         </MapContainer>
       </div>
     </div>
+  )
+}
+
+interface ClusterPointProps {
+  apartment: Apartment
+}
+
+/** Groups overlapping listing pins into a numbered badge at low zoom, splitting them apart as the
+ * map zooms in (via `supercluster` — a plain clustering algorithm, so pins stay the same
+ * theme-aware divIcons as everywhere else on this map instead of a plugin's own marker layer). */
+function ClusterMarkers({
+  apartments,
+  selectedId,
+  onSelect,
+}: {
+  apartments: Apartment[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const map = useMap()
+  const navigate = useNavigate()
+  const { t, i18n } = useTranslation()
+
+  const index = useMemo(() => {
+    const cluster = new Supercluster<ClusterPointProps>({ radius: 60, maxZoom: 16 })
+    cluster.load(
+      apartments.map((apartment) => ({
+        type: 'Feature',
+        properties: { apartment },
+        geometry: { type: 'Point', coordinates: [apartment.longitude!, apartment.latitude!] },
+      })),
+    )
+    return cluster
+  }, [apartments])
+
+  const [view, setView] = useState(() => ({ bounds: map.getBounds(), zoom: map.getZoom() }))
+
+  useMapEvents({
+    moveend: () => setView({ bounds: map.getBounds(), zoom: map.getZoom() }),
+    zoomend: () => setView({ bounds: map.getBounds(), zoom: map.getZoom() }),
+  })
+
+  // The index itself changes when the listing count changes — recompute the view-derived
+  // clusters even if the user hasn't moved the map since.
+  useEffect(() => {
+    setView({ bounds: map.getBounds(), zoom: map.getZoom() })
+  }, [index, map])
+
+  const bbox: [number, number, number, number] = [
+    view.bounds.getWest(),
+    view.bounds.getSouth(),
+    view.bounds.getEast(),
+    view.bounds.getNorth(),
+  ]
+  const clusters = index.getClusters(bbox, Math.round(view.zoom))
+
+  return (
+    <>
+      {clusters.map((feature) => {
+        const [lng, lat] = feature.geometry.coordinates as [number, number]
+
+        if ('cluster' in feature.properties && feature.properties.cluster) {
+          const clusterId = feature.properties.cluster_id
+          return (
+            <Marker
+              key={`cluster-${clusterId}`}
+              position={[lat, lng]}
+              icon={clusterMarkerIcon(feature.properties.point_count)}
+              eventHandlers={{
+                click: () => {
+                  const expansionZoom = Math.min(index.getClusterExpansionZoom(clusterId), 18)
+                  map.flyTo([lat, lng], expansionZoom, { duration: 0.5 })
+                },
+              }}
+            />
+          )
+        }
+
+        const apartment = feature.properties.apartment
+        return (
+          <Marker
+            key={apartment.apartmentId}
+            position={[lat, lng]}
+            icon={apartmentMarkerIcon(apartment.apartmentId === selectedId)}
+            eventHandlers={{ click: () => onSelect(apartment.apartmentId) }}
+          >
+            <Popup>
+              <div className="flex flex-col gap-0.5">
+                <strong>{formatCurrency(apartment.price, i18n.language)}</strong>
+                <span>
+                  {apartment.address}, {apartment.city}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/apartments/${apartment.apartmentId}`)}
+                  className="mt-1 text-start text-primary underline"
+                >
+                  {t('apartments.card.viewDetails')}
+                </button>
+              </div>
+            </Popup>
+          </Marker>
+        )
+      })}
+    </>
   )
 }

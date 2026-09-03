@@ -25,6 +25,15 @@ namespace serverApi.Models.DTOs
         public DateTime JoiningDate { get; set; }
         public string? ProfileColor { get; set; }
         public string? ProfileImageBase64 { get; set; }
+        public bool IsEmailVerified { get; set; }
+        public bool IsBlocked { get; set; }
+        public string? ThemePreference { get; set; }
+    }
+
+    /// <summary>Body for <c>PATCH /api/User/theme</c>.</summary>
+    public class UpdateThemePreferenceDto
+    {
+        public string? ThemePreference { get; set; }
     }
 
     public class UpdateProfileImageDto
@@ -62,11 +71,37 @@ namespace serverApi.Models.DTOs
         UserNotFound,
         NoPasswordAccount,
         InvalidPassword,
+        Blocked,
     }
 
     public class VerifyPasswordResult
     {
         public required PasswordVerifyOutcome Outcome { get; set; }
         public UserResponseDto? User { get; set; }
+    }
+
+    /// <summary>Body for <c>POST /api/auth/verify-email</c>.</summary>
+    public class VerifyEmailDto
+    {
+        public string Token { get; set; } = string.Empty;
+    }
+
+    /// <summary>Body for <c>POST /api/auth/resend-verification</c>.</summary>
+    public class ResendVerificationEmailDto
+    {
+        public Guid UserId { get; set; }
+    }
+
+    /// <summary>Body for <c>POST /api/auth/forgot-password</c>.</summary>
+    public class ForgotPasswordDto
+    {
+        public string Email { get; set; } = string.Empty;
+    }
+
+    /// <summary>Body for <c>POST /api/auth/reset-password</c>. `PasswordHash` — auth-server hashes, this service never sees the raw password.</summary>
+    public class ResetPasswordDto
+    {
+        public string Token { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
     }
 }

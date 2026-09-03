@@ -8,6 +8,11 @@ dotenv.config();
 
 const app = express();
 
+// Exactly one hop (the nginx gateway) sits in front of this service — trusting only that hop means
+// `req.ip` reflects the real client IP from X-Forwarded-For, which the rate limiters below key on,
+// without trusting a spoofable header from further upstream than actually exists.
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(cookieParser());
 

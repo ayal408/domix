@@ -8,7 +8,8 @@ namespace serverApi.Models.DTOs
     {
         public Guid ApartmentId { get; set; }
         public Guid UserId { get; set; }
-        public bool status { get; set; }
+        public ApartmentStatus Status { get; set; }
+        public bool IsAnonymous { get; set; }
         public decimal price { get; set; }
         public DateTime date { get; set; }
         public string city { get; set; } = string.Empty;
@@ -52,6 +53,8 @@ namespace serverApi.Models.DTOs
         public bool? elevator { get; set; }
         public bool? Parking { get; set; }
         public string? PropertyType { get; set; }
+        /// <summary>When true, the owner's name/avatar/phone are hidden from other users on this listing.</summary>
+        public bool IsAnonymous { get; set; }
     }
 
     public class UpdateApartmentDTO
@@ -68,7 +71,13 @@ namespace serverApi.Models.DTOs
         public bool? elevator { get; set; }
         public bool? Parking { get; set; }
         public string? PropertyType { get; set; }
-        /// <summary>Whether the listing is live. Omit to leave unchanged.</summary>
-        public bool? status { get; set; }
+        /// <summary>When set, changes whether the owner's identity is hidden. Omit to leave unchanged.</summary>
+        public bool? IsAnonymous { get; set; }
+    }
+
+    /// <summary>Body for <c>PATCH /api/Apartment/{id}/status</c>.</summary>
+    public class SetApartmentStatusDTO
+    {
+        public ApartmentStatus Status { get; set; }
     }
 }

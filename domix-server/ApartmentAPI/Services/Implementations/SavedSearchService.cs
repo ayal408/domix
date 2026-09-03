@@ -79,7 +79,7 @@ namespace serverApi.Services.Implementations
         public async Task<List<ApartmentDTO>> FindNewMatchesAsync(SavedSearch savedSearch, CancellationToken cancellationToken = default)
         {
             var query = ApartmentService.ApplySearchFilters(
-                _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking().Where(a => a.status),
+                _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking(),
                 savedSearch.City, savedSearch.Area, savedSearch.MinPrice, savedSearch.MaxPrice,
                 savedSearch.MinRooms, savedSearch.MaxRooms, savedSearch.PropertyType, savedSearch.Parking, savedSearch.Elevator);
 

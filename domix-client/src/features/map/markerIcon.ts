@@ -25,6 +25,26 @@ export function apartmentMarkerIcon(active: boolean): L.DivIcon {
   })
 }
 
+/** Badge for a group of overlapping listing pins at low zoom — click to zoom into the group. */
+export function clusterMarkerIcon(count: number): L.DivIcon {
+  const size = count >= 50 ? 52 : count >= 10 ? 44 : 36
+
+  return L.divIcon({
+    className: 'domix-marker',
+    html: `
+      <div style="
+        display: flex; align-items: center; justify-content: center;
+        width: ${size}px; height: ${size}px; border-radius: 9999px;
+        background: var(--color-primary); color: var(--color-primary-foreground);
+        border: 3px solid var(--color-card); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+        font: 600 ${size >= 44 ? 14 : 12}px system-ui, sans-serif;
+      ">${count}</div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+  })
+}
+
 export function userMarkerIcon(): L.DivIcon {
   return L.divIcon({
     className: 'domix-marker',

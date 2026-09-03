@@ -125,3 +125,21 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
+
+/**
+ * Builds a `wa.me` deep link from a phone number on file. Every number in this app is Israeli
+ * (972), stored in local format (leading 0) — normalises that to the international form WhatsApp
+ * requires. Returns null for anything too short to plausibly be a real number, e.g. a placeholder.
+ */
+export function toWhatsAppLink(phone: string | null | undefined, message?: string): string | null {
+  if (!phone) return null
+  const digits = phone.replace(/\D/g, '')
+  if (!digits) return null
+
+  const international = digits.startsWith('972') ? digits : digits.startsWith('0') ? `972${digits.slice(1)}` : digits
+
+  if (international.length < 10) return null
+
+  const query = message ? `?text=${encodeURIComponent(message)}` : ''
+  return `https://wa.me/${international}${query}`
+}

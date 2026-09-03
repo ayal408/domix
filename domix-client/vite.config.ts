@@ -34,6 +34,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: apiTarget,
           changeOrigin: true,
+          // PresenceHub (SignalR) upgrades /api/hubs/presence to a WebSocket.
+          ws: true,
         },
       },
     },

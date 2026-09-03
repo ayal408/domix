@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDeleteApartment } from '@/hooks/useApartments'
+import { useDeleteApartment, useSetApartmentStatus } from '@/hooks/useApartments'
 import { ApartmentFormDialog } from '@/features/admin/ApartmentFormDialog'
 import { ApartmentImagesDialog } from '@/features/admin/ApartmentImagesDialog'
 import { Button } from '@/components/ui/Button'
@@ -12,14 +12,21 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToastStore } from '@/stores/toast.store'
 import { errorTranslationKey, toApiError } from '@/api/errors'
 import { formatCurrency } from '@/lib/format'
-import type { Apartment, Guid } from '@/types/api'
+import type { Apartment, ApartmentStatusValue, Guid } from '@/types/api'
+import { APARTMENT_STATUSES } from '@/types/api'
 
 type DialogState =
   | { kind: 'closed' }
   | { kind: 'create' }
   | { kind: 'edit'; apartmentId: Guid }
-  | { kind: 'images'; apartmentId: Guid }
+  | { kind: 'images'; apartment: Apartment }
   | { kind: 'delete'; apartmentId: Guid }
+
+const STATUS_TONE: Record<ApartmentStatusValue, 'success' | 'neutral'> = {
+  Available: 'success',
+  Rented: 'neutral',
+  Sold: 'neutral',
+}
 
 interface Props {
   apartments: Apartment[] | undefined
@@ -40,14 +47,17 @@ interface Props {
 export function ApartmentManagementList({ apartments, isLoading, title, subtitle, newApartmentLabel, emptyLabel }: Props) {
   const { t, i18n } = useTranslation()
   const deleteMutation = useDeleteApartment()
+  const setStatusMutation = useSetApartmentStatus()
   const pushToast = useToastStore((state) => state.push)
   const [dialog, setDialog] = useState<DialogState>({ kind: 'closed' })
 
   const byId = useMemo(() => new Map((apartments ?? []).map((a) => [a.apartmentId, a])), [apartments])
   const activeApartment: Apartment | null =
-    dialog.kind === 'edit' || dialog.kind === 'images' || dialog.kind === 'delete'
-      ? (byId.get(dialog.apartmentId) ?? null)
-      : null
+    dialog.kind === 'edit' || dialog.kind === 'delete' ? (byId.get(dialog.apartmentId) ?? null) : null
+  // Falls back to the snapshot passed into `setDialog` (e.g. right after create, before the list
+  // refetch lands) but prefers the live cached copy once available, so newly uploaded images show up.
+  const activeImagesApartment: Apartment | null =
+    dialog.kind === 'images' ? (byId.get(dialog.apartment.apartmentId) ?? dialog.apartment) : null
 
   async function handleDeleteConfirm() {
     if (dialog.kind !== 'delete') return
@@ -55,6 +65,16 @@ export function ApartmentManagementList({ apartments, isLoading, title, subtitle
       await deleteMutation.mutateAsync(dialog.apartmentId)
       pushToast({ variant: 'success', title: t('admin.apartments.deleteSuccess') })
       setDialog({ kind: 'closed' })
+    } catch (error) {
+      const apiError = toApiError(error)
+      pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
+    }
+  }
+
+  async function handleStatusChange(apartmentId: Guid, status: ApartmentStatusValue) {
+    try {
+      await setStatusMutation.mutateAsync({ apartmentId, status })
+      pushToast({ variant: 'success', title: t('admin.apartments.statusUpdateSuccess') })
     } catch (error) {
       const apiError = toApiError(error)
       pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
@@ -108,13 +128,30 @@ export function ApartmentManagementList({ apartments, isLoading, title, subtitle
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge tone={apartment.status ? 'success' : 'neutral'}>
-                      {apartment.status ? t('admin.apartments.status.active') : t('admin.apartments.status.inactive')}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge tone={STATUS_TONE[apartment.status]}>
+                        {t(`admin.apartments.status.${apartment.status}`)}
+                      </Badge>
+                      <select
+                        aria-label={t('admin.apartments.changeStatus')}
+                        className="rounded border border-border bg-card px-2 py-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        value={apartment.status}
+                        disabled={setStatusMutation.isPending}
+                        onChange={(event) =>
+                          handleStatusChange(apartment.apartmentId, event.target.value as ApartmentStatusValue)
+                        }
+                      >
+                        {APARTMENT_STATUSES.map((status) => (
+                          <option key={status} value={status}>
+                            {t(`admin.apartments.status.${status}`)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-1.5">
-                      <Button size="sm" variant="ghost" onClick={() => setDialog({ kind: 'images', apartmentId: apartment.apartmentId })}>
+                      <Button size="sm" variant="ghost" onClick={() => setDialog({ kind: 'images', apartment })}>
                         {t('admin.apartments.images')}
                       </Button>
                       <Button size="sm" variant="secondary" onClick={() => setDialog({ kind: 'edit', apartmentId: apartment.apartmentId })}>
@@ -136,11 +173,12 @@ export function ApartmentManagementList({ apartments, isLoading, title, subtitle
         open={dialog.kind === 'create' || dialog.kind === 'edit'}
         apartment={dialog.kind === 'edit' ? activeApartment : null}
         onClose={() => setDialog({ kind: 'closed' })}
+        onCreated={(created) => setDialog({ kind: 'images', apartment: created })}
       />
 
       <ApartmentImagesDialog
         open={dialog.kind === 'images'}
-        apartment={activeApartment}
+        apartment={activeImagesApartment}
         onClose={() => setDialog({ kind: 'closed' })}
       />
 

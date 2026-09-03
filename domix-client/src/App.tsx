@@ -2,6 +2,7 @@ import { Suspense, useEffect, useRef } from 'react'
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AppShell } from '@/components/layout/AppShell'
+import { AdminLayout } from '@/features/admin/AdminLayout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import { useAuthStore } from '@/stores/auth.store'
 import { useToastStore } from '@/stores/toast.store'
@@ -19,11 +20,18 @@ const MessagesPage = lazyWithReload(() => import('@/features/messages/MessagesPa
 const MyApartmentsPage = lazyWithReload(() => import('@/features/apartments/MyApartmentsPage'))
 const MortgageCalculatorPage = lazyWithReload(() => import('@/features/mortgage/MortgageCalculatorPage'))
 const AdminApartmentsPage = lazyWithReload(() => import('@/features/admin/AdminApartmentsPage'))
+const AdminSupportPage = lazyWithReload(() => import('@/features/admin/AdminSupportPage'))
+const AdminUsersPage = lazyWithReload(() => import('@/features/admin/AdminUsersPage'))
+const AdminAnalyticsPage = lazyWithReload(() => import('@/features/admin/AdminAnalyticsPage'))
+const AdminNotificationsPage = lazyWithReload(() => import('@/features/admin/AdminNotificationsPage'))
 const FavoritesPage = lazyWithReload(() => import('@/features/apartments/FavoritesPage'))
 const ComparePage = lazyWithReload(() => import('@/features/apartments/ComparePage'))
 const SavedSearchesPage = lazyWithReload(() => import('@/features/account/SavedSearchesPage'))
 const LoginPage = lazyWithReload(() => import('@/features/auth/LoginPage'))
 const RegisterPage = lazyWithReload(() => import('@/features/auth/RegisterPage'))
+const VerifyEmailPage = lazyWithReload(() => import('@/pages/VerifyEmailPage'))
+const ForgotPasswordPage = lazyWithReload(() => import('@/features/auth/ForgotPasswordPage'))
+const ResetPasswordPage = lazyWithReload(() => import('@/features/auth/ResetPasswordPage'))
 const UnauthorizedPage = lazyWithReload(() => import('@/pages/UnauthorizedPage'))
 const NotFoundPage = lazyWithReload(() => import('@/pages/NotFoundPage'))
 
@@ -131,15 +139,24 @@ export default function App() {
             }
           />
           <Route
-            path="admin/apartments"
+            path="admin"
             element={
               <ProtectedRoute policy="ManagerOrAdmin">
-                <AdminApartmentsPage />
+                <AdminLayout />
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="apartments" element={<AdminApartmentsPage />} />
+            <Route path="support" element={<AdminSupportPage />} />
+            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="analytics" element={<AdminAnalyticsPage />} />
+            <Route path="notifications" element={<AdminNotificationsPage />} />
+          </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
+          <Route path="verify-email" element={<VerifyEmailPage />} />
+          <Route path="forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="reset-password" element={<ResetPasswordPage />} />
           <Route path="unauthorized" element={<UnauthorizedPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>

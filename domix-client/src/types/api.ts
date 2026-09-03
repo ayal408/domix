@@ -58,6 +58,16 @@ export interface UserResponse {
   profileColor?: string | null
   /** Raw base64 PNG bytes, without a `data:` prefix. */
   profileImageBase64?: string | null
+  /** Google accounts are verified on creation; password accounts must click the emailed link. */
+  isEmailVerified: boolean
+  isBlocked: boolean
+  /** "light" | "dark" | "system" | null (unset). */
+  themePreference?: string | null
+}
+
+/** Body for `PATCH /api/User/theme`. */
+export interface UpdateThemePreferenceRequest {
+  themePreference: string | null
 }
 
 /** `UserDto` — request body for `POST /api/User` and `POST /api/auth`. */
@@ -113,6 +123,7 @@ export interface AuthUser {
   googleId: string | null
   registrationMethod: RegistrationMethod
   profileImageBase64: string | null
+  isEmailVerified: boolean
   token?: string | null
 }
 
@@ -139,6 +150,38 @@ export interface RegisterRequest {
 
 export interface GoogleLoginRequest {
   idToken: string
+}
+
+/** `POST /auth/verify-email` — auth-server proxies to domix-server AuthController.VerifyEmail. */
+export interface VerifyEmailRequest {
+  token: string
+}
+
+export interface VerifyEmailResponse {
+  verified: boolean
+}
+
+export interface ResendVerificationResponse {
+  sent: boolean
+}
+
+/** `POST /auth/forgot-password`. Always resolves — never reveals whether the email is registered. */
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+export interface ForgotPasswordResponse {
+  sent: boolean
+}
+
+/** `POST /auth/reset-password`. */
+export interface ResetPasswordRequest {
+  token: string
+  newPassword: string
+}
+
+export interface ResetPasswordResponse {
+  reset: boolean
 }
 
 /** Claims minted by auth-server/src/utils/jwt.js `createAccessToken`. */
@@ -170,12 +213,17 @@ export interface ApartmentImage {
 export const PROPERTY_TYPES = ['Apartment', 'House', 'Studio', 'Penthouse', 'Garden', 'Duplex', 'Other'] as const
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
 
+/** `ApartmentStatus` on the server. Rented/Sold listings drop out of search and the public catalog but are never deleted. */
+export const APARTMENT_STATUSES = ['Available', 'Rented', 'Sold'] as const
+export type ApartmentStatusValue = (typeof APARTMENT_STATUSES)[number]
+
 /** `ApartmentDTO`. */
 export interface Apartment {
   apartmentId: Guid
   userId: Guid
-  /** `true` while the listing is live. */
-  status: boolean
+  status: ApartmentStatusValue
+  /** When true, the owner's name/avatar/phone are hidden from other users on this listing. */
+  isAnonymous: boolean
   price: number
   date: IsoDateTime
   city: string
@@ -218,15 +266,17 @@ export interface CreateApartmentRequest {
   elevator?: boolean | null
   parking?: boolean | null
   propertyType?: string | null
+  /** When true, the owner's name/avatar/phone are hidden from other users on this listing. */
+  isAnonymous?: boolean
 }
 
 /**
  * `UpdateApartmentDTO` — `PUT /api/Apartment/{id}`.
  *
- * A full replace of the editable fields (mirrors `CreateApartmentRequest`),
- * plus `status` to let the owner take a listing on/off the market. The
- * controller re-geocodes when `city`/`address` change, same as on create, so
- * an edit that only moves the listing can take a moment longer.
+ * A full replace of the editable fields (mirrors `CreateApartmentRequest`).
+ * The controller re-geocodes when `city`/`address` change, same as on
+ * create, so an edit that only moves the listing can take a moment longer.
+ * Status is changed separately via `PATCH /api/Apartment/{id}/status`.
  */
 export interface UpdateApartmentRequest {
   city: string
@@ -241,8 +291,13 @@ export interface UpdateApartmentRequest {
   elevator?: boolean | null
   parking?: boolean | null
   propertyType?: string | null
-  /** Omit to leave the current live/inactive state unchanged. */
-  status?: boolean
+  /** Omit to leave the current anonymous-posting state unchanged. */
+  isAnonymous?: boolean
+}
+
+/** `SetApartmentStatusDTO` — `PATCH /api/Apartment/{id}/status`. */
+export interface SetApartmentStatusRequest {
+  status: ApartmentStatusValue
 }
 
 /** `RateApartmentDTO` — `POST /api/Apartment/{id}/rate`. The controller rejects the owner's own listing. */
@@ -361,6 +416,85 @@ export interface CreateMessageRequest {
 export interface InboxQuery {
   page: number
   pageSize: number
+}
+
+// ---------------------------------------------------------------------------
+// Support — DTOs/SupportTicketDTO.cs, ChatController
+// ---------------------------------------------------------------------------
+
+export type ChatTurnRole = 'user' | 'model'
+
+export interface ChatTurn {
+  role: ChatTurnRole
+  text: string
+}
+
+export const SUPPORT_TICKET_STATUSES = ['Open', 'Resolved'] as const
+export type SupportTicketStatus = (typeof SUPPORT_TICKET_STATUSES)[number]
+
+/** `CreateSupportTicketDto` — `POST /api/Support`. Open to anonymous visitors, same as chat. */
+export interface CreateSupportTicketRequest {
+  contactName?: string | null
+  contactEmail?: string | null
+  message: string
+  transcript?: ChatTurn[] | null
+}
+
+/** `SupportTicketDto`. */
+export interface SupportTicket {
+  supportTicketId: Guid
+  userId?: Guid | null
+  userName?: string | null
+  contactName?: string | null
+  contactEmail?: string | null
+  message: string
+  transcript?: string | null
+  status: SupportTicketStatus
+  createdAt: IsoDateTime
+  resolvedAt?: IsoDateTime | null
+}
+
+// ---------------------------------------------------------------------------
+// Notifications — DTOs/NotificationDTO.cs, delivered live over PresenceHub
+// ---------------------------------------------------------------------------
+
+/** `NotificationDto`. */
+export interface AppNotification {
+  notificationId: Guid
+  title: string
+  message: string
+  createdAt: IsoDateTime
+  createdByUserName?: string | null
+}
+
+/** `NotificationFeedDto` — `GET /api/Notification`. */
+export interface NotificationFeed {
+  notifications: AppNotification[]
+  unreadCount: number
+}
+
+/** `CreateNotificationDto` — `POST /api/Notification`, Manager/Admin only. */
+export interface CreateNotificationRequest {
+  title: string
+  message: string
+}
+
+// ---------------------------------------------------------------------------
+// Analytics — DTOs/AnalyticsSummaryDTO.cs
+// ---------------------------------------------------------------------------
+
+/** `GET /api/Analytics/summary` — Manager/Admin only. */
+export interface AnalyticsSummary {
+  totalUsers: number
+  verifiedUsers: number
+  blockedUsers: number
+  newUsersLast7Days: number
+  totalApartments: number
+  availableApartments: number
+  rentedApartments: number
+  soldApartments: number
+  newApartmentsLast7Days: number
+  openSupportTickets: number
 }
 
 // ---------------------------------------------------------------------------

@@ -70,3 +70,44 @@ export async function linkPassword(userId, passwordHash, userName) {
   });
   return data;
 }
+
+/**
+ * Throws an Error with message INVALID_OR_EXPIRED_TOKEN on a bad/expired token,
+ * matching domix-server AuthController.VerifyEmail's `{ code }` response shape.
+ */
+export async function verifyEmailToken(token) {
+  try {
+    await axios.post(`${DATA_SERVICE_URL}/api/auth/verify-email`, { token });
+  } catch (err) {
+    const code = err.response?.data?.code;
+    if (code) throw new Error(code);
+    throw err;
+  }
+}
+
+/** Throws ALREADY_VERIFIED_OR_NOT_FOUND when there's nothing to resend. */
+export async function resendVerificationEmail(userId) {
+  try {
+    await axios.post(`${DATA_SERVICE_URL}/api/auth/resend-verification`, { userId });
+  } catch (err) {
+    const code = err.response?.data?.code;
+    if (code) throw new Error(code);
+    throw err;
+  }
+}
+
+/** Always resolves — the data API returns 200 whether or not the email matches an account. */
+export async function requestPasswordReset(email) {
+  await axios.post(`${DATA_SERVICE_URL}/api/auth/forgot-password`, { email });
+}
+
+/** Throws INVALID_OR_EXPIRED_TOKEN on a bad/expired token. */
+export async function resetPassword(token, passwordHash) {
+  try {
+    await axios.post(`${DATA_SERVICE_URL}/api/auth/reset-password`, { token, passwordHash });
+  } catch (err) {
+    const code = err.response?.data?.code;
+    if (code) throw new Error(code);
+    throw err;
+  }
+}

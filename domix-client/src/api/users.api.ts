@@ -7,6 +7,7 @@ import type {
   LinkGoogleRequest,
   LinkPasswordRequest,
   UpdateProfileImageRequest,
+  UpdateThemePreferenceRequest,
   UserLookupQuery,
   UserResponse,
 } from '@/types/api'
@@ -75,4 +76,33 @@ export async function updateProfileImage(payload: UpdateProfileImageRequest): Pr
     payload,
   )
   return data
+}
+
+/** Manager/Admin only — the admin user list. */
+export async function getAllUsers(signal?: AbortSignal): Promise<UserResponse[]> {
+  const { data } = await dataClient.get<UserResponse[]>(apiEndpoints.users.all(), { signal })
+  return data
+}
+
+/** Admin only. */
+export async function blockUser(userId: Guid): Promise<UserResponse> {
+  const { data } = await dataClient.patch<UserResponse>(apiEndpoints.users.block(userId))
+  return data
+}
+
+/** Admin only. */
+export async function unblockUser(userId: Guid): Promise<UserResponse> {
+  const { data } = await dataClient.patch<UserResponse>(apiEndpoints.users.unblock(userId))
+  return data
+}
+
+/** Updates the signed-in user's theme preference so it follows their account across devices. */
+export async function updateThemePreference(payload: UpdateThemePreferenceRequest): Promise<UserResponse> {
+  const { data } = await dataClient.patch<UserResponse>(apiEndpoints.users.theme(), payload)
+  return data
+}
+
+/** Deletes an account and everything it owns. The server enforces self-or-admin (403 otherwise). */
+export async function deleteAccount(userId: Guid): Promise<void> {
+  await dataClient.delete(apiEndpoints.users.remove(userId))
 }

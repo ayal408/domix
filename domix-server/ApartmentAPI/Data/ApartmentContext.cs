@@ -20,6 +20,8 @@ namespace serverApi.Data
         public DbSet<Message> Messages { get; set; }
         public DbSet<Favorite> Favorites { get; set; }
         public DbSet<SavedSearch> SavedSearches { get; set; }
+        public DbSet<SupportTicket> SupportTickets { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -89,6 +91,18 @@ namespace serverApi.Data
                 .WithMany()
                 .HasForeignKey(s => s.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<SupportTicket>()
+                .HasOne(t => t.User)
+                .WithMany()
+                .HasForeignKey(t => t.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.CreatedByUser)
+                .WithMany()
+                .HasForeignKey(n => n.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

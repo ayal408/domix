@@ -7,7 +7,8 @@ namespace serverApi.Models
     {
         public Guid ApartmentId { get; set; }
         public Guid UserId { get; set; }
-        public bool status { get; set; }
+        public ApartmentStatus Status { get; set; } = ApartmentStatus.Available;
+        public bool IsAnonymous { get; set; } = false;
         public int price { get; set; }
         [Required]
         public string city { get; set; } = string.Empty;

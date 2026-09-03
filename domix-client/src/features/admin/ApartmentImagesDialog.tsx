@@ -15,7 +15,7 @@ interface Props {
 }
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp']
-const MAX_BYTES = 8 * 1024 * 1024
+const MAX_BYTES = 15 * 1024 * 1024
 
 export function ApartmentImagesDialog({ open, apartment, onClose }: Props) {
   const { t } = useTranslation()
@@ -37,7 +37,7 @@ export function ApartmentImagesDialog({ open, apartment, onClose }: Props) {
       return
     }
     if (file.size > MAX_BYTES) {
-      pushToast({ variant: 'error', title: 'Image is too large (max 8 MB).' })
+      pushToast({ variant: 'error', title: 'Image is too large (max 15 MB).' })
       return
     }
 

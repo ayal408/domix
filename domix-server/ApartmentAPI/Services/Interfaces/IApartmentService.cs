@@ -1,3 +1,4 @@
+using serverApi.Models;
 using serverApi.Models.DTOs;
 
 namespace serverApi.Services.Interfaces
@@ -5,6 +6,9 @@ namespace serverApi.Services.Interfaces
     public interface IApartmentService
     {
         Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>Returns null when no apartment with the given id exists. Used by the anonymous social-share preview endpoint.</summary>
+        Task<ApartmentDTO?> GetApartmentByIdAsync(Guid apartmentId, CancellationToken cancellationToken = default);
         Task<IEnumerable<string>> GetCitiesAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<ApartmentDTO>> SearchApartmentsAsync(
             string? city,
@@ -40,5 +44,13 @@ namespace serverApi.Services.Interfaces
         /// when the caller owns the listing — an owner cannot rate their own apartment.
         /// </summary>
         Task<ApartmentDTO?> RateApartmentAsync(Guid apartmentId, Guid userId, int score, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Marks a listing Available/Rented/Sold. Rented/Sold listings drop out of search and the
+        /// public catalog but are never deleted. Returns null when no apartment with the given id
+        /// exists. Throws <see cref="UnauthorizedAccessException"/> when the caller neither owns the
+        /// listing nor passes <paramref name="isPrivileged"/> (Admin/Manager).
+        /// </summary>
+        Task<ApartmentDTO?> SetApartmentStatusAsync(Guid apartmentId, ApartmentStatus status, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default);
     }
 }

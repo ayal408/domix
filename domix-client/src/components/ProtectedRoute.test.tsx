@@ -12,6 +12,8 @@ const managerUser: UserResponse = {
   registrationMethod: 'Password',
   role: 'Manager',
   joiningDate: '2024-01-01T00:00:00Z',
+  isEmailVerified: true,
+  isBlocked: false,
 }
 
 function renderProtected(props: Partial<ComponentProps<typeof ProtectedRoute>> = {}) {

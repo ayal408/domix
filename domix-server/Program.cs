@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
 using FluentValidation.AspNetCore;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 using serverApi.Data;
 using serverApi.Extensions;
+using serverApi.Hubs;
 
 DotNetEnv.Env.Load();
 
@@ -13,7 +16,8 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -24,14 +28,13 @@ builder.Services.AddAppOptions(builder.Configuration);
 
 var app = builder.Build();
 
-// No EF Core migrations exist yet in this project — this creates the schema
-// from the current model on first boot against a fresh database. Replace
-// with `dotnet ef migrations add InitialCreate` + `db.Database.Migrate()`
-// once migrations are introduced; EnsureCreated and Migrate must not be mixed.
+// Applies any pending EF Core migrations on boot, including the very first one against an empty
+// database. EnsureCreated is never used alongside this — the two are mutually exclusive since
+// EnsureCreated bypasses the migrations history table entirely.
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApartmentContext>();
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 }
 
 app.ConfigurePipeline();
@@ -43,6 +46,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapHub<PresenceHub>("/api/hubs/presence");
 
 app.MapGet("/", async (ApartmentContext db) =>
 {

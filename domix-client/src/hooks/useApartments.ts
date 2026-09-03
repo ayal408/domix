@@ -5,6 +5,7 @@ import { queryKeys } from '@/api/queryKeys'
 import type {
   Apartment,
   ApartmentSearchQuery,
+  ApartmentStatusValue,
   CreateApartmentRequest,
   Guid,
   RateApartmentRequest,
@@ -85,6 +86,15 @@ export function useRateApartment() {
   return useMutation({
     mutationFn: ({ apartmentId, payload }: { apartmentId: Guid; payload: RateApartmentRequest }) =>
       apartmentsApi.rateApartment(apartmentId, payload),
+    onSuccess: () => invalidateApartments(queryClient),
+  })
+}
+
+export function useSetApartmentStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ apartmentId, status }: { apartmentId: Guid; status: ApartmentStatusValue }) =>
+      apartmentsApi.setApartmentStatus(apartmentId, { status }),
     onSuccess: () => invalidateApartments(queryClient),
   })
 }

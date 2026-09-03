@@ -19,6 +19,10 @@ export const authEndpoints = {
   refresh: () => '/refresh',
   logout: () => '/logout',
   me: () => '/me',
+  verifyEmail: () => '/verify-email',
+  resendVerification: () => '/resend-verification',
+  forgotPassword: () => '/forgot-password',
+  resetPassword: () => '/reset-password',
 } as const
 
 /** .NET data API — domix-server/ApartmentAPI/Controllers */
@@ -33,6 +37,11 @@ export const apiEndpoints = {
     linkGoogle: () => '/User/link-google',
     linkPassword: () => '/User/link-password',
     profileImage: () => '/User/profile-image',
+    all: () => '/User/all',
+    block: (userId: Guid) => `/User/${seg(userId)}/block`,
+    unblock: (userId: Guid) => `/User/${seg(userId)}/unblock`,
+    theme: () => '/User/theme',
+    remove: (userId: Guid) => `/User/${seg(userId)}`,
   },
   apartments: {
     all: () => '/Apartment/all',
@@ -42,6 +51,11 @@ export const apiEndpoints = {
     update: (apartmentId: Guid) => `/Apartment/${seg(apartmentId)}`,
     remove: (apartmentId: Guid) => `/Apartment/${seg(apartmentId)}`,
     rate: (apartmentId: Guid) => `/Apartment/${seg(apartmentId)}/rate`,
+    setStatus: (apartmentId: Guid) => `/Apartment/${seg(apartmentId)}/status`,
+  },
+  address: {
+    cities: () => '/Address/cities',
+    streets: () => '/Address/streets',
   },
   favorites: {
     list: () => '/Favorite',
@@ -65,6 +79,22 @@ export const apiEndpoints = {
     archive: (messageId: Guid) => `/Message/archive/${seg(messageId)}`,
     markRead: (messageId: Guid) => `/Message/read/${seg(messageId)}`,
     remove: (messageId: Guid) => `/Message/${seg(messageId)}`,
+  },
+  chat: {
+    stream: () => '/Chat/stream',
+  },
+  support: {
+    create: () => '/Support',
+    list: () => '/Support',
+    resolve: (ticketId: Guid) => `/Support/${seg(ticketId)}/resolve`,
+  },
+  notifications: {
+    feed: () => '/Notification',
+    markSeen: () => '/Notification/mark-seen',
+    create: () => '/Notification',
+  },
+  analytics: {
+    summary: () => '/Analytics/summary',
   },
   health: {
     dbQuery: () => '/health/db-query',

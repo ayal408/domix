@@ -17,12 +17,15 @@ const testUser: UserResponse = {
   registrationMethod: 'Password',
   role: 'User',
   joiningDate: '2024-01-01T00:00:00Z',
+  isEmailVerified: true,
+  isBlocked: false,
 }
 
 const apartment: Apartment = {
   apartmentId: 'a1',
   userId: 'owner-1',
-  status: true,
+  status: 'Available',
+  isAnonymous: false,
   price: 5000,
   date: '2024-01-01T00:00:00Z',
   city: 'Tel Aviv',

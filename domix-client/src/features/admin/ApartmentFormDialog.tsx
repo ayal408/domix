@@ -1,6 +1,6 @@
-import { Fragment, useEffect } from 'react'
+import { Fragment, useEffect, useState } from 'react'
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,7 +13,9 @@ import {
   type ApartmentFormValues,
 } from '@/features/apartments/schemas'
 import { useCreateApartment, useUpdateApartment } from '@/hooks/useApartments'
+import { useCitySuggestions, useStreetSuggestions } from '@/hooks/useAddress'
 import { InputField, TextareaField, CheckboxField, SelectField } from '@/components/ui/Field'
+import { AddressAutocomplete } from '@/components/ui/AddressAutocomplete'
 import { Button } from '@/components/ui/Button'
 import { useToastStore } from '@/stores/toast.store'
 import { errorTranslationKey, toApiError } from '@/api/errors'
@@ -24,10 +26,13 @@ interface Props {
   open: boolean
   apartment: Apartment | null
   onClose: () => void
+  /** Called instead of `onClose` right after a successful create, with the new listing — lets the
+   * caller chain straight into the images dialog so photos can be attached without a separate step. */
+  onCreated?: (apartment: Apartment) => void
 }
 
 /** Create when `apartment` is null, full edit (owner/Admin/Manager only — enforced server-side) otherwise. */
-export function ApartmentFormDialog({ open, apartment, onClose }: Props) {
+export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Props) {
   const { t } = useTranslation()
   const isEdit = apartment != null
   const createMutation = useCreateApartment()
@@ -38,14 +43,27 @@ export function ApartmentFormDialog({ open, apartment, onClose }: Props) {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ApartmentFormInput, unknown, ApartmentFormValues>({
     resolver: zodResolver(apartmentFormSchema),
     defaultValues: APARTMENT_FORM_DEFAULTS,
   })
 
+  const [cityQuery, setCityQuery] = useState('')
+  const [addressQuery, setAddressQuery] = useState('')
+  const selectedCity = watch('city')
+  const citySuggestions = useCitySuggestions(cityQuery)
+  const streetSuggestions = useStreetSuggestions(selectedCity ?? '', addressQuery)
+
   useEffect(() => {
-    if (open) reset(apartment ? apartmentToFormValues(apartment) : APARTMENT_FORM_DEFAULTS)
+    if (open) {
+      reset(apartment ? apartmentToFormValues(apartment) : APARTMENT_FORM_DEFAULTS)
+      setCityQuery('')
+      setAddressQuery('')
+    }
   }, [open, apartment, reset])
 
   async function onSubmit(values: ApartmentFormValues) {
@@ -53,11 +71,16 @@ export function ApartmentFormDialog({ open, apartment, onClose }: Props) {
       if (isEdit) {
         await updateMutation.mutateAsync({ apartmentId: apartment.apartmentId, payload: toUpdateApartmentRequest(values) })
         pushToast({ variant: 'success', title: t('admin.apartments.updateSuccess') })
+        onClose()
       } else {
-        await createMutation.mutateAsync(toCreateApartmentRequest(values))
+        const created = await createMutation.mutateAsync(toCreateApartmentRequest(values))
         pushToast({ variant: 'success', title: t('admin.apartments.createSuccess') })
+        if (onCreated) {
+          onCreated(created)
+        } else {
+          onClose()
+        }
       }
-      onClose()
     } catch (error) {
       const apiError = toApiError(error)
       pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
@@ -97,11 +120,52 @@ export function ApartmentFormDialog({ open, apartment, onClose }: Props) {
 
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <InputField label={t('apartments.fields.city')} required error={errors.city?.message} {...register('city')} />
+                    <Controller
+                      name="city"
+                      control={control}
+                      render={({ field }) => (
+                        <AddressAutocomplete
+                          label={t('apartments.fields.city')}
+                          required
+                          error={errors.city?.message}
+                          value={field.value}
+                          onChange={(value) => {
+                            field.onChange(value)
+                            // Streets belong to a specific city — a different pick invalidates the old street.
+                            setValue('address', '')
+                            setAddressQuery('')
+                          }}
+                          query={cityQuery}
+                          onQueryChange={setCityQuery}
+                          suggestions={citySuggestions.data ?? []}
+                          isLoading={citySuggestions.isFetching}
+                          placeholder={t('apartments.fields.cityPlaceholder')}
+                        />
+                      )}
+                    />
                     <InputField label={t('apartments.fields.area')} required error={errors.area?.message} {...register('area')} />
                   </div>
 
-                  <InputField label={t('apartments.fields.address')} required error={errors.address?.message} {...register('address')} />
+                  <Controller
+                    name="address"
+                    control={control}
+                    render={({ field }) => (
+                      <AddressAutocomplete
+                        label={t('apartments.fields.address')}
+                        required
+                        error={errors.address?.message}
+                        value={field.value}
+                        onChange={field.onChange}
+                        query={addressQuery}
+                        onQueryChange={setAddressQuery}
+                        suggestions={streetSuggestions.data ?? []}
+                        isLoading={streetSuggestions.isFetching}
+                        disabled={!selectedCity}
+                        placeholder={selectedCity ? t('apartments.fields.addressPlaceholder') : undefined}
+                        hint={!selectedCity ? t('apartments.fields.addressNeedsCity') : undefined}
+                      />
+                    )}
+                  />
 
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <InputField
@@ -149,7 +213,7 @@ export function ApartmentFormDialog({ open, apartment, onClose }: Props) {
                     <div className="col-span-2 flex items-end gap-6 pb-2">
                       <CheckboxField label={t('apartments.fields.elevator')} {...register('elevator')} />
                       <CheckboxField label={t('apartments.fields.parking')} {...register('parking')} />
-                      {isEdit && <CheckboxField label={t('apartments.fields.status')} {...register('status')} />}
+                      <CheckboxField label={t('apartments.fields.isAnonymous')} {...register('isAnonymous')} />
                     </div>
                   </div>
 
