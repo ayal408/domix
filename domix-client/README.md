@@ -4,7 +4,7 @@ React 19 frontend for the DOMIX platform, built with Vite 8.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 20.19+ or 22.12+
 - npm
 
 ## Development
