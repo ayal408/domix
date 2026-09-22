@@ -56,7 +56,7 @@ For container-based development:
 
 For running individual services:
 
-- Node.js 20 or newer
+- Node.js 20.19+ or 22.12+
 - npm
 - .NET 10 SDK
 
