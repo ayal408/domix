@@ -1,22 +1,21 @@
-// Minimal in-memory user store.
-// Swap this out for a real database once one is wired up (see DB_CONNECTION_STRING
-// in docker-compose.yml for domix-server) — data here does not survive a restart.
-const usersByEmail = new Map();
+const { pool } = require('./db');
 
-function findByEmail(email) {
-  return usersByEmail.get(email.toLowerCase());
+async function findByEmail(email) {
+  const { rows } = await pool.query(
+    'SELECT id, email, password_hash AS "passwordHash", name FROM users WHERE email = $1',
+    [email.toLowerCase()]
+  );
+  return rows[0];
 }
 
-function create({ email, passwordHash, name }) {
-  const user = {
-    id: usersByEmail.size + 1,
-    email: email.toLowerCase(),
-    passwordHash,
-    name,
-    createdAt: new Date().toISOString(),
-  };
-  usersByEmail.set(user.email, user);
-  return user;
+async function create({ email, passwordHash, name }) {
+  const { rows } = await pool.query(
+    `INSERT INTO users (email, password_hash, name)
+     VALUES ($1, $2, $3)
+     RETURNING id, email, password_hash AS "passwordHash", name`,
+    [email.toLowerCase(), passwordHash, name || null]
+  );
+  return rows[0];
 }
 
 module.exports = { findByEmail, create };

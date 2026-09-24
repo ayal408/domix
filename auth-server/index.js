@@ -2,11 +2,13 @@ const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 
+const { migrateWithRetry } = require('./db');
 const users = require('./userStore');
 const { signToken, requireAuth } = require('./auth');
 
 const PORT = process.env.PORT || 5000;
 const PASSWORD_MIN_LENGTH = 8;
+const UNIQUE_VIOLATION = '23505';
 
 const app = express();
 app.use(cors());
@@ -18,49 +20,61 @@ router.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-router.post('/register', async (req, res) => {
-  const { email, password, name } = req.body || {};
+router.post('/register', async (req, res, next) => {
+  try {
+    const { email, password, name } = req.body || {};
 
-  if (typeof email !== 'string' || typeof password !== 'string') {
-    return res.status(400).json({ error: 'email and password are required' });
-  }
-  if (password.length < PASSWORD_MIN_LENGTH) {
-    return res.status(400).json({ error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` });
-  }
-  if (users.findByEmail(email)) {
-    return res.status(409).json({ error: 'a user with this email already exists' });
-  }
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+    if (password.length < PASSWORD_MIN_LENGTH) {
+      return res.status(400).json({ error: `password must be at least ${PASSWORD_MIN_LENGTH} characters` });
+    }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = users.create({ email, passwordHash, name });
-  const token = signToken(user);
+    const passwordHash = await bcrypt.hash(password, 10);
+    const user = await users.create({ email, passwordHash, name });
+    const token = signToken(user);
 
-  res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    if (err.code === UNIQUE_VIOLATION) {
+      return res.status(409).json({ error: 'a user with this email already exists' });
+    }
+    next(err);
+  }
 });
 
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
+router.post('/login', async (req, res, next) => {
+  try {
+    const { email, password } = req.body || {};
 
-  if (typeof email !== 'string' || typeof password !== 'string') {
-    return res.status(400).json({ error: 'email and password are required' });
+    if (typeof email !== 'string' || typeof password !== 'string') {
+      return res.status(400).json({ error: 'email and password are required' });
+    }
+
+    const user = await users.findByEmail(email);
+    const passwordMatches = user && (await bcrypt.compare(password, user.passwordHash));
+    if (!passwordMatches) {
+      return res.status(401).json({ error: 'invalid email or password' });
+    }
+
+    const token = signToken(user);
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    next(err);
   }
-
-  const user = users.findByEmail(email);
-  const passwordMatches = user && (await bcrypt.compare(password, user.passwordHash));
-  if (!passwordMatches) {
-    return res.status(401).json({ error: 'invalid email or password' });
-  }
-
-  const token = signToken(user);
-  res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
 });
 
-router.get('/me', requireAuth, (req, res) => {
-  const user = users.findByEmail(req.user.email);
-  if (!user) {
-    return res.status(404).json({ error: 'user not found' });
+router.get('/me', requireAuth, async (req, res, next) => {
+  try {
+    const user = await users.findByEmail(req.user.email);
+    if (!user) {
+      return res.status(404).json({ error: 'user not found' });
+    }
+    res.json({ id: user.id, email: user.email, name: user.name });
+  } catch (err) {
+    next(err);
   }
-  res.json({ id: user.id, email: user.email, name: user.name });
 });
 
 // Mounted at /api/auth to match the nginx gateway's proxy_pass for this service.
@@ -76,6 +90,13 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'internal server error' });
 });
 
-app.listen(PORT, () => {
-  console.log(`auth-server listening on port ${PORT}`);
-});
+migrateWithRetry()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`auth-server listening on port ${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Failed to run database migrations', err);
+    process.exit(1);
+  });

@@ -23,6 +23,27 @@ services:
       - PORT=5000
       - JWT_SECRET=${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in your .env file}
       - JWT_EXPIRES_IN=1h
+      - DATABASE_URL=postgres://${AUTH_DB_USER:-auth}:${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in your .env file}@auth-db:5432/${AUTH_DB_NAME:-auth}
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # מסד הנתונים של שרת האימות
+  auth-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${AUTH_DB_USER:-auth}
+      - POSTGRES_PASSWORD=${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in your .env file}
+      - POSTGRES_DB=${AUTH_DB_NAME:-auth}
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER:-auth} -d ${AUTH_DB_NAME:-auth}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - app-network
 
@@ -40,3 +61,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  auth-db-data:
