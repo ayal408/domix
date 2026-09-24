@@ -3,12 +3,11 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # העתקת קובץ הפרויקט וביצוע שחזור חבילות
-COPY ["domix-server.vbproj", "domix-server/"]
-RUN dotnet restore "domix-server/domix-server.vbproj"
+COPY domix-server.csproj .
+RUN dotnet restore "domix-server.csproj"
 
 # העתקת כל שאר הקוד וביצוע Publish
 COPY . .
-WORKDIR "/src/domix-server"
 RUN dotnet publish -c Release -o /app/publish
 
 # --- שלב ה-Runtime ---

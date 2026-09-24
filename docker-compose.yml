@@ -5,7 +5,7 @@ services:
   nginx-gateway:
     build:
       context: .
-      dockerfile: domix-client/Dockerfile # או ה-Dockerfile הראשי שבנית עבור Nginx וקליינט יחד
+      dockerfile: nginx/Dockerfile
     ports:
       - "80:80"
     depends_on:
