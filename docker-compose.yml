@@ -21,6 +21,8 @@ services:
       dockerfile: Dockerfile
     environment:
       - PORT=5000
+      - JWT_SECRET=${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in your .env file}
+      - JWT_EXPIRES_IN=1h
     networks:
       - app-network
 
