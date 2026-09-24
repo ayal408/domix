@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  domix-client:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: domix-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: domix-client/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  domix-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore domix-server.Tests/domix-server.Tests.csproj
+      - run: dotnet build domix-server.Tests/domix-server.Tests.csproj --no-restore
+      - run: dotnet test domix-server.Tests/domix-server.Tests.csproj --no-build
+      - run: dotnet list domix-server/domix-server.csproj package --vulnerable --include-transitive
+          | tee /tmp/vuln.txt
+      - run: '! grep -q "has the following vulnerable packages" /tmp/vuln.txt'
+
+  auth-server:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: auth-server
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: auth
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: auth
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U auth -d auth"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      JWT_SECRET: ci-test-secret
+      DATABASE_URL: postgres://auth:testpass@localhost:5432/auth
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: auth-server/package-lock.json
+      - run: npm ci
+      - run: npm audit --omit=dev --audit-level=high
+      - run: npm test
