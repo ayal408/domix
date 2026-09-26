@@ -23,7 +23,11 @@ services:
       - PORT=5000
       - JWT_SECRET=${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in your .env file}
       - JWT_EXPIRES_IN=1h
-      - DATABASE_URL=postgres://${AUTH_DB_USER:-auth}:${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in your .env file}@auth-db:5432/${AUTH_DB_NAME:-auth}
+      - PGHOST=auth-db
+      - PGPORT=5432
+      - PGUSER=${AUTH_DB_USER:-auth}
+      - PGPASSWORD=${AUTH_DB_PASSWORD:?set AUTH_DB_PASSWORD in your .env file}
+      - PGDATABASE=${AUTH_DB_NAME:-auth}
     depends_on:
       auth-db:
         condition: service_healthy

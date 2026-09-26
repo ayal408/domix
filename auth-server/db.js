@@ -1,12 +1,17 @@
 const { Pool } = require('pg');
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error('DATABASE_URL environment variable is required');
+// Prefer discrete PG* fields (PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE, which
+// `pg` reads automatically) over a DATABASE_URL string: a password containing
+// URI-reserved characters (/, #, ?, @, :) would otherwise corrupt the URL.
+// DATABASE_URL remains supported for callers (e.g. tests, managed hosts) that
+// already have a full connection string.
+if (!process.env.DATABASE_URL && !process.env.PGHOST) {
+  throw new Error('DATABASE_URL or PGHOST (+ PGUSER/PGPASSWORD/PGDATABASE) environment variables are required');
 }
 
-const pool = new Pool({ connectionString: DATABASE_URL });
+const pool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL })
+  : new Pool();
 
 async function migrate() {
   await pool.query(`
