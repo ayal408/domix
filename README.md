@@ -68,12 +68,13 @@ connection; it also serves uploaded apartment photos and owns the real-time pres
 
 ```text
 domix/
-├── auth-server/       # Express authentication service
-├── domix-client/      # React + TypeScript frontend
-├── domix-server/      # ASP.NET Core data API
-├── nginx/             # Reverse-proxy Dockerfile
-├── integration-tests/ # End-to-end tests: auth-server + domix-server + Postgres together
-├── docker-compose.yml # Multi-service development stack
+├── auth-server/         # Express authentication service
+├── domix-client/        # React + TypeScript frontend
+├── domix-server/        # ASP.NET Core data API
+├── domix-server.Tests/  # domix-server unit tests (xUnit)
+├── nginx/               # Reverse-proxy Dockerfile
+├── integration-tests/   # End-to-end tests: auth-server + domix-server + Postgres together
+├── docker-compose.yml   # Multi-service development stack
 └── README.md
 ```
 
@@ -94,15 +95,18 @@ For running services individually:
 
 ```bash
 cp .env.example .env                          # ports + VITE_GOOGLE_CLIENT_ID (optional)
-cp auth-server/.env.example auth-server/.env   # fill in JWT_SECRET, GOOGLE_CLIENT_ID, ...
-cp domix-server/.env.example domix-server/.env # fill in JWT_SECRET, Gmail/Gemini credentials, ...
+cp auth-server/.env.example auth-server/.env   # fill in JWT_SECRET, GOOGLE_CLIENT_ID, INTERNAL_SERVICE_KEY, ...
+cp domix-server/.env.example domix-server/.env # fill in JWT_SECRET, INTERNAL_SERVICE_KEY, Gmail/Gemini credentials, ...
 docker compose up --build
 ```
 
 The gateway serves the app at `http://localhost` (override with `NGINX_PORT`). `docker-compose.yml`
 overrides a couple of values from each `.env` automatically (container hostnames instead of
 `localhost`) — no manual edits needed to switch between running a service standalone and running
-it via Compose.
+it via Compose. `INTERNAL_SERVICE_KEY` is the one value that must be set to the *exact same string*
+in both `auth-server/.env` and `domix-server/.env` — it's how domix-server tells a call from
+auth-server apart from an arbitrary caller on the internal network (see
+`domix-server/ApartmentAPI/Security/InternalOnlyAttribute.cs`).
 
 ## Running services individually (no Docker)
 
@@ -122,7 +126,7 @@ Other useful commands: `npm run build`, `npm run lint`, `npm run typecheck`, `np
 ```bash
 cd auth-server
 npm install
-cp .env.example .env   # fill in JWT_SECRET (32+ chars) and DATA_SERVICE_URL
+cp .env.example .env   # fill in JWT_SECRET (32+ chars), INTERNAL_SERVICE_KEY, and DATA_SERVICE_URL
 npm start
 ```
 
@@ -130,7 +134,7 @@ npm start
 
 ```bash
 cd domix-server
-cp .env.example .env   # fill in DEFAULT_CONNECTION (a running Postgres) and JWT_SECRET (32+ chars)
+cp .env.example .env   # fill in DEFAULT_CONNECTION (a running Postgres), JWT_SECRET, and INTERNAL_SERVICE_KEY
 dotnet restore
 dotnet run
 ```
@@ -142,16 +146,15 @@ served at `/swagger`.
 
 | Suite | Command | What it covers |
 | --- | --- | --- |
-| `domix-client` | `cd domix-client && npm test` | Component/hook unit tests (Vitest) |
+| `domix-client` | `cd domix-client && npm test` | Component/hook unit tests (Vitest), including automated accessibility checks (axe-core) on shared UI components |
+| `domix-server.Tests` | `cd domix-server.Tests && dotnet test` | `domix-server` unit tests (xUnit) |
 | `integration-tests` | `cd integration-tests && npm test` | `auth-server` + `domix-server` + Postgres together, real HTTP, no mocking — see [`integration-tests/README.md`](integration-tests/README.md) |
-
-`domix-server` doesn't yet have a dedicated unit-test project (see Roadmap).
 
 ## CI
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push/PR to `dev`: frontend
-lint/typecheck/test/build, an auth-server syntax check, a domix-server build, and the full
-integration-test suite against a Postgres service container.
+lint/typecheck/test/build, an auth-server syntax check, a domix-server build + unit tests, and the
+full integration-test suite against a Postgres service container.
 
 ## Roadmap
 
@@ -159,9 +162,8 @@ integration-test suite against a Postgres service container.
 - [x] Replace the sample API endpoint with DOMIX domain endpoints
 - [x] Add database persistence and migrations
 - [x] Complete Docker Compose startup
-- [x] Add automated tests (frontend unit tests + service-to-service integration tests)
+- [x] Add automated tests (frontend + domix-server unit tests, accessibility checks, service-to-service integration tests)
 - [x] Add CI checks for frontend and backend builds
-- [ ] Add a dedicated unit-test project for `domix-server`
 - [ ] Document environment variables in full (Gmail, Gemini, Google OAuth setup)
 - [ ] Add screenshots and a hosted demo
 
