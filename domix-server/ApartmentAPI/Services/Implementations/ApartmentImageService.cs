@@ -13,6 +13,7 @@ namespace serverApi.Services.Implementations
         private readonly ApartmentContext _context;
         private readonly ILogger<ApartmentImageService> _logger;
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
+        private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10 MB
 
         public ApartmentImageService(ApartmentContext context, ILogger<ApartmentImageService> logger)
         {
@@ -67,6 +68,9 @@ namespace serverApi.Services.Implementations
         {
             if (dto.Image == null || dto.Image.Length == 0)
                 raiseInvalidOperation("No image provided");
+
+            if (dto.Image.Length > MaxImageSizeBytes)
+                throw new ArgumentException($"Image exceeds the maximum allowed size of {MaxImageSizeBytes / (1024 * 1024)} MB.");
 
             var extension = Path.GetExtension(dto.Image.FileName).ToLowerInvariant();
             if (!_allowedExtensions.Contains(extension))
