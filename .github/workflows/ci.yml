@@ -95,6 +95,10 @@ jobs:
       - name: Build
         run: dotnet build domix-server.csproj --configuration Release --no-restore
 
+      - name: Unit test
+        working-directory: domix-server.Tests
+        run: dotnet test domix-server.Tests.csproj --configuration Release
+
   integration:
     name: Integration (auth-server + domix-server + Postgres)
     runs-on: ubuntu-latest

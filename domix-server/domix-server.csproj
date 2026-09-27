@@ -27,4 +27,8 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="domix-server.Tests" />
+  </ItemGroup>
+
 </Project>
