@@ -205,6 +205,49 @@ test("logout revokes the refresh token so it can no longer be used to refresh", 
   assert.equal(afterLogout.status, 401);
 });
 
+test("refresh rotates the refresh token, so a reused old one is rejected", async () => {
+  const email = `rotate-${runId}@example.com`;
+  const userName = `rotate${runId}`;
+  const registerRes = await authFetch("/register", {
+    method: "POST",
+    body: JSON.stringify({ userName, email, password: "password123" }),
+  });
+  assert.equal(registerRes.status, 200);
+
+  const originalCookie = registerRes.headers
+    .getSetCookie()
+    .find((c) => c.startsWith("refreshToken="))
+    .split(";")[0];
+
+  const firstRefresh = await authFetch("/refresh", {
+    method: "POST",
+    headers: { Cookie: originalCookie },
+  });
+  assert.equal(firstRefresh.status, 200);
+
+  const rotatedCookie = firstRefresh.headers
+    .getSetCookie()
+    .find((c) => c.startsWith("refreshToken="))
+    .split(";")[0];
+  // Rotation only means something if the new cookie is a genuinely different token.
+  assert.notEqual(rotatedCookie, originalCookie);
+
+  // The original token was consumed by the refresh above -- reusing it is exactly what a stolen,
+  // already-used refresh token would look like.
+  const reuseOriginal = await authFetch("/refresh", {
+    method: "POST",
+    headers: { Cookie: originalCookie },
+  });
+  assert.equal(reuseOriginal.status, 401);
+
+  // The rotated token, on the other hand, is the legitimate live session and must keep working.
+  const useRotated = await authFetch("/refresh", {
+    method: "POST",
+    headers: { Cookie: rotatedCookie },
+  });
+  assert.equal(useRotated.status, 200);
+});
+
 test("a user cannot attach an image to another user's apartment", async () => {
   // adminUserId/adminAccessToken owns an apartment created here; a second, unrelated account
   // then tries to register an image against it directly -- this is the exact request shape the

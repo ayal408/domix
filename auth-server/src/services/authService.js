@@ -7,6 +7,7 @@ import {
     verifyRefreshToken
 } from "../utils/jwt.js";
 import { mapUser } from "../utils/mapper.js";
+import { setRefreshTokenCookie } from "../utils/cookies.js";
 import {
   lookupUser,
   createUser,
@@ -151,6 +152,23 @@ export async function refresh(req, res) {
     }
 
     const accessToken = createAccessToken(user);
+
+    // Rotation: the old refresh token is revoked the moment it's used, and a brand new one takes
+    // its place in the cookie. This bounds how long a stolen-but-unused refresh token stays
+    // usable to a single access-token lifetime instead of its full 30-day life, and (bonus) means
+    // a copy of an already-rotated token failing this same revocation check is a strong signal of
+    // theft, not just an expected user action.
+    const newRefreshToken = createRefreshToken(user);
+    if (payload.jti) {
+      try {
+        await revokeRefreshToken(payload.userId, payload.jti, new Date(payload.exp * 1000));
+      } catch {
+        // Best-effort, same as logout(): a user must still be able to refresh their session even
+        // if domix-server is briefly unreachable. Worst case, the old token stays usable until it
+        // expires on its own rather than being cut off the instant it's rotated.
+      }
+    }
+    setRefreshTokenCookie(res, newRefreshToken);
 
     res.json({
       accessToken

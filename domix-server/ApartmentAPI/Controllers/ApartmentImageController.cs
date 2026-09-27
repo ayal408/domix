@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using serverApi.Models.DTOs;
 using serverApi.Services.Interfaces;
 
@@ -33,6 +34,7 @@ namespace serverApi.Controllers
         // CREATE IMAGE (DTO ONLY)
         // =========================
         [HttpPost]
+        [EnableRateLimiting("imageUpload")]
         public async Task<IActionResult> Create([FromBody] ApartmentImageDTO dto, CancellationToken cancellationToken)
         {
             if (dto == null)
@@ -62,6 +64,7 @@ namespace serverApi.Controllers
         [HttpPost("upload")]
         [Consumes("multipart/form-data")]
         [RequestSizeLimit(11 * 1024 * 1024)] // slightly above the service's 10 MB check, so the real limit always produces the service's clear error message rather than a generic 413
+        [EnableRateLimiting("imageUpload")]
         public async Task<IActionResult> Upload([FromForm] UploadImageDto dto, CancellationToken cancellationToken)
         {
             if (dto?.Image == null || dto.Image.Length == 0)

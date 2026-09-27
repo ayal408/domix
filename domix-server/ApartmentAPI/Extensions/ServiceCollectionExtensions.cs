@@ -115,11 +115,28 @@ namespace serverApi.Extensions
                         Window = TimeSpan.FromMinutes(1),
                         QueueLimit = 0
                     }));
+
+                // Upload has a per-file size cap (see ApartmentImageService) but nothing stopped a
+                // single authenticated user from calling it back-to-back -- partition by userId
+                // (not IP) since it's always [Authorize]d and a shared IP (office NAT) shouldn't
+                // throttle multiple real users together.
+                options.AddPolicy("imageUpload", httpContext => RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: httpContext.User.FindFirst("userId")?.Value
+                        ?? httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                        ?? httpContext.Connection.RemoteIpAddress?.ToString()
+                        ?? "unknown",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 20,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0
+                    }));
+
                 options.OnRejected = async (context, cancellationToken) =>
                 {
                     context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
                     await context.HttpContext.Response.WriteAsync(
-                        "Too many chat requests. Please wait a moment and try again.", cancellationToken);
+                        "Too many requests. Please wait a moment and try again.", cancellationToken);
                 };
             });
 
