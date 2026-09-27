@@ -38,14 +38,21 @@ namespace serverApi.Controllers
             if (dto == null)
                 return BadRequest("Invalid data");
 
+            if (!TryGetUserId(out var userId))
+                return Unauthorized("User identity is invalid.");
+
             try
             {
-                var result = await _imageService.CreateImageAsync(dto, cancellationToken);
+                var result = await _imageService.CreateImageAsync(dto, userId, IsPrivileged(), cancellationToken);
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)
             {
                 return BadRequest(ex.Message);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
             }
         }
 
@@ -60,9 +67,12 @@ namespace serverApi.Controllers
             if (dto?.Image == null || dto.Image.Length == 0)
                 return BadRequest("No image provided");
 
+            if (!TryGetUserId(out var userId))
+                return Unauthorized("User identity is invalid.");
+
             try
             {
-                var result = await _imageService.UploadImageAsync(dto, cancellationToken);
+                var result = await _imageService.UploadImageAsync(dto, userId, IsPrivileged(), cancellationToken);
                 return Ok(result);
             }
             catch (KeyNotFoundException ex)
@@ -73,11 +83,24 @@ namespace serverApi.Controllers
             {
                 return BadRequest(ex.Message);
             }
+            catch (UnauthorizedAccessException)
+            {
+                return Forbid();
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while uploading image.");
                 return StatusCode(500, "Internal server error occurred during image upload.");
             }
+        }
+
+        /// <summary>Admin/Manager may attach images to listings they don't own; regular users may only act on their own.</summary>
+        private bool IsPrivileged() => User.IsInRole("Admin") || User.IsInRole("Manager");
+
+        private bool TryGetUserId(out Guid userId)
+        {
+            var claim = User.FindFirst("userId")?.Value ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return Guid.TryParse(claim, out userId);
         }
     }
 }

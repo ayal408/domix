@@ -169,3 +169,33 @@ test("an admin cannot block their own account", async () => {
   assert.equal(res.status, 409);
   assert.equal(body.code, "CANNOT_BLOCK_SELF");
 });
+
+test("a user cannot attach an image to another user's apartment", async () => {
+  // adminUserId/adminAccessToken owns an apartment created here; a second, unrelated account
+  // then tries to register an image against it directly -- this is the exact request shape the
+  // real image-management UI sends, just with someone else's apartmentId, so it's what an IDOR
+  // exploit against ApartmentImageController would actually look like.
+  const createRes = await fetch(`${services.domixServerUrl}/api/Apartment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminAccessToken}` },
+    body: JSON.stringify({ city: "Tel Aviv", address: "1 Rothschild", area: "Center", price: 5000 }),
+  });
+  const apartment = await createRes.json();
+  assert.equal(createRes.status, 200);
+
+  const outsiderEmail = `image-outsider-${runId}@example.com`;
+  const outsiderRes = await authFetch("/register", {
+    method: "POST",
+    body: JSON.stringify({ userName: `imageoutsider${runId}`, email: outsiderEmail, password: "password123" }),
+  });
+  const outsider = await outsiderRes.json();
+  assert.equal(outsiderRes.status, 200);
+
+  const imageRes = await fetch(`${services.domixServerUrl}/api/ApartmentImage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${outsider.accessToken}` },
+    body: JSON.stringify({ apartmentId: apartment.apartmentId, imageUrl: "https://example.com/hijacked.jpg" }),
+  });
+
+  assert.equal(imageRes.status, 403);
+});

@@ -36,13 +36,19 @@ namespace serverApi.Services.Implementations
                 .ToListAsync(cancellationToken);
         }
 
-        public async Task<ApartmentImageDTO> CreateImageAsync(ApartmentImageDTO dto, CancellationToken cancellationToken = default)
+        public async Task<ApartmentImageDTO> CreateImageAsync(ApartmentImageDTO dto, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
         {
-            var exists = await _context.Apartments
-                .AnyAsync(a => a.ApartmentId == dto.ApartmentId, cancellationToken);
+            var apartment = await _context.Apartments
+                .FirstOrDefaultAsync(a => a.ApartmentId == dto.ApartmentId, cancellationToken);
 
-            if (!exists)
+            if (apartment == null)
                 throw new KeyNotFoundException("Apartment not found");
+
+            if (apartment.UserId != userId && !isPrivileged)
+            {
+                _logger.LogWarning("User {UserId} attempted to add an image to apartment {ApartmentId} owned by {OwnerId}", userId, dto.ApartmentId, apartment.UserId);
+                throw new UnauthorizedAccessException("You do not own this apartment.");
+            }
 
             var image = new ApartmentImage
             {
@@ -64,7 +70,7 @@ namespace serverApi.Services.Implementations
             };
         }
 
-        public async Task<ApartmentImageDTO> UploadImageAsync(UploadImageDto dto, CancellationToken cancellationToken = default)
+        public async Task<ApartmentImageDTO> UploadImageAsync(UploadImageDto dto, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
         {
             if (dto.Image == null || dto.Image.Length == 0)
                 raiseInvalidOperation("No image provided");
@@ -76,11 +82,17 @@ namespace serverApi.Services.Implementations
             if (!_allowedExtensions.Contains(extension))
                 throw new ArgumentException("Invalid file type. Only JPG, PNG, and WEBP are allowed.");
 
-            var exists = await _context.Apartments
-                .AnyAsync(a => a.ApartmentId == dto.ApartmentId, cancellationToken);
+            var apartment = await _context.Apartments
+                .FirstOrDefaultAsync(a => a.ApartmentId == dto.ApartmentId, cancellationToken);
 
-            if (!exists)
+            if (apartment == null)
                 throw new KeyNotFoundException("Apartment not found");
+
+            if (apartment.UserId != userId && !isPrivileged)
+            {
+                _logger.LogWarning("User {UserId} attempted to upload an image to apartment {ApartmentId} owned by {OwnerId}", userId, dto.ApartmentId, apartment.UserId);
+                throw new UnauthorizedAccessException("You do not own this apartment.");
+            }
 
             var fileName = $"{Guid.NewGuid()}{extension}";
             var folderPath = Path.Combine("wwwroot", "images");
