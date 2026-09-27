@@ -93,11 +93,16 @@ namespace serverApi.Services.Implementations
                         .AsNoTracking()
                         .FirstOrDefaultAsync(u => u.UserId == savedSearch.UserId, cancellationToken);
 
-                    if (!string.IsNullOrWhiteSpace(user?.EmailAddress))
+                    if (string.IsNullOrWhiteSpace(user?.EmailAddress))
                     {
-                        var html = BuildDigestHtml(savedSearch.Name, matches, _configuration);
-                        await emailService.SendEmailAsync(user.EmailAddress, $"DOMIX — {matches.Count} new match(es) for \"{savedSearch.Name}\"", html, cancellationToken);
+                        // No address to notify -- leave LastNotifiedAt alone so these matches are
+                        // still picked up (and an email attempted) on a later sweep, e.g. once the
+                        // user adds an email address, rather than being silently skipped forever.
+                        continue;
                     }
+
+                    var html = BuildDigestHtml(savedSearch.Name, matches, _configuration);
+                    await emailService.SendEmailAsync(user.EmailAddress, $"DOMIX — {matches.Count} new match(es) for \"{savedSearch.Name}\"", html, cancellationToken);
 
                     await savedSearchService.MarkNotifiedAsync(savedSearch.SavedSearchId, now, cancellationToken);
                 }
