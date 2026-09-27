@@ -7,6 +7,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { startServices } from "../helpers/services.js";
+import { resetDatabase } from "../helpers/db.js";
 
 const POSTGRES_URL =
   process.env.INTEGRATION_TEST_POSTGRES_URL ||
@@ -17,6 +18,11 @@ let services;
 const runId = Date.now();
 
 before(async () => {
+  // A fresh Postgres service container gives CI a clean database automatically; this makes
+  // repeated local `npm test` runs against the same long-lived database behave the same way
+  // -- in particular, the "first user in the database becomes Admin" test below depends on it.
+  await resetDatabase(POSTGRES_URL);
+
   services = await startServices({
     postgresUrl: POSTGRES_URL,
     domixServerPort: 18080,
@@ -35,6 +41,12 @@ function authFetch(path, options) {
   });
 }
 
+// domix-server makes the very first user ever registered in the database an Admin (see
+// UserService.CreateUserAsync's isFirstUser check) -- captured here so the self-block test
+// below has real admin credentials to work with, without a separate bootstrap step.
+let adminAccessToken;
+let adminUserId;
+
 test("register creates a user that is actually persisted in domix-server's database", async () => {
   const email = `flow-${runId}@example.com`;
   const res = await authFetch("/register", {
@@ -47,12 +59,24 @@ test("register creates a user that is actually persisted in domix-server's datab
   assert.ok(body.accessToken);
   assert.equal(body.user.email, email);
 
+  adminAccessToken = body.accessToken;
+  adminUserId = body.user.userId;
+
   // Confirms the write actually reached domix-server's database, not just that auth-server
-  // returned something that looked right.
-  const directRes = await fetch(`${services.domixServerUrl}/api/User/lookup?email=${email}`);
+  // returned something that looked right. Uses the same internal key auth-server itself
+  // presents -- this endpoint is gated to service-to-service callers (see the next test).
+  const directRes = await fetch(`${services.domixServerUrl}/api/User/lookup?email=${email}`, {
+    headers: { "X-Internal-Api-Key": services.internalServiceKey },
+  });
   const directBody = await directRes.json();
   assert.equal(directRes.status, 200);
   assert.equal(directBody.userId, body.user.userId);
+  assert.equal(directBody.role, "Admin"); // first user in a fresh database
+});
+
+test("domix-server rejects internal-only endpoints without the internal service key", async () => {
+  const res = await fetch(`${services.domixServerUrl}/api/User/lookup?email=anyone@example.com`);
+  assert.equal(res.status, 403);
 });
 
 test("register rejects a duplicate email", async () => {
@@ -133,4 +157,15 @@ test("/me rejects a request with no token", async () => {
 test("/me rejects a malformed token", async () => {
   const res = await authFetch("/me", { headers: { Authorization: "Bearer not-a-real-token" } });
   assert.equal(res.status, 401);
+});
+
+test("an admin cannot block their own account", async () => {
+  const res = await fetch(`${services.domixServerUrl}/api/User/${adminUserId}/block`, {
+    method: "PATCH",
+    headers: { Authorization: `Bearer ${adminAccessToken}` },
+  });
+  const body = await res.json();
+
+  assert.equal(res.status, 409);
+  assert.equal(body.code, "CANNOT_BLOCK_SELF");
 });

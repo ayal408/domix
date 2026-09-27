@@ -39,6 +39,13 @@ namespace serverApi.Extensions
             if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
                 throw new InvalidOperationException("Configuration Error: JWT_SECRET must be set and at least 32 characters.");
 
+            // Read by InternalOnlyAttribute directly (same reasoning as JWT_SECRET above), but still
+            // validated here so a missing/too-short key fails fast at startup instead of as a
+            // confusing 403 the first time auth-server calls a gated endpoint.
+            var internalServiceKey = Environment.GetEnvironmentVariable("INTERNAL_SERVICE_KEY");
+            if (string.IsNullOrWhiteSpace(internalServiceKey) || internalServiceKey.Length < 32)
+                throw new InvalidOperationException("Configuration Error: INTERNAL_SERVICE_KEY must be set and at least 32 characters.");
+
             var jwtIssuer = configuration["Jwt:Issuer"] ?? "serverApi";
             var jwtAudience = configuration["Jwt:Audience"] ?? "serverApi";
 

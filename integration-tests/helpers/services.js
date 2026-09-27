@@ -14,6 +14,7 @@ const ROOT = path.resolve(fileURLToPath(import.meta.url), "../../..");
  */
 export async function startServices({ postgresUrl, domixServerPort, authServerPort }) {
   const jwtSecret = "integration-test-secret-at-least-32-characters-long";
+  const internalServiceKey = "integration-test-internal-key-at-least-32-characters-long";
 
   const domixServer = spawn("dotnet", ["run", "--no-launch-profile", "--configuration", "Release"], {
     cwd: path.join(ROOT, "domix-server"),
@@ -21,6 +22,7 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
       ...process.env,
       DEFAULT_CONNECTION: postgresUrl,
       JWT_SECRET: jwtSecret,
+      INTERNAL_SERVICE_KEY: internalServiceKey,
       ASPNETCORE_URLS: `http://localhost:${domixServerPort}`,
       ASPNETCORE_ENVIRONMENT: "Production",
       // No Gmail credentials in CI: EmailService logs and swallows the failure rather than
@@ -37,7 +39,11 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
       ...process.env,
       PORT: String(authServerPort),
       JWT_SECRET: jwtSecret,
+      INTERNAL_SERVICE_KEY: internalServiceKey,
       DATA_SERVICE_URL: `http://localhost:${domixServerPort}`,
+      // The code's own default (30s) is meant for production token-refresh hygiene, not for
+      // a test suite that holds onto a token captured early and uses it minutes later.
+      ACCESS_TOKEN_EXPIRES: "10m",
       BCRYPT_SALT_ROUNDS: "4", // fast hashing in tests; production uses a higher cost
       NODE_ENV: "test",
       COOKIE_SAME_SITE: "lax",
@@ -50,6 +56,7 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
   return {
     domixServerUrl: `http://localhost:${domixServerPort}`,
     authServerUrl: `http://localhost:${authServerPort}`,
+    internalServiceKey,
     async stop() {
       domixServer.kill("SIGTERM");
       authServer.kill("SIGTERM");

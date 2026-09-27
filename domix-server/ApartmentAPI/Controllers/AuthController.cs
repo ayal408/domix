@@ -1,9 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
 using serverApi.Models.DTOs;
+using serverApi.Security;
 using serverApi.Services.Interfaces;
 
 namespace serverApi.Controllers
 {
+    // Every action here is auth-server-to-domix-server only: domix-client never calls this
+    // controller directly (it only ever talks to auth-server's own /auth/* routes — see
+    // domix-client/src/api/auth.api.ts).
+    [InternalOnly]
     [ApiController]
     [Route("api/auth")]
     public class AuthController : ControllerBase

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using serverApi.Models.DTOs;
+using serverApi.Security;
 using serverApi.Services.Interfaces;
 using System.Security.Claims;
 
@@ -21,6 +22,9 @@ namespace serverApi.Controllers
         }
 
         // ================= GET BY ID =================
+        // Called both by auth-server (no user token during refresh) and directly by the
+        // browser with the end user's own Bearer token (viewing a profile).
+        [InternalOnly(allowAuthenticatedUser: true)]
         [HttpGet("by-id/{userId}")]
         public async Task<IActionResult> GetById(string userId, CancellationToken cancellationToken)
         {
@@ -29,6 +33,7 @@ namespace serverApi.Controllers
         }
 
         // ================= GET BY EMAIL =================
+        [InternalOnly]
         [HttpGet("by-email/{email}")]
         public async Task<IActionResult> GetByEmail(string email, CancellationToken cancellationToken)
         {
@@ -37,6 +42,7 @@ namespace serverApi.Controllers
         }
 
         // ================= GET BY USERNAME =================
+        [InternalOnly]
         [HttpGet("by-username/{username}")]
         public async Task<IActionResult> GetByUsername(string username, CancellationToken cancellationToken)
         {
@@ -45,6 +51,7 @@ namespace serverApi.Controllers
         }
 
         // ================= GET BY GOOGLE ID =================
+        [InternalOnly]
         [HttpGet("by-google-id/{googleId}")]
         public async Task<IActionResult> GetByGoogleId(string googleId, CancellationToken cancellationToken)
         {
@@ -53,6 +60,7 @@ namespace serverApi.Controllers
         }
 
         // ================= CREATE USER =================
+        [InternalOnly]
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] UserDto user, CancellationToken cancellationToken)
         {
@@ -76,6 +84,7 @@ namespace serverApi.Controllers
         }
 
         // ================= LINK GOOGLE =================
+        [InternalOnly]
         [HttpPut("link-google")]
         public async Task<IActionResult> LinkGoogle([FromBody] LinkGoogleDto dto, CancellationToken cancellationToken)
         {
@@ -86,6 +95,7 @@ namespace serverApi.Controllers
         }
 
         // ================= LINK PASSWORD =================
+        [InternalOnly]
         [HttpPut("link-password")]
         public async Task<IActionResult> LinkPassword([FromBody] LinkPasswordDto dto, CancellationToken cancellationToken)
         {
@@ -96,6 +106,7 @@ namespace serverApi.Controllers
         }
 
         // ================= LOOKUP (UNIFIED) =================
+        [InternalOnly]
         [HttpGet("lookup")]
         public async Task<IActionResult> Lookup([FromQuery] string? email, [FromQuery] string? username, [FromQuery] string? googleId, CancellationToken cancellationToken)
         {
@@ -124,6 +135,13 @@ namespace serverApi.Controllers
         [HttpPatch("{id}/block")]
         public async Task<IActionResult> Block(Guid id, CancellationToken cancellationToken)
         {
+            // Blocked accounts can't authenticate at all (see AuthController.VerifyPassword's
+            // Blocked outcome), so an admin blocking themselves has no recovery path short of a
+            // manual DB edit -- and if they're the only admin, no one else can undo it either.
+            var callerIdClaim = User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (Guid.TryParse(callerIdClaim, out var callerId) && callerId == id)
+                return Conflict(new { code = "CANNOT_BLOCK_SELF" });
+
             var user = await _userService.SetBlockedAsync(id, true, cancellationToken);
             return user == null ? NotFound() : Ok(user);
         }

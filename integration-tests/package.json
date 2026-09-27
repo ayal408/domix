@@ -5,5 +5,8 @@
   "type": "module",
   "scripts": {
     "test": "node --test --test-concurrency=1"
+  },
+  "dependencies": {
+    "pg": "^8.23.0"
   }
 }
