@@ -44,6 +44,7 @@ domix/
 ├── domix-client/      # React and Vite frontend
 ├── domix-server/      # ASP.NET Core API
 ├── nginx/             # Reverse-proxy configuration
+├── integration-tests/ # End-to-end tests: auth-server + domix-server + Postgres together
 ├── docker-compose.yml # Multi-service development stack
 └── README.md
 ```
@@ -103,8 +104,8 @@ These items are intentionally listed here so contributors can distinguish the cu
 - [ ] Replace the sample API endpoint with DOMIX domain endpoints
 - [ ] Add database persistence and migrations
 - [ ] Complete Docker Compose startup
-- [ ] Add automated tests
-- [ ] Add CI checks for frontend and backend builds
+- [x] Add automated tests
+- [x] Add CI checks for frontend and backend builds
 - [ ] Document configuration and deployment
 - [ ] Add screenshots and a hosted demo
 

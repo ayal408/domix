@@ -94,3 +94,52 @@ jobs:
 
       - name: Build
         run: dotnet build domix-server.csproj --configuration Release --no-restore
+
+  integration:
+    name: Integration (auth-server + domix-server + Postgres)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integration-tests
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: domix_integration_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d domix_integration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.2
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install auth-server dependencies
+        working-directory: auth-server
+        run: npm ci
+
+      - name: Build domix-server (Release, once, so the test run below starts fast)
+        working-directory: domix-server
+        run: dotnet build domix-server.csproj --configuration Release
+
+      - name: Run integration tests
+        run: npm test
+        env:
+          INTEGRATION_TEST_POSTGRES_URL: "Host=localhost;Port=5432;Database=domix_integration_test;Username=postgres;Password=postgres"
