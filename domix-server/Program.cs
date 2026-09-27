@@ -16,6 +16,17 @@ Log.Logger = new LoggerConfiguration()
 var builder = WebApplication.CreateBuilder(args);
 builder.Host.UseSerilog();
 
+// Common convention for PaaS hosts (Render, Heroku, ...), and what docker-compose.yml /
+// .env.example already document as configurable -- without this, PORT was silently ignored and
+// Kestrel just fell back to whatever ASPNETCORE_URLS/launchSettings said, which only happened to
+// line up with the container's actual exposed port by coincidence (the official aspnet image
+// defaults ASPNETCORE_HTTP_PORTS to 8080). ASPNETCORE_URLS, if set, still wins.
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(port) && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("ASPNETCORE_URLS")))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 builder.Services.AddControllers()
     .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddFluentValidationAutoValidation();
