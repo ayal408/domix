@@ -142,6 +142,23 @@ dotnet run
 EF Core migrations run automatically on startup. In the Development environment, Swagger is
 served at `/swagger`.
 
+## Environment variables
+
+Every `.env.example` in this repo is a real, fillable template (not just a list of names) —
+these are the values worth knowing about beyond "copy the file":
+
+| Variable | Where | Notes |
+| --- | --- | --- |
+| `JWT_SECRET` | `auth-server`, `domix-server` | Must be the *exact same string* in both, 32+ chars (the app refuses to start otherwise) — `auth-server` issues the access token, but the browser sends that same token straight to `domix-server` too (see `domix-client/src/api/http.ts`), so `domix-server` must be able to verify auth-server's signature. |
+| `INTERNAL_SERVICE_KEY` | `auth-server`, `domix-server` | Also must be the *exact same string* in both, but for a different reason — see the note under [Docker Compose](#running-the-full-stack-with-docker-compose) above. |
+| `DATA_SERVICE_URL` / `DEFAULT_CONNECTION` | `auth-server` / `domix-server` | Where each service finds the other service / the database. `docker-compose.yml` overrides both automatically for container-to-container use — only edit them for standalone runs. |
+| `PORT` | all three services | Optional; each falls back to a sensible default (8080 for `domix-server`, 5000 for `auth-server`, `--port` for Vite) if unset. |
+| `GOOGLE_CLIENT_ID` (`auth-server`) / `VITE_GOOGLE_CLIENT_ID` (`domix-client`) | Google sign-in | Both must be the *same* OAuth 2.0 Client ID from a [Google Cloud project](https://console.cloud.google.com/apis/credentials) (Web application type). Leave both empty to build/run without the "Continue with Google" button — nothing else breaks. |
+| `GMAIL__EMAIL`, `GMAIL__CLIENTID`, `GMAIL__CLIENTSECRET`, `GMAIL__REFRESHTOKEN` | `domix-server` | Gmail API OAuth credentials used to send verification/reset/notification emails. Get them from a Google Cloud project with the Gmail API enabled (client id/secret) and the [OAuth Playground](https://developers.google.com/oauthplayground) (refresh token, scope `https://mail.google.com/`). Leave unset and the app still runs fine — `EmailService` logs the failure and continues rather than throwing (see `SavedSearchAlertBackgroundService`'s doc comment). |
+| `GEMINI_API_KEY` | `domix-server` | Powers the chat widget. Get one from [Google AI Studio](https://aistudio.google.com/apikey). Leave unset and the app itself still starts and runs fine — only a request to the chat endpoint 500s (checked directly: `ChatService`'s constructor throws before its own try/catch ever runs, so it's a plain 500, not a friendly error). |
+| `CLIENT_APP_URL` | `domix-server` | Base URL used to build links inside emails (verification, password reset, saved-search alerts, support notifications). Must match wherever `domix-client` is actually reachable — see the comment in `domix-server/.env.example` for the Compose-vs-Vite-dev-server values. |
+| `ADMIN_NOTIFICATION_EMAIL` | `domix-server` | Where "Ask the team" chat escalations and support tickets get emailed. Leave empty to skip that notification — tickets still land in the admin support inbox either way. |
+
 ## Testing
 
 | Suite | Command | What it covers |
@@ -164,7 +181,7 @@ full integration-test suite against a Postgres service container.
 - [x] Complete Docker Compose startup
 - [x] Add automated tests (frontend + domix-server unit tests, accessibility checks, service-to-service integration tests)
 - [x] Add CI checks for frontend and backend builds
-- [ ] Document environment variables in full (Gmail, Gemini, Google OAuth setup)
+- [x] Document environment variables in full (Gmail, Gemini, Google OAuth setup)
 - [ ] Add screenshots and a hosted demo
 
 ## Contributing
