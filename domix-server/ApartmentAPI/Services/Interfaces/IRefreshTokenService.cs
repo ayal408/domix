@@ -10,5 +10,12 @@ namespace serverApi.Services.Interfaces
     {
         Task RevokeAsync(Guid userId, string jti, DateTime expires, CancellationToken cancellationToken = default);
         Task<bool> IsRevokedAsync(string jti, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Deletes revoked-token rows whose underlying refresh token has already expired on its
+        /// own -- once that happens the row is dead weight, since an expired JWT is rejected by
+        /// signature/expiry verification alone regardless of what this table says.
+        /// </summary>
+        Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default);
     }
 }

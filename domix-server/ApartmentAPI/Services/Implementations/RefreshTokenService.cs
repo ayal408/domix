@@ -45,5 +45,20 @@ namespace serverApi.Services.Implementations
 
             return await _context.RefreshTokens.AnyAsync(t => t.Token == jti, cancellationToken);
         }
+
+        public async Task<int> PurgeExpiredAsync(CancellationToken cancellationToken = default)
+        {
+            var now = DateTime.UtcNow;
+            var expired = await _context.RefreshTokens
+                .Where(t => t.Expires < now)
+                .ToListAsync(cancellationToken);
+
+            if (expired.Count == 0)
+                return 0;
+
+            _context.RefreshTokens.RemoveRange(expired);
+            await _context.SaveChangesAsync(cancellationToken);
+            return expired.Count;
+        }
     }
 }

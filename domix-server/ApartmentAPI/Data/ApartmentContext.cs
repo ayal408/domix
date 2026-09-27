@@ -27,23 +27,27 @@ namespace serverApi.Data
         {
             base.OnModelCreating(modelBuilder);
 
+            // HasFilter emits raw Postgres SQL, which the EF Core InMemory provider (used by
+            // domix-server.Tests to unit-test services that touch ApartmentContext) can't
+            // translate -- it isn't a relational provider at all. Guarding these two keeps the
+            // model buildable there without changing anything about the real Npgsql-backed index.
+            var supportsSqlFilters = Database.IsNpgsql();
+
             modelBuilder.Entity<User>(entity =>
             {
                 entity.HasKey(x => x.UserId);
 
                 // UNIQUE: Email
-                entity.HasIndex(x => x.EmailAddress)
-                      .IsUnique()
-                      .HasFilter("\"EmailAddress\" IS NOT NULL");
+                var emailIndex = entity.HasIndex(x => x.EmailAddress).IsUnique();
+                if (supportsSqlFilters) emailIndex.HasFilter("\"EmailAddress\" IS NOT NULL");
 
                 // UNIQUE: Username
                 entity.HasIndex(x => x.UserName)
                       .IsUnique();
 
                 // UNIQUE: GoogleId
-                entity.HasIndex(x => x.GoogleId)
-                      .IsUnique()
-                      .HasFilter("\"GoogleId\" IS NOT NULL");
+                var googleIdIndex = entity.HasIndex(x => x.GoogleId).IsUnique();
+                if (supportsSqlFilters) googleIdIndex.HasFilter("\"GoogleId\" IS NOT NULL");
             });
 
             modelBuilder.Entity<Apartment>()
