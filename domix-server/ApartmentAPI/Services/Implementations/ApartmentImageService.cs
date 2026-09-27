@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using serverApi.Data;
@@ -112,6 +113,7 @@ namespace serverApi.Services.Implementations
             };
         }
 
+        [DoesNotReturn]
         private static void raiseInvalidOperation(string message) => throw new InvalidOperationException(message);
     }
 }
