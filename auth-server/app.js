@@ -1,10 +1,15 @@
-import express from "express";
 import dotenv from "dotenv";
-import cookieParser from "cookie-parser";
 
-import authRoutes from "./src/routes/authRoutes.js";
-
+// Must run before any other local import: several modules (jwt.js, authService.js,
+// userClient.js) read process.env into top-level consts at import time, which — since ES
+// module imports are evaluated before any statement below them — would otherwise always see
+// an empty environment and silently fall back to their hardcoded defaults (including an
+// insecure default JWT secret and a stale external API URL).
 dotenv.config();
+
+const { default: express } = await import("express");
+const { default: cookieParser } = await import("cookie-parser");
+const { default: authRoutes } = await import("./src/routes/authRoutes.js");
 
 const app = express();
 
