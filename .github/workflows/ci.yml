@@ -139,6 +139,9 @@ jobs:
         working-directory: auth-server
         run: npm ci
 
+      - name: Install integration-tests dependencies
+        run: npm ci
+
       - name: Build domix-server (Release, once, so the test run below starts fast)
         working-directory: domix-server
         run: dotnet build domix-server.csproj --configuration Release
