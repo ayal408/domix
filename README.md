@@ -38,6 +38,12 @@ each be developed and deployed independently:
 - Localized UI (English, Hebrew, Spanish, French — with right-to-left layout for Hebrew)
 - Server-rendered link previews for social crawlers (WhatsApp/Facebook/etc.) sharing a listing
 
+## Screenshots
+
+| Search & filters | Listing detail |
+| --- | --- |
+| ![Search page](docs/screenshots/search.png) | ![Listing detail page](docs/screenshots/listing-detail.png) |
+
 ## Architecture
 
 ```mermaid
@@ -140,7 +146,9 @@ dotnet run
 ```
 
 EF Core migrations run automatically on startup. In the Development environment, Swagger is
-served at `/swagger`.
+served at `/swagger`. `domix-server` also exposes `/healthz/live` (process is up, no DB call —
+what an orchestrator should use to decide whether to restart the container) and `/healthz/ready`
+(also checks the database — what it should use to decide whether to route traffic here).
 
 ## Environment variables
 
@@ -182,7 +190,8 @@ full integration-test suite against a Postgres service container.
 - [x] Add automated tests (frontend + domix-server unit tests, accessibility checks, service-to-service integration tests)
 - [x] Add CI checks for frontend and backend builds
 - [x] Document environment variables in full (Gmail, Gemini, Google OAuth setup)
-- [ ] Add screenshots and a hosted demo
+- [x] Add screenshots
+- [ ] Hosted demo
 
 ## Contributing
 

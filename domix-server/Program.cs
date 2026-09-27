@@ -59,10 +59,28 @@ if (app.Environment.IsDevelopment())
 app.MapControllers();
 app.MapHub<PresenceHub>("/api/hubs/presence");
 
+// Kept for backward compatibility (existing uptime checks, docker-compose healthcheck) --
+// equivalent to /healthz/ready below.
 app.MapGet("/", async (ApartmentContext db) =>
 {
     var canConnect = await db.Database.CanConnectAsync();
     return Results.Ok(new { status = canConnect ? "ok" : "db_error", time = DateTime.UtcNow });
+});
+
+// Liveness: is the process itself responsive? No DB call -- an orchestrator (k8s, ECS, ...)
+// should restart the container on a liveness failure, and a slow/down database is not a reason
+// to restart a perfectly healthy process (it would just restart in a loop instead of recovering).
+app.MapGet("/healthz/live", () => Results.Ok(new { status = "ok" }));
+
+// Readiness: can this instance actually serve traffic right now? An orchestrator should stop
+// routing to it on failure here, but must NOT restart it -- the database recovering is exactly
+// what should flip this back to ready without a restart.
+app.MapGet("/healthz/ready", async (ApartmentContext db) =>
+{
+    var canConnect = await db.Database.CanConnectAsync();
+    return canConnect
+        ? Results.Ok(new { status = "ok" })
+        : Results.Json(new { status = "db_unreachable" }, statusCode: StatusCodes.Status503ServiceUnavailable);
 });
 
 app.Run();
