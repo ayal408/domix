@@ -170,6 +170,41 @@ test("an admin cannot block their own account", async () => {
   assert.equal(body.code, "CANNOT_BLOCK_SELF");
 });
 
+test("logout revokes the refresh token so it can no longer be used to refresh", async () => {
+  const email = `revoke-${runId}@example.com`;
+  const userName = `revoke${runId}`;
+  const registerRes = await authFetch("/register", {
+    method: "POST",
+    body: JSON.stringify({ userName, email, password: "password123" }),
+  });
+  assert.equal(registerRes.status, 200);
+
+  const refreshCookie = registerRes.headers
+    .getSetCookie()
+    .find((c) => c.startsWith("refreshToken="))
+    .split(";")[0];
+
+  // The token still works before logout -- establishes the baseline this test is actually
+  // checking, rather than just proving logout doesn't crash.
+  const beforeLogout = await authFetch("/refresh", {
+    method: "POST",
+    headers: { Cookie: refreshCookie },
+  });
+  assert.equal(beforeLogout.status, 200);
+
+  const logoutRes = await authFetch("/logout", {
+    method: "POST",
+    headers: { Cookie: refreshCookie },
+  });
+  assert.equal(logoutRes.status, 204);
+
+  const afterLogout = await authFetch("/refresh", {
+    method: "POST",
+    headers: { Cookie: refreshCookie },
+  });
+  assert.equal(afterLogout.status, 401);
+});
+
 test("a user cannot attach an image to another user's apartment", async () => {
   // adminUserId/adminAccessToken owns an apartment created here; a second, unrelated account
   // then tries to register an image against it directly -- this is the exact request shape the

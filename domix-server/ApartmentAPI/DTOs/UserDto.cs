@@ -104,4 +104,12 @@ namespace serverApi.Models.DTOs
         public string Token { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
     }
+
+    /// <summary>Body for <c>POST /api/auth/refresh-tokens/revoke</c>. `Jti` is the refresh token's unique id claim (not the token itself, which never leaves auth-server).</summary>
+    public class RevokeRefreshTokenDto
+    {
+        public Guid UserId { get; set; }
+        public string Jti { get; set; } = string.Empty;
+        public DateTime Expires { get; set; }
+    }
 }

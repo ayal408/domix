@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import { randomUUID } from "crypto";
 
 const SECRET_KEY = process.env.JWT_SECRET || "SUPER_SECRET_KEY_12345678910111213";
 const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES || "30s";
@@ -22,10 +23,14 @@ export function createAccessToken(user) {
   );
 }
 
+// `jti` lets a single refresh token be individually revoked (see userClient's
+// revokeRefreshToken/isRefreshTokenRevoked) without needing to track or invalidate every other
+// token the same user holds.
 export function createRefreshToken(user) {
   return jwt.sign(
     {
-      userId: user.userId
+      userId: user.userId,
+      jti: randomUUID()
     },
     SECRET_KEY,
     {

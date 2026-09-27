@@ -147,6 +147,7 @@ namespace serverApi.Extensions
             services.AddScoped<ISupportService, SupportService>();
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             services.AddHostedService<SavedSearchAlertBackgroundService>();
             return services;
         }

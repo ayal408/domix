@@ -117,3 +117,18 @@ export async function resetPassword(token, passwordHash) {
     throw err;
   }
 }
+
+/**
+ * Records a refresh token's `jti` as revoked so it's rejected on every future /refresh call, even
+ * though the JWT itself remains cryptographically valid until it naturally expires. Called from
+ * logout() -- deliberately best-effort there (a failed revoke must never block the user from
+ * logging out), so this is allowed to throw and the caller decides whether to swallow it.
+ */
+export async function revokeRefreshToken(userId, jti, expires) {
+  await client.post(`/api/auth/refresh-tokens/revoke`, { userId, jti, expires });
+}
+
+export async function isRefreshTokenRevoked(jti) {
+  const { data } = await client.get(`/api/auth/refresh-tokens/${jti}/revoked`);
+  return data.revoked === true;
+}

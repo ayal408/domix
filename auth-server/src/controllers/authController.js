@@ -66,8 +66,8 @@ export async function refresh(req, res) {
   }
 }
 
-export function logout(req, res) {
-  authService.logout(req, res);
+export async function logout(req, res) {
+  await authService.logout(req, res);
 }
 
 export async function verifyEmail(req, res) {

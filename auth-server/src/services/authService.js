@@ -16,7 +16,9 @@ import {
   verifyEmailToken,
   resendVerificationEmail as resendVerificationEmailApi,
   requestPasswordReset,
-  resetPassword as resetPasswordApi
+  resetPassword as resetPasswordApi,
+  revokeRefreshToken,
+  isRefreshTokenRevoked
 } from "../utils/userClient.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -136,6 +138,12 @@ export async function refresh(req, res) {
   try {
     const payload = verifyRefreshToken(refreshToken);
 
+    // A signature/expiry check alone can't catch a token the user already logged out of --
+    // that's exactly what this revocation check is for (see revokeRefreshToken in logout()).
+    if (payload.jti && (await isRefreshTokenRevoked(payload.jti))) {
+      return res.sendStatus(401);
+    }
+
     const user = await getUserById(payload.userId);
 
     if (!user || user.isBlocked) {
@@ -152,7 +160,24 @@ export async function refresh(req, res) {
   }
 }
 
-export function logout(req, res) {
+export async function logout(req, res) {
+  const refreshToken = req.cookies.refreshToken;
+
+  if (refreshToken) {
+    try {
+      const payload = verifyRefreshToken(refreshToken);
+      if (payload.jti) {
+        // Best-effort: a user must always be able to log out client-side (cookie cleared below)
+        // even if domix-server is briefly unreachable -- losing server-side revocation for one
+        // logout is a far smaller problem than blocking logout entirely.
+        await revokeRefreshToken(payload.userId, payload.jti, new Date(payload.exp * 1000));
+      }
+    } catch {
+      // Expired/malformed refresh token -- nothing meaningful to revoke, and the cookie is
+      // cleared unconditionally below regardless.
+    }
+  }
+
   res.clearCookie("refreshToken");
   res.sendStatus(204);
 }

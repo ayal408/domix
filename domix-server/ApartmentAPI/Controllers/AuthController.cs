@@ -14,11 +14,13 @@ namespace serverApi.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
+        private readonly IRefreshTokenService _refreshTokenService;
         private readonly ILogger<AuthController> _logger;
 
-        public AuthController(IUserService userService, ILogger<AuthController> logger)
+        public AuthController(IUserService userService, IRefreshTokenService refreshTokenService, ILogger<AuthController> logger)
         {
             _userService = userService;
+            _refreshTokenService = refreshTokenService;
             _logger = logger;
         }
 
@@ -132,6 +134,27 @@ namespace serverApi.Controllers
 
             var reset = await _userService.ResetPasswordAsync(dto.Token, dto.PasswordHash, cancellationToken);
             return reset ? Ok() : BadRequest(new { code = "INVALID_OR_EXPIRED_TOKEN" });
+        }
+
+        // ================= REVOKE REFRESH TOKEN =================
+        /// <summary>Called on logout so a stolen/leaked refresh token can't be used after the user signs out.</summary>
+        [HttpPost("refresh-tokens/revoke")]
+        public async Task<IActionResult> RevokeRefreshToken([FromBody] RevokeRefreshTokenDto dto, CancellationToken cancellationToken)
+        {
+            if (dto == null || dto.UserId == Guid.Empty || string.IsNullOrWhiteSpace(dto.Jti))
+                return BadRequest(new { code = "INVALID_REQUEST" });
+
+            await _refreshTokenService.RevokeAsync(dto.UserId, dto.Jti, dto.Expires, cancellationToken);
+            return Ok();
+        }
+
+        // ================= CHECK REFRESH TOKEN REVOKED =================
+        /// <summary>Called on every /refresh so a revoked-but-not-yet-expired refresh token is rejected.</summary>
+        [HttpGet("refresh-tokens/{jti}/revoked")]
+        public async Task<IActionResult> IsRefreshTokenRevoked(string jti, CancellationToken cancellationToken)
+        {
+            var revoked = await _refreshTokenService.IsRevokedAsync(jti, cancellationToken);
+            return Ok(new { revoked });
         }
     }
 }
