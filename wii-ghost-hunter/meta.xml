@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<app version="1">
+  <name>Ghost Hunter</name>
+  <coder>domix</coder>
+  <version>1.0</version>
+  <short_description>Flashlight + rumble ghost radar</short_description>
+  <long_description>The room is dark. Hold B for the flashlight, follow the Wiimote rumble to find hidden ghosts, press A to zap them, and SHAKE the Wiimote to recharge the battery.</long_description>
+</app>
