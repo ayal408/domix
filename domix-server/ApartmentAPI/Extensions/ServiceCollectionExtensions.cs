@@ -149,6 +149,9 @@ namespace serverApi.Extensions
             services.AddSignalR();
             services.AddScoped<IImageService, ImageService>();
             services.AddSingleton<GoogleOAuthService>();
+            services.AddSingleton(new GmailTokenProtector(Environment.GetEnvironmentVariable("JWT_SECRET")!));
+            services.AddSingleton<GmailConnectionService>();
+            services.AddScoped<EmailConfigurationService>();
             services.AddScoped<IEmailService, EmailService>();
 
             services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();

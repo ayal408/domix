@@ -101,5 +101,9 @@ export const apiEndpoints = {
   },
   email: {
     sendTest: () => '/email/send-test',
+    settings: () => '/email/settings',
+    connect: () => '/email/gmail/connect',
+    disconnect: () => '/email/gmail/connection',
+    history: () => '/email/history',
   },
 } as const

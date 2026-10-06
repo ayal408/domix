@@ -1,6 +1,8 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
+import { useAuthStore } from '@/stores/auth.store'
+import './email.i18n'
 
 const tabClasses = ({ isActive }: { isActive: boolean }) =>
   cn(
@@ -11,6 +13,7 @@ const tabClasses = ({ isActive }: { isActive: boolean }) =>
 /** Shared shell for every `/admin/*` page — the route tree gates all of them on the ManagerOrAdmin policy. */
 export function AdminLayout() {
   const { t } = useTranslation()
+  const can = useAuthStore((state) => state.can)
 
   return (
     <div className="flex flex-col gap-6">
@@ -30,6 +33,7 @@ export function AdminLayout() {
         <NavLink to="/admin/notifications" className={tabClasses}>
           {t('admin.nav.notifications')}
         </NavLink>
+        {can('AdminOnly') && <NavLink to="/admin/email" className={tabClasses}>{t('email:nav')}</NavLink>}
       </nav>
       <Outlet />
     </div>

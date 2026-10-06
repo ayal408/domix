@@ -23,6 +23,7 @@ const AdminApartmentsPage = lazyWithReload(() => import('@/features/admin/AdminA
 const AdminSupportPage = lazyWithReload(() => import('@/features/admin/AdminSupportPage'))
 const AdminUsersPage = lazyWithReload(() => import('@/features/admin/AdminUsersPage'))
 const AdminAnalyticsPage = lazyWithReload(() => import('@/features/admin/AdminAnalyticsPage'))
+const AdminEmailPage = lazyWithReload(() => import('@/features/admin/AdminEmailPage'))
 const AdminNotificationsPage = lazyWithReload(() => import('@/features/admin/AdminNotificationsPage'))
 const FavoritesPage = lazyWithReload(() => import('@/features/apartments/FavoritesPage'))
 const ComparePage = lazyWithReload(() => import('@/features/apartments/ComparePage'))
@@ -151,6 +152,7 @@ export default function App() {
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="analytics" element={<AdminAnalyticsPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
+            <Route path="email" element={<ProtectedRoute policy="AdminOnly"><AdminEmailPage /></ProtectedRoute>} />
           </Route>
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
