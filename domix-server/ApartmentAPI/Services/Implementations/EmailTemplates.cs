@@ -16,11 +16,17 @@ namespace serverApi.Services.Implementations
         private const string Border = "#e3e5ea";
         private const string FontStack = "Arial, Helvetica, sans-serif";
 
-        /// <param name="heading">Plain text, HTML-encoded by the caller if it contains user input.</param>
+        /// <param name="heading">Plain text; encoded by this renderer.</param>
         /// <param name="bodyHtml">Already-safe HTML (the caller HTML-encodes any interpolated user input).</param>
         /// <param name="ctaText">Button label; omit together with <paramref name="ctaUrl"/> for a plain notice email.</param>
-        public static string Render(string heading, string bodyHtml, string? ctaText = null, string? ctaUrl = null)
+        public static string Render(string heading, string bodyHtml, string? ctaText = null, string? ctaUrl = null, string? language = null)
         {
+            var lang = EmailText.Language(language);
+            var direction = lang == "he" ? "rtl" : "ltr";
+            var alignment = lang == "he" ? "right" : "left";
+            heading = EmailText.Safe(heading);
+            ctaText = ctaText is null ? null : EmailText.Safe(ctaText);
+            ctaUrl = ctaUrl is null ? null : EmailText.Safe(ctaUrl);
             var cta = ctaText != null && ctaUrl != null
                 ? $"""
                    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px 0 4px;">
@@ -35,8 +41,8 @@ namespace serverApi.Services.Implementations
 
             return $"""
                 <!DOCTYPE html>
-                <html>
-                <body style="margin:0;padding:0;background-color:{Background};font-family:{FontStack};">
+                <html lang="{lang}" dir="{direction}">
+                <body dir="{direction}" style="margin:0;padding:0;background-color:{Background};font-family:{FontStack};">
                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:{Background};padding:32px 16px;">
                     <tr>
                       <td align="center">
@@ -47,15 +53,16 @@ namespace serverApi.Services.Implementations
                             </td>
                           </tr>
                           <tr>
-                            <td style="padding:32px;">
+                            <td style="padding:32px;text-align:{alignment};">
                               <h1 style="margin:0 0 16px;font-family:{FontStack};font-size:20px;color:{Foreground};">{heading}</h1>
                               <div style="font-family:{FontStack};font-size:15px;line-height:1.6;color:{Foreground};">{bodyHtml}</div>
                               {cta}
+                              <!-- DOMIX_SIGNATURE -->
                             </td>
                           </tr>
                           <tr>
                             <td style="padding:18px 32px;background-color:{Background};border-top:1px solid {Border};">
-                              <p style="margin:0;font-family:{FontStack};font-size:12px;color:{Muted};">DOMIX &mdash; find your next home.</p>
+                              <p style="margin:0;font-family:{FontStack};font-size:12px;color:{Muted};">{EmailText.Footer(lang)}</p>
                             </td>
                           </tr>
                         </table>

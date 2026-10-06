@@ -111,6 +111,7 @@ namespace serverApi.Services.Implementations
             {
                 UserId = Guid.NewGuid(),
                 RegistrationMethod = dto.RegistrationMethod,
+                LanguagePreference = EmailText.Language(dto.LanguagePreference),
                 UserName = dto.UserName,
                 PhoneNumber = dto.PhoneNumber,
                 EmailAddress = dto.EmailAddress,
@@ -191,17 +192,8 @@ namespace serverApi.Services.Implementations
 
             try
             {
-                await _emailService.SendEmailAsync(
-                    user.EmailAddress!,
-                    "Reset your DOMIX password",
-                    EmailTemplates.Render(
-                        "Reset your password",
-                        $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.UserName)},</p>" +
-                        "<p>We got a request to reset your DOMIX password. Click below to choose a new one — this link expires in 24 hours.</p>" +
-                        "<p>If you didn't request this, you can safely ignore this email.</p>",
-                        "Reset my password",
-                        resetLink),
-                    cancellationToken);
+                var emailMessage = EmailText.PasswordReset(user.UserName, resetLink, user.LanguagePreference);
+                await _emailService.SendEmailAsync(user.EmailAddress!, emailMessage.Subject, emailMessage.Html, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -264,16 +256,8 @@ namespace serverApi.Services.Implementations
 
             try
             {
-                await _emailService.SendEmailAsync(
-                    user.EmailAddress!,
-                    "Confirm your DOMIX email address",
-                    EmailTemplates.Render(
-                        "Confirm your email",
-                        $"<p>Hi {System.Net.WebUtility.HtmlEncode(user.UserName)},</p>" +
-                        "<p>Please confirm your email address to finish setting up your DOMIX account. This link expires in 24 hours.</p>",
-                        "Verify my email",
-                        verifyLink),
-                    cancellationToken);
+                var emailMessage = EmailText.Verification(user.UserName, verifyLink, user.LanguagePreference);
+                await _emailService.SendEmailAsync(user.EmailAddress!, emailMessage.Subject, emailMessage.Html, cancellationToken);
             }
             catch (Exception ex)
             {
@@ -447,6 +431,7 @@ namespace serverApi.Services.Implementations
                 IsEmailVerified = user.IsEmailVerified,
                 IsBlocked = user.IsBlocked,
                 ThemePreference = user.ThemePreference,
+                LanguagePreference = user.LanguagePreference,
             };
         }
 

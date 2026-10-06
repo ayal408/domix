@@ -9,6 +9,7 @@ import { useToastStore } from '@/stores/toast.store'
 import { onSessionExpired } from '@/lib/sessionEvents'
 import { lazyWithReload } from '@/lib/lazyWithReload'
 import { Spinner } from '@/components/ui/Spinner'
+import { LanguagePreferenceSync } from '@/components/LanguagePreferenceSync'
 import './i18n'
 
 const HomePage = lazyWithReload(() => import('@/pages/HomePage'))
@@ -92,6 +93,7 @@ export default function App() {
 
   return (
     <Suspense fallback={<PageFallback />}>
+      <LanguagePreferenceSync />
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<IndexRoute />} />

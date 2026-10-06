@@ -62,15 +62,8 @@ namespace serverApi.Services.Implementations
                 try
                 {
                     var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
-                    var encodedName = System.Net.WebUtility.HtmlEncode(sender.UserName);
-                    var body = $"<p>You have a new message from {encodedName}:</p>" +
-                               $"<p style=\"white-space:pre-wrap\">{System.Net.WebUtility.HtmlEncode(dto.Content)}</p>";
-
-                    await _emailService.SendEmailAsync(
-                        owner.EmailAddress,
-                        "New DOMIX message",
-                        EmailTemplates.Render($"New message from {encodedName}", body, "Reply on DOMIX", $"{clientAppUrl}/messages"),
-                        cancellationToken);
+                    var emailMessage = EmailText.Message(sender.UserName, dto.Content, $"{clientAppUrl}/messages", owner.LanguagePreference);
+                    await _emailService.SendEmailAsync(owner.EmailAddress, emailMessage.Subject, emailMessage.Html, cancellationToken);
                 }
                 catch (Exception ex)
                 {

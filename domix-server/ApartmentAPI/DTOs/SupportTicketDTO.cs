@@ -5,6 +5,7 @@ namespace serverApi.Models.DTOs
     /// <summary>Body for <c>POST /api/Support</c>. Open to anonymous visitors, same as the chat endpoint.</summary>
     public class CreateSupportTicketDto
     {
+        public string? LanguagePreference { get; set; }
         /// <summary>Required when the sender isn't signed in, so the team has a way to reply.</summary>
         public string? ContactName { get; set; }
         public string? ContactEmail { get; set; }

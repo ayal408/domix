@@ -36,7 +36,7 @@ namespace serverApi.Services.Implementations
                 ContactName = dto.ContactName?.Trim(),
                 ContactEmail = dto.ContactEmail?.Trim(),
                 Message = dto.Message.Trim(),
-                Transcript = FormatTranscript(dto.Transcript),
+                Transcript = FormatTranscript(dto.Transcript, dto.LanguagePreference),
                 Status = SupportTicketStatus.Open,
                 CreatedAt = DateTime.UtcNow,
             };
@@ -46,7 +46,11 @@ namespace serverApi.Services.Implementations
 
             _logger.LogInformation("Support ticket {TicketId} created (user {UserId}).", ticket.SupportTicketId, userId);
 
+            if (ticket.UserId.HasValue)
+                ticket.User = await _context.Users.FirstOrDefaultAsync(u => u.UserId == ticket.UserId.Value, cancellationToken);
+            var language = EmailText.Language(dto.LanguagePreference ?? ticket.User?.LanguagePreference);
             await NotifyAdminAsync(ticket, cancellationToken);
+            await SendReceiptAsync(ticket, language, cancellationToken);
 
             return await ToDtoAsync(ticket, cancellationToken);
         }
@@ -78,45 +82,57 @@ namespace serverApi.Services.Implementations
             return ToDto(ticket);
         }
 
-        private static string? FormatTranscript(List<ChatTurnDto>? transcript)
+        private static string? FormatTranscript(List<ChatTurnDto>? transcript, string? language)
         {
             if (transcript == null || transcript.Count == 0)
                 return null;
 
-            return string.Join("\n\n", transcript.Select(turn => $"{(turn.Role == "user" ? "Visitor" : "Assistant")}: {turn.Text}"));
+            return string.Join("\n\n", transcript.Select(turn => $"{(turn.Role == "user" ? EmailText.Pick(language, "פונה", "Visitor", "Visitante", "Visiteur") : EmailText.Pick(language, "עוזר", "Assistant", "Asistente", "Assistant"))}: {turn.Text}"));
         }
 
         private async Task NotifyAdminAsync(SupportTicket ticket, CancellationToken cancellationToken)
         {
             var adminEmail = _configuration["ADMIN_NOTIFICATION_EMAIL"];
             if (string.IsNullOrWhiteSpace(adminEmail))
+                adminEmail = await _context.SystemEmailSettings.AsNoTracking().Where(x => x.Id == 1)
+                    .Select(x => x.Email).SingleOrDefaultAsync(cancellationToken) ?? _configuration["Gmail:Email"];
+            if (!EmailService.IsMailbox(adminEmail))
             {
-                _logger.LogWarning("ADMIN_NOTIFICATION_EMAIL is not set — skipping notification for support ticket {TicketId}.", ticket.SupportTicketId);
+                _logger.LogWarning("No support recipient configured for ticket {TicketId}.", ticket.SupportTicketId);
                 return;
             }
-
-            var from = string.IsNullOrWhiteSpace(ticket.ContactName) ? (ticket.ContactEmail ?? "a signed-in user") : ticket.ContactName;
-            var body = $"<p><strong>From:</strong> {System.Net.WebUtility.HtmlEncode(from)}" +
-                       (ticket.ContactEmail != null ? $" ({System.Net.WebUtility.HtmlEncode(ticket.ContactEmail)})" : "") +
-                       $"</p><p>{System.Net.WebUtility.HtmlEncode(ticket.Message).Replace("\n", "<br/>")}</p>" +
-                       (ticket.Transcript != null ? $"<hr/><p style=\"white-space:pre-wrap\">{System.Net.WebUtility.HtmlEncode(ticket.Transcript)}</p>" : "");
-
+            var admin = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.EmailAddress == adminEmail, cancellationToken);
+            var recipientLanguage = admin?.LanguagePreference ?? "he";
+            var from = ticket.ContactName ?? ticket.User?.UserName ?? ticket.ContactEmail ??
+                EmailText.Pick(recipientLanguage, "משתמש", "User", "Usuario", "Utilisateur");
+            var contact = ticket.ContactEmail ?? ticket.User?.EmailAddress;
+            if (!string.IsNullOrWhiteSpace(contact)) from += " (" + contact + ")";
             var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
+            var mail = EmailText.Support(from, ticket.Message, ticket.Transcript, ticket.SupportTicketId.ToString(),
+                $"{clientAppUrl}/admin/support", recipientLanguage, receipt: false);
 
             try
             {
-                await _emailService.SendEmailAsync(
-                    adminEmail,
-                    "New DOMIX support question",
-                    EmailTemplates.Render("New support question", body, "Open the support inbox", $"{clientAppUrl}/admin/support"),
-                    cancellationToken);
+                await _emailService.SendEmailAsync(adminEmail!, mail.Subject, mail.Html, cancellationToken);
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 // The ticket is already saved and visible in the admin inbox — a failed notification
                 // email must not fail the visitor's request.
                 _logger.LogError(ex, "Failed to send admin notification for support ticket {TicketId}.", ticket.SupportTicketId);
             }
+        }
+
+        private async Task SendReceiptAsync(SupportTicket ticket, string language, CancellationToken ct)
+        {
+            var recipient = ticket.User?.EmailAddress ?? ticket.ContactEmail;
+            if (!EmailService.IsMailbox(recipient)) return;
+            var mail = EmailText.Support(ticket.ContactName ?? ticket.User?.UserName ?? "", ticket.Message, null,
+                ticket.SupportTicketId.ToString(), "", language, receipt: true);
+            try { await _emailService.SendEmailAsync(recipient!, mail.Subject, mail.Html, ct); }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }
+            catch (Exception ex) { _logger.LogWarning("Support receipt failed for {TicketId} ({FailureType}).", ticket.SupportTicketId, ex.GetType().Name); }
         }
 
         private async Task<SupportTicketDto> ToDtoAsync(SupportTicket ticket, CancellationToken cancellationToken)

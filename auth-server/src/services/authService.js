@@ -60,7 +60,7 @@ export async function login(userName, password) {
   };
 }
 
-export async function register({ userName, email, password, phone }) {
+export async function register({ userName, email, password, phone, languagePreference }) {
   const existing = await lookupUser({ email });
 
   if (existing) throw new Error("EMAIL_EXISTS");
@@ -70,6 +70,7 @@ const passwordHash = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SAL
     userName,
     emailAddress: email,
     phoneNumber: phone,
+    languagePreference,
     passwordHash,
     registrationMethod: "Password"
   });
@@ -216,3 +217,4 @@ export async function resetPassword(token, newPassword) {
   const passwordHash = await bcrypt.hash(newPassword, parseInt(process.env.BCRYPT_SALT_ROUNDS || "10", 10));
   await resetPasswordApi(token, passwordHash);
 }
+

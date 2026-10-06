@@ -29,6 +29,7 @@ namespace serverApi.Models
 
         /// <summary>"light" | "dark" | "system" | null (unset — client falls back to its own default).</summary>
         public string? ThemePreference { get; set; }
+        public string LanguagePreference { get; set; } = "he";
 
         /// <summary>Notifications created after this time count as unread. Null means none have ever been seen.</summary>
         public DateTime? NotificationsSeenAt { get; set; }

@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { authClient, type RetryableConfig } from '@/api/http'
 import { authEndpoints } from '@/api/endpoints'
 import type {
@@ -41,7 +42,7 @@ export async function login(payload: LoginRequest): Promise<AuthSessionResponse>
 export async function register(payload: RegisterRequest): Promise<AuthSessionResponse> {
   const { data } = await authClient.post<AuthSessionResponse>(
     authEndpoints.register(),
-    payload,
+    { ...payload, languagePreference: i18n.resolvedLanguage ?? 'he' },
     skipRefresh,
   )
   return data

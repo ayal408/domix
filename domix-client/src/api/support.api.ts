@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import { dataClient } from '@/api/http'
 import { apiEndpoints } from '@/api/endpoints'
 import type { CreateSupportTicketRequest, Guid, SupportTicket } from '@/types/api'
@@ -6,7 +7,7 @@ import type { CreateSupportTicketRequest, Guid, SupportTicket } from '@/types/ap
 
 /** Open to anonymous visitors, same as the chat endpoint — no auth required. */
 export async function createSupportTicket(payload: CreateSupportTicketRequest): Promise<SupportTicket> {
-  const { data } = await dataClient.post<SupportTicket>(apiEndpoints.support.create(), payload)
+  const { data } = await dataClient.post<SupportTicket>(apiEndpoints.support.create(), { ...payload, languagePreference: i18n.resolvedLanguage ?? 'he' })
   return data
 }
 

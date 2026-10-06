@@ -101,8 +101,8 @@ namespace serverApi.Services.Implementations
                         continue;
                     }
 
-                    var html = BuildDigestHtml(savedSearch.Name, matches, _configuration);
-                    await emailService.SendEmailAsync(user.EmailAddress, $"DOMIX — {matches.Count} new match(es) for \"{savedSearch.Name}\"", html, cancellationToken);
+                    var html = BuildDigestHtml(savedSearch.Name, matches, _configuration, user.LanguagePreference);
+                    await emailService.SendEmailAsync(user.EmailAddress, EmailText.MatchesTitle(savedSearch.Name, matches.Count, user.LanguagePreference), html, cancellationToken);
 
                     await savedSearchService.MarkNotifiedAsync(savedSearch.SavedSearchId, now, cancellationToken);
                 }
@@ -113,11 +113,10 @@ namespace serverApi.Services.Implementations
             }
         }
 
-        private static string BuildDigestHtml(string searchName, IReadOnlyCollection<Models.DTOs.ApartmentDTO> matches, IConfiguration configuration)
+        private static string BuildDigestHtml(string searchName, IReadOnlyCollection<Models.DTOs.ApartmentDTO> matches, IConfiguration configuration, string? language)
         {
-            var encodedName = System.Net.WebUtility.HtmlEncode(searchName);
             var sb = new StringBuilder();
-            sb.Append("<p>New listings matched your saved search \"").Append(encodedName).Append("\":</p>");
+            sb.Append(EmailText.Paragraph(EmailText.MatchesTitle(searchName, matches.Count, language)));
             sb.Append("<ul style=\"margin:0;padding-inline-start:20px;\">");
             foreach (var apartment in matches)
             {
@@ -130,10 +129,9 @@ namespace serverApi.Services.Implementations
 
             var clientAppUrl = (configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
             return EmailTemplates.Render(
-                $"New matches for \"{encodedName}\"",
-                sb.ToString(),
-                "View your saved searches",
-                $"{clientAppUrl}/saved-searches");
+                EmailText.MatchesTitle(searchName, matches.Count, language), sb.ToString(),
+                EmailText.Pick(language, "צפייה בחיפושים השמורים", "View your saved searches", "Ver búsquedas guardadas", "Voir vos recherches enregistrées"),
+                $"{clientAppUrl}/saved-searches", language);
         }
     }
 }

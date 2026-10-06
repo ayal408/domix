@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using serverApi.Data;
@@ -11,9 +12,10 @@ using serverApi.Data;
 namespace domix_server.ApartmentAPI.Migrations
 {
     [DbContext(typeof(ApartmentContext))]
-    partial class ApartmentContextModelSnapshot : ModelSnapshot
+    [Migration("20261006211000_AddEmailLanguage")]
+    partial class AddEmailLanguage : Migration
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

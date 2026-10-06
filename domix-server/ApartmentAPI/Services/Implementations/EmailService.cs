@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Mail;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Google.Apis.Auth.OAuth2;
 using Google.Apis.Gmail.v1;
 using Google.Apis.Services;
@@ -23,8 +24,10 @@ public class EmailService(
         var body = settings.TestBody
             .Replace("{{DateTime}}", DateTime.UtcNow.ToString("dd/MM/yyyy HH:mm 'UTC'"))
             .Replace("{{Email}}", target);
+        var language = await db.Users.AsNoTracking().Where(u => u.EmailAddress == target)
+            .Select(u => u.LanguagePreference).FirstOrDefaultAsync(cancellationToken);
         await SendEmailAsync(target!, settings.TestSubject,
-            "<div dir=\"auto\">" + WebUtility.HtmlEncode(body).Replace("\n", "<br>") + "</div>", cancellationToken);
+            EmailTemplates.Render(settings.TestSubject, EmailText.Paragraph(body), language: language), cancellationToken);
     }
 
     public async Task SendEmailAsync(string to, string subject, string htmlBody, CancellationToken cancellationToken = default)
@@ -42,8 +45,10 @@ public class EmailService(
                 HttpClientInitializer = GoogleCredential.FromAccessToken(token), ApplicationName = "DOMIX"
             });
             var body = htmlBody;
-            if (!string.IsNullOrWhiteSpace(settings.Signature))
-                body += "<hr><div dir=\"auto\">" + WebUtility.HtmlEncode(settings.Signature).Replace("\n", "<br>") + "</div>";
+            var signature = string.IsNullOrWhiteSpace(settings.Signature) ? "" :
+                "<hr><div dir=\"auto\">" + WebUtility.HtmlEncode(settings.Signature).Replace("\n", "<br>") + "</div>";
+            if (body.Contains("<!-- DOMIX_SIGNATURE -->")) body = body.Replace("<!-- DOMIX_SIGNATURE -->", signature);
+            else body += signature;
             var raw = CreateEmail(to, credentials.Email, settings.SenderName, settings.ReplyTo, subject, body);
             var message = new Google.Apis.Gmail.v1.Data.Message
             {

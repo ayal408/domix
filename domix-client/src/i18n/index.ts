@@ -1911,11 +1911,11 @@ i18n
       es: { translation: es },
       fr: { translation: fr },
     },
-    fallbackLng: 'en',
+    fallbackLng: 'he',
     supportedLngs: SUPPORTED_LANGUAGES,
     interpolation: { escapeValue: false },
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       caches: ['localStorage'],
       lookupLocalStorage: 'domix.language',
     },

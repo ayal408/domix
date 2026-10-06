@@ -11,6 +11,7 @@ namespace serverApi.Models.DTOs
         public string? PhoneNumber { get; set; }
         public string? GoogleId { get; set; }
         public string? ProfileImageBase64 { get; set; }
+        public string? LanguagePreference { get; set; }
     }
 
     public class UserResponseDto
@@ -25,6 +26,7 @@ namespace serverApi.Models.DTOs
         public DateTime JoiningDate { get; set; }
         public string? ProfileColor { get; set; }
         public string? ProfileImageBase64 { get; set; }
+        public string? LanguagePreference { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsBlocked { get; set; }
         public string? ThemePreference { get; set; }
