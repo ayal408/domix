@@ -1,3 +1,4 @@
+import { HebrewDateField } from '@/components/ui/HebrewDateField'
 import { Fragment, useEffect, useState } from 'react'
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react'
 import { useForm, Controller } from 'react-hook-form'
@@ -46,7 +47,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
     watch,
     setValue,
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isSubmitting, isDirty },
   } = useForm<ApartmentFormInput, unknown, ApartmentFormValues>({
     resolver: zodResolver(apartmentFormSchema),
     defaultValues: APARTMENT_FORM_DEFAULTS,
@@ -54,6 +55,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
 
   const [cityQuery, setCityQuery] = useState('')
   const [addressQuery, setAddressQuery] = useState('')
+  const listingType = watch('listingType')
   const selectedCity = watch('city')
   const citySuggestions = useCitySuggestions(cityQuery)
   const streetSuggestions = useStreetSuggestions(selectedCity ?? '', addressQuery)
@@ -87,9 +89,14 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
     }
   }
 
+  function closeSafely() {
+    if (isSubmitting) return
+    if (!isDirty || window.confirm(t('exchange.discard'))) onClose()
+  }
+
   return (
     <Transition show={open} as={Fragment}>
-      <Dialog static onClose={onClose} className="relative z-50">
+      <Dialog static onClose={closeSafely} className="relative z-50">
         <TransitionChild
           as={Fragment}
           enter="ease-out duration-150"
@@ -119,6 +126,16 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                 </DialogTitle>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4">
+                  <SelectField label={t('exchange.listingType')} {...register('listingType')}>
+                    {['Exchange', 'Rent', 'Sale', 'Unspecified'].map(type => <option key={type} value={type}>{t(`exchange.types.${type}`)}</option>)}
+                  </SelectField>
+                  {listingType === 'Exchange' && <fieldset className="grid grid-cols-1 gap-4 rounded-lg border border-border p-4 sm:grid-cols-2">
+                    <legend>{t('exchange.offerTerms')}</legend>
+                    <Controller name="availableFrom" control={control} render={({ field }) => <HebrewDateField name={field.name} label={t('exchange.from')} required value={field.value ?? ''} onChange={field.onChange} error={errors.availableFrom?.message} />} />
+                    <Controller name="availableTo" control={control} render={({ field }) => <HebrewDateField name={field.name} label={t('exchange.to')} required value={field.value ?? ''} onChange={field.onChange} minDate={watch('availableFrom') || undefined} error={errors.availableTo?.message} />} />
+                    <InputField label={t('exchange.destination')} required error={errors.desiredCity?.message} {...register('desiredCity')} />
+                    <p className="text-sm text-muted">{t('exchange.offerHint')}</p>
+                  </fieldset>}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <Controller
                       name="city"
@@ -169,7 +186,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
 
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <InputField
-                      label={t('apartments.fields.price')}
+                      label={t(listingType === 'Exchange' ? 'exchange.supplement' : listingType === 'Rent' ? 'exchange.monthlyPrice' : 'apartments.fields.price')}
                       type="number"
                       min={0}
                       required
@@ -211,8 +228,8 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                       ))}
                     </SelectField>
                     <div className="col-span-2 flex items-end gap-6 pb-2">
-                      <CheckboxField label={t('apartments.fields.elevator')} {...register('elevator')} />
-                      <CheckboxField label={t('apartments.fields.parking')} {...register('parking')} />
+                      <Controller name="elevator" control={control} render={({ field }) => <SelectField label={t('apartments.fields.elevator')} value={field.value == null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : e.target.value === 'true')}><option value="">{t('exchange.unknown')}</option><option value="true">{t('common.yes')}</option><option value="false">{t('common.no')}</option></SelectField>} />
+                      <Controller name="parking" control={control} render={({ field }) => <SelectField label={t('apartments.fields.parking')} value={field.value == null ? '' : String(field.value)} onChange={e => field.onChange(e.target.value === '' ? null : e.target.value === 'true')}><option value="">{t('exchange.unknown')}</option><option value="true">{t('common.yes')}</option><option value="false">{t('common.no')}</option></SelectField>} />
                       <CheckboxField label={t('apartments.fields.isAnonymous')} {...register('isAnonymous')} />
                     </div>
                   </div>
@@ -224,7 +241,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                   />
 
                   <div className="mt-2 flex justify-end gap-2">
-                    <Button type="button" variant="secondary" onClick={onClose} disabled={isSubmitting}>
+                    <Button type="button" variant="secondary" onClick={closeSafely} disabled={isSubmitting}>
                       {t('common.cancel')}
                     </Button>
                     <Button type="submit" loading={isSubmitting}>

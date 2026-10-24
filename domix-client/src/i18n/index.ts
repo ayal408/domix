@@ -1,3 +1,4 @@
+import { exchangeHe, exchangeEn, validationHe, validationEn } from '@/features/apartments/exchange.i18n'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
@@ -570,7 +571,7 @@ const he: typeof en = {
   },
   home: {
     title: 'מצאו את הבית הבא שלכם עם DOMIX',
-    description: 'עיינו בדירות למכירה ולהשכרה, השוו מחירים והתחברו ישירות עם בעלי הדירות. התחברו או צרו חשבון כדי להתחיל.',
+    description: 'עיינו בדירות להחלפה זמנית, למכירה ולהשכרה, השוו מחירים והתחברו ישירות עם בעלי הדירות. התחברו או צרו חשבון כדי להתחיל.',
     createAccount: 'יצירת חשבון',
     signIn: 'התחברות',
   },
@@ -1906,10 +1907,10 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: en },
-      he: { translation: he },
-      es: { translation: es },
-      fr: { translation: fr },
+      en: { translation: { ...en, exchange: exchangeEn, validation: validationEn } },
+      he: { translation: { ...he, exchange: exchangeHe, validation: validationHe } },
+      es: { translation: { ...es, exchange: exchangeEn, validation: validationEn } },
+      fr: { translation: { ...fr, exchange: exchangeEn, validation: validationEn } },
     },
     fallbackLng: 'he',
     supportedLngs: SUPPORTED_LANGUAGES,

@@ -40,6 +40,7 @@ export async function searchApartments(
   if (typeof query.maxPrice === 'number') params.maxPrice = query.maxPrice
   if (typeof query.minRooms === 'number') params.minRooms = query.minRooms
   if (typeof query.maxRooms === 'number') params.maxRooms = query.maxRooms
+  if (query.listingType) params.listingType = query.listingType
   if (query.propertyType) params.propertyType = query.propertyType
   if (typeof query.parking === 'boolean') params.parking = query.parking
   if (typeof query.elevator === 'boolean') params.elevator = query.elevator
@@ -106,5 +107,10 @@ export async function setApartmentStatus(
   payload: SetApartmentStatusRequest,
 ): Promise<Apartment> {
   const { data } = await dataClient.patch<Apartment>(apiEndpoints.apartments.setStatus(apartmentId), payload)
+  return data
+}
+
+export async function getApartment(apartmentId: Guid, signal?: AbortSignal): Promise<Apartment> {
+  const { data } = await dataClient.get<Apartment>(`/Apartment/${encodeURIComponent(apartmentId)}`, { signal })
   return data
 }

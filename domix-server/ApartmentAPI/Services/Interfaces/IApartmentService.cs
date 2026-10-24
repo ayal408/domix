@@ -15,13 +15,13 @@ namespace serverApi.Services.Interfaces
             string? area,
             int? minPrice,
             int? maxPrice,
-            int? minRooms,
-            int? maxRooms,
+            decimal? minRooms,
+            decimal? maxRooms,
             string? propertyType,
             bool? parking,
             bool? elevator,
             string? sortBy,
-            CancellationToken cancellationToken = default);
+            CancellationToken cancellationToken = default, string? listingType = null);
         Task<ApartmentDTO> CreateApartmentAsync(CreateApartmentDTO dto, Guid userId, CancellationToken cancellationToken = default);
 
         /// <summary>

@@ -39,6 +39,10 @@ namespace serverApi.Controllers
                 var result = await _messageService.SendMessageAsync(dto, senderId, cancellationToken);
                 return Ok(result);
             }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(ex.Message);
+            }
             catch (KeyNotFoundException ex)
             {
                 return NotFound(ex.Message);

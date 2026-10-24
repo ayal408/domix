@@ -9,6 +9,8 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    // Transform the picker ESM entry; its published main points to CJS in a type:module package.
+    server: { deps: { inline: ['react-hebrew-datepicker'] } },
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     coverage: {

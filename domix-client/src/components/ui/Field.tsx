@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { forwardRef, useId } from 'react'
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
@@ -18,6 +19,7 @@ interface FieldShellProps {
 }
 
 export function FieldShell({ id, label, error, required, hint, children }: FieldShellProps) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={id} className="text-sm font-medium text-foreground">
@@ -28,7 +30,7 @@ export function FieldShell({ id, label, error, required, hint, children }: Field
       {hint && !error && <p className="text-xs text-muted">{hint}</p>}
       {error && (
         <p id={`${id}-error`} role="alert" className="text-xs font-medium text-danger">
-          {error}
+          {t(error)}
         </p>
       )}
     </div>

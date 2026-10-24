@@ -26,7 +26,8 @@ export default function ComparePage() {
   )
 
   const rows: Row[] = [
-    { label: t('apartments.fields.price'), render: (a, lang) => formatCurrency(a.price, lang) },
+    { label: t('exchange.listingType'), render: a => t(`exchange.types.${a.listingType ?? 'Unspecified'}`) },
+    { label: t('apartments.fields.price'), render: (a, lang) => a.listingType === 'Exchange' && a.price === 0 ? t('exchange.noPayment') : `${formatCurrency(a.price, lang)} ${a.listingType === 'Rent' ? t('exchange.perMonth') : ''}` },
     { label: t('apartments.filters.city'), render: (a) => `${a.city} · ${a.area}` },
     { label: t('apartments.fields.sumOfRooms'), render: (a) => a.sumOfRooms ?? '—' },
     { label: t('apartments.fields.sumOfBeds'), render: (a) => a.sumOfBeds ?? '—' },
@@ -36,8 +37,8 @@ export default function ComparePage() {
       label: t('apartments.fields.propertyType'),
       render: (a) => (a.propertyType ? t(`apartments.propertyTypes.${a.propertyType}`) : '—'),
     },
-    { label: t('apartments.fields.elevator'), render: (a) => (a.elevator ? t('common.yes') : t('common.no')) },
-    { label: t('apartments.fields.parking'), render: (a) => (a.parking ? t('common.yes') : t('common.no')) },
+    { label: t('apartments.fields.elevator'), render: (a) => (a.elevator == null ? t('exchange.unknown') : a.elevator ? t('common.yes') : t('common.no')) },
+    { label: t('apartments.fields.parking'), render: (a) => (a.parking == null ? t('exchange.unknown') : a.parking ? t('common.yes') : t('common.no')) },
     {
       label: t('apartments.fields.rating'),
       render: (a) => (a.ratingCount > 0 ? `${a.rating.toFixed(1)} (${a.ratingCount})` : '—'),

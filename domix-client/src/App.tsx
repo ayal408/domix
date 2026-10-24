@@ -12,6 +12,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { LanguagePreferenceSync } from '@/components/LanguagePreferenceSync'
 import './i18n'
 
+const ExchangePage = lazyWithReload(() => import('@/features/apartments/ExchangePage'))
 const HomePage = lazyWithReload(() => import('@/pages/HomePage'))
 const ApartmentsCatalogPage = lazyWithReload(() => import('@/features/apartments/ApartmentsCatalogPage'))
 const ApartmentDetailPage = lazyWithReload(() => import('@/features/apartments/ApartmentDetailPage'))
@@ -98,6 +99,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<IndexRoute />} />
           <Route path="apartments/:apartmentId" element={<ApartmentDetailPage />} />
+          <Route path="exchange" element={<ProtectedRoute><ExchangePage /></ProtectedRoute>} />
           <Route path="map" element={<MapPage />} />
           <Route path="mortgage-calculator" element={<MortgageCalculatorPage />} />
           <Route

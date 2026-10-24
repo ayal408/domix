@@ -11,12 +11,17 @@ import { Card } from '@/components/ui/Card'
 import type { Guid } from '@/types/api'
 
 interface Props {
+  apartmentId: Guid
+  listingAddress: string
+  offeredApartmentId?: Guid
+  exchangeStart?: string
+  exchangeEnd?: string
   ownerId: Guid
   senderId: Guid
 }
 
 /** Contact-the-owner form shown on a listing's detail page. */
-export function ContactOwnerForm({ ownerId, senderId }: Props) {
+export function ContactOwnerForm({ ownerId, senderId, apartmentId, listingAddress, offeredApartmentId, exchangeStart, exchangeEnd }: Props) {
   const { t } = useTranslation()
   const sendMessage = useSendMessage()
   const pushToast = useToastStore((state) => state.push)
@@ -33,7 +38,7 @@ export function ContactOwnerForm({ ownerId, senderId }: Props) {
 
   async function onSubmit(values: ContactOwnerFormValues) {
     try {
-      await sendMessage.mutateAsync({ senderId, ownerId, content: values.content })
+      await sendMessage.mutateAsync({ senderId, ownerId, apartmentId, offeredApartmentId, exchangeStart: offeredApartmentId ? exchangeStart : undefined, exchangeEnd: offeredApartmentId ? exchangeEnd : undefined, content: values.content })
       reset({ content: '' })
       pushToast({ variant: 'success', title: t('messages.contact.sent') })
     } catch (error) {
@@ -45,6 +50,8 @@ export function ContactOwnerForm({ ownerId, senderId }: Props) {
   return (
     <Card className="flex flex-col gap-3 p-4">
       <h2 className="text-base font-semibold text-foreground">{t('messages.contact.title')}</h2>
+      <p className="text-sm text-muted">{t('exchange.regarding')}: {listingAddress}</p>
+      {offeredApartmentId && <p className="text-sm">{t('exchange.proposalDates')}: {exchangeStart} — {exchangeEnd}</p>}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
         <TextareaField
           label={t('messages.contact.label')}

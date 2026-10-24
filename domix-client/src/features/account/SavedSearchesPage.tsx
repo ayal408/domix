@@ -14,6 +14,7 @@ import type { Guid, SavedSearch } from '@/types/api'
 
 function describeSearch(search: SavedSearch, t: (key: string, options?: Record<string, unknown>) => string): string {
   const parts: string[] = []
+  if (search.listingType) parts.push(t(`exchange.types.${search.listingType}`))
   if (search.city) parts.push(search.city)
   if (search.area) parts.push(search.area)
   if (search.minPrice != null || search.maxPrice != null) {
@@ -35,6 +36,7 @@ export default function SavedSearchesPage() {
 
   function applySearch(search: SavedSearch) {
     const params = new URLSearchParams()
+    if (search.listingType) params.set('listingType', search.listingType)
     if (search.city) params.set('city', search.city)
     if (search.area) params.set('area', search.area)
     if (search.minPrice != null) params.set('minPrice', String(search.minPrice))

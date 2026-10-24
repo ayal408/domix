@@ -29,6 +29,13 @@ namespace serverApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("{id:guid}")]
+        public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+        {
+            var apartment = await _apartmentService.GetApartmentByIdAsync(id, cancellationToken);
+            return apartment == null ? NotFound() : Ok(apartment);
+        }
+
         // GET: api/Apartment/cities
         [HttpGet("cities")]
         public async Task<ActionResult<IEnumerable<string>>> GetCities(CancellationToken cancellationToken)
@@ -44,16 +51,17 @@ namespace serverApi.Controllers
             [FromQuery] string? area,
             [FromQuery] int? minPrice,
             [FromQuery] int? maxPrice,
-            [FromQuery] int? minRooms,
-            [FromQuery] int? maxRooms,
+            [FromQuery] decimal? minRooms,
+            [FromQuery] decimal? maxRooms,
             [FromQuery] string? propertyType,
             [FromQuery] bool? parking,
             [FromQuery] bool? elevator,
             [FromQuery] string? sortBy,
+            [FromQuery] string? listingType,
             CancellationToken cancellationToken)
         {
             var result = await _apartmentService.SearchApartmentsAsync(
-                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, sortBy, cancellationToken);
+                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, sortBy, cancellationToken, listingType);
             return Ok(result);
         }
 
@@ -67,7 +75,7 @@ namespace serverApi.Controllers
             if (string.IsNullOrWhiteSpace(dto.city) ||
                 string.IsNullOrWhiteSpace(dto.address) ||
                 string.IsNullOrWhiteSpace(dto.area) ||
-                dto.price <= 0)
+                (dto.ListingType == "Exchange" ? dto.price < 0 : dto.price <= 0))
             {
                 return BadRequest("Missing required fields: city, address, area, or price.");
             }
@@ -94,7 +102,7 @@ namespace serverApi.Controllers
             if (string.IsNullOrWhiteSpace(dto.city) ||
                 string.IsNullOrWhiteSpace(dto.address) ||
                 string.IsNullOrWhiteSpace(dto.area) ||
-                dto.price <= 0)
+                (dto.ListingType == "Exchange" ? dto.price < 0 : dto.price <= 0))
             {
                 return BadRequest("Missing required fields: city, address, area, or price.");
             }
@@ -235,7 +243,7 @@ namespace serverApi.Controllers
 
             var title = $"{apartment.price:N0} ₪ · {apartment.city}, {apartment.area}";
             var descriptionParts = new List<string>();
-            if (apartment.SumOfRooms is int rooms) descriptionParts.Add($"{rooms} rooms");
+            if (apartment.SumOfRooms is decimal rooms) descriptionParts.Add($"{rooms} rooms");
             if (apartment.SquareMeters is int sqm) descriptionParts.Add($"{sqm} m²");
             descriptionParts.Add(apartment.address);
             var description = string.Join(" · ", descriptionParts);

@@ -22,7 +22,8 @@ export default function LoginPage() {
   const [googleError, setGoogleError] = useState<string | null>(null)
 
   function redirectAfterSignIn() {
-    const redirectTo = (location.state as { from?: Location })?.from?.pathname ?? '/'
+    const from = (location.state as { from?: Location })?.from
+    const redirectTo = from ? from.pathname + (from.search ?? '') : '/'
     navigate(redirectTo, { replace: true })
   }
 

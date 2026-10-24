@@ -4,6 +4,10 @@ namespace serverApi.Models.DTOs
     {
         public Guid SenderId { get; set; }
         public Guid OwnerId { get; set; }
+        public Guid? ApartmentId { get; set; }
+        public Guid? OfferedApartmentId { get; set; }
+        public DateOnly? ExchangeStart { get; set; }
+        public DateOnly? ExchangeEnd { get; set; }
         public required string Content { get; set; }
     }
 
@@ -13,6 +17,10 @@ namespace serverApi.Models.DTOs
         public Guid SenderId { get; set; }
         public string? SenderName { get; set; }
         public Guid OwnerId { get; set; }
+        public Guid? ApartmentId { get; set; }
+        public Guid? OfferedApartmentId { get; set; }
+        public DateOnly? ExchangeStart { get; set; }
+        public DateOnly? ExchangeEnd { get; set; }
         public string? OwnerName { get; set; }
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

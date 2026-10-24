@@ -9,6 +9,10 @@ namespace serverApi.Models
         public Guid UserId { get; set; }
         public ApartmentStatus Status { get; set; } = ApartmentStatus.Available;
         public bool IsAnonymous { get; set; } = false;
+        public string ListingType { get; set; } = "Unspecified";
+        public DateOnly? AvailableFrom { get; set; }
+        public DateOnly? AvailableTo { get; set; }
+        public string? DesiredCity { get; set; }
         public int price { get; set; }
         [Required]
         public string city { get; set; } = string.Empty;
@@ -17,7 +21,7 @@ namespace serverApi.Models
         public string address { get; set; } = string.Empty;
         public string description { get; set; } = string.Empty;
         public int? SquareMeters { get; set; }
-        public int? SumOfRooms { get; set; }
+        public decimal? SumOfRooms { get; set; }
         public int? SumOfBeds { get; set; }
         public int? floor { get; set; }
         public bool? elevator { get; set; }

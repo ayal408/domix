@@ -14,12 +14,13 @@ namespace serverApi.Models
         [Required]
         public string Name { get; set; } = string.Empty;
 
+        public string? ListingType { get; set; }
         public string? City { get; set; }
         public string? Area { get; set; }
         public int? MinPrice { get; set; }
         public int? MaxPrice { get; set; }
-        public int? MinRooms { get; set; }
-        public int? MaxRooms { get; set; }
+        public decimal? MinRooms { get; set; }
+        public decimal? MaxRooms { get; set; }
         public string? PropertyType { get; set; }
         public bool? Parking { get; set; }
         public bool? Elevator { get; set; }

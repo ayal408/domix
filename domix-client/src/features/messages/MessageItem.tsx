@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { base64ToImageSrc, initialsOf } from '@/lib/sanitize'
 import { formatRelativeTime } from '@/lib/format'
@@ -44,6 +45,11 @@ export function MessageItem({
           <span className="text-xs text-muted">{formatRelativeTime(message.createdAt, i18n.language)}</span>
         </div>
 
+        {message.apartmentId && <Link className="text-sm text-primary underline" to={`/apartments/${message.apartmentId}`}>{t('exchange.viewListing')}</Link>}
+        {message.offeredApartmentId && <>
+          <Link className="text-sm text-primary underline" to={`/apartments/${message.offeredApartmentId}`}>{t('exchange.viewOffer')}</Link>
+          <p className="text-sm">{t('exchange.proposalDates')}: {message.exchangeStart} — {message.exchangeEnd}</p>
+        </>}
         <p className="whitespace-pre-line text-sm text-foreground">{message.content}</p>
 
         <div className="mt-1 flex flex-wrap gap-2">
