@@ -1,5 +1,10 @@
 namespace serverApi.Models.DTOs
 {
+    public class ExchangeCitySupplyDto
+    {
+        public string City { get; set; } = string.Empty;
+        public int Homes { get; set; }
+    }
     /// <summary>Response for <c>GET /api/Analytics/summary</c> — the admin dashboard's headline counts.</summary>
     public class AnalyticsSummaryDto
     {
@@ -14,6 +19,11 @@ namespace serverApi.Models.DTOs
         public int SoldApartments { get; set; }
         public int NewApartmentsLast7Days { get; set; }
 
+        public int ExchangeInquiriesLast7Days { get; set; }
+        public int ExchangeSeekersLast7Days { get; set; }
+        public int ExchangeInquiriesWithReplyLast7Days { get; set; }
+        public int AvailableExchangeHomes { get; set; }
+        public List<ExchangeCitySupplyDto> ExchangeSupplyByCity { get; set; } = new();
         public int OpenSupportTickets { get; set; }
     }
 }

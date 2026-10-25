@@ -75,6 +75,26 @@ public class ExchangeTests
     }
 
     [Fact]
+    public async Task PreviewWorksWithoutAnOfferAndExcludesOwnBlockedUnavailableAndPartialHomes()
+    {
+        await using var db = Context();
+        var good = Offer("ירושלים"); good.UserId = Guid.NewGuid();
+        var blocked = Offer("ירושלים"); blocked.UserId = Guid.NewGuid();
+        var partial = Offer("ירושלים"); partial.UserId = Guid.NewGuid(); partial.AvailableTo = End.AddDays(-1);
+        var rental = Offer("ירושלים"); rental.UserId = Guid.NewGuid(); rental.ListingType = "Rent";
+        db.Users.Add(new User { UserId = blocked.UserId, UserName = "blocked", IsBlocked = true });
+        db.AddRange(good, blocked, partial, rental, Offer("ירושלים")); await db.SaveChangesAsync();
+        var result = Assert.IsType<OkObjectResult>(await Controller(db).Preview(" ירושלים ", Start, End, default));
+        var json = JsonSerializer.SerializeToElement(result.Value);
+        Assert.Equal(1, json.GetArrayLength());
+        Assert.Equal(good.ApartmentId, json[0].GetProperty("Apartment").GetProperty("ApartmentId").GetGuid());
+        Assert.False(json[0].GetProperty("IsMutual").GetBoolean());
+        Assert.IsType<BadRequestObjectResult>(await Controller(db).Preview("ירושלים", End, Start, default));
+        var anonymous = Controller(db); anonymous.ControllerContext.HttpContext.User = new ClaimsPrincipal();
+        Assert.IsType<UnauthorizedResult>(await anonymous.Preview("ירושלים", Start, End, default));
+    }
+
+    [Fact]
     public void ExchangeTermsRequireDestinationAndIncreasingDates()
     {
         var terms = new ListingTerms { ListingType = "Exchange" };

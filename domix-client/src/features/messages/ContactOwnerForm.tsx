@@ -51,6 +51,7 @@ export function ContactOwnerForm({ ownerId, senderId, apartmentId, listingAddres
     <Card className="flex flex-col gap-3 p-4">
       <h2 className="text-base font-semibold text-foreground">{t('messages.contact.title')}</h2>
       <p className="text-sm text-muted">{t('exchange.regarding')}: {listingAddress}</p>
+      {exchangeStart && <p className="text-sm text-muted">{t('discovery.contactHint')}</p>}
       {offeredApartmentId && <p className="text-sm">{t('exchange.proposalDates')}: {exchangeStart} — {exchangeEnd}</p>}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
         <TextareaField

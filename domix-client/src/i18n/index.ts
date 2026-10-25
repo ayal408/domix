@@ -1,3 +1,4 @@
+import { discoveryHe, discoveryEn } from '@/features/apartments/discovery.i18n'
 import { exchangeHe, exchangeEn, validationHe, validationEn } from '@/features/apartments/exchange.i18n'
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
@@ -1907,10 +1908,10 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      en: { translation: { ...en, exchange: exchangeEn, validation: validationEn } },
-      he: { translation: { ...he, exchange: exchangeHe, validation: validationHe } },
-      es: { translation: { ...es, exchange: exchangeEn, validation: validationEn } },
-      fr: { translation: { ...fr, exchange: exchangeEn, validation: validationEn } },
+      en: { translation: { ...en, exchange: exchangeEn, discovery: discoveryEn, validation: validationEn } },
+      he: { translation: { ...he, exchange: exchangeHe, discovery: discoveryHe, validation: validationHe } },
+      es: { translation: { ...es, exchange: exchangeEn, discovery: discoveryEn, validation: validationEn } },
+      fr: { translation: { ...fr, exchange: exchangeEn, discovery: discoveryEn, validation: validationEn } },
     },
     fallbackLng: 'he',
     supportedLngs: SUPPORTED_LANGUAGES,

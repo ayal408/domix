@@ -99,7 +99,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<IndexRoute />} />
           <Route path="apartments/:apartmentId" element={<ApartmentDetailPage />} />
-          <Route path="exchange" element={<ProtectedRoute><ExchangePage /></ProtectedRoute>} />
+          <Route path="exchange" element={<ExchangePage />} />
           <Route path="map" element={<MapPage />} />
           <Route path="mortgage-calculator" element={<MortgageCalculatorPage />} />
           <Route

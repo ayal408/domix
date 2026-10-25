@@ -16,6 +16,8 @@ export default function HomePage() {
       <img src="/hero.png" alt="" className="h-28 w-auto sm:h-36" aria-hidden="true" />
       <h1 className="text-3xl font-bold text-foreground sm:text-4xl">{t('home.title')}</h1>
       <p className="text-base text-muted sm:text-lg">{t('home.description')}</p>
+      <p className="text-muted">{t('discovery.promise')}</p>
+      <Button size="lg" onClick={() => navigate('/exchange')}>{t('discovery.start')}</Button>
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button size="lg" onClick={() => navigate('/register')}>
           {t('home.createAccount')}

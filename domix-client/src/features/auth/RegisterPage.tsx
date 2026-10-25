@@ -1,7 +1,8 @@
+import { authReturn } from '@/lib/authReturn'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { registerSchema, type RegisterFormValues } from '@/features/auth/schemas'
 import { useAuthStore } from '@/stores/auth.store'
@@ -15,6 +16,7 @@ import { errorTranslationKey, toApiError } from '@/api/errors'
 export default function RegisterPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const location = useLocation()
   const signUp = useAuthStore((state) => state.signUp)
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle)
   const [formError, setFormError] = useState<string | null>(null)
@@ -24,7 +26,7 @@ export default function RegisterPage() {
     setGoogleError(null)
     try {
       await signInWithGoogle(idToken)
-      navigate('/', { replace: true })
+      navigate(authReturn(location.state), { replace: true })
     } catch (error) {
       const apiError = toApiError(error)
       setGoogleError(t(errorTranslationKey(error), apiError.message))
@@ -46,7 +48,7 @@ export default function RegisterPage() {
         password: values.password,
         ...(values.phone ? { phone: values.phone } : {}),
       })
-      navigate('/', { replace: true })
+      navigate(authReturn(location.state), { replace: true })
     } catch (error) {
       const apiError = toApiError(error)
       setFormError(t(errorTranslationKey(error), apiError.message))
@@ -117,7 +119,7 @@ export default function RegisterPage() {
       </Card>
       <p className="text-center text-sm text-muted">
         {t('auth.haveAccount')}{' '}
-        <Link to="/login" className="font-medium text-primary hover:underline">
+        <Link to="/login" state={location.state} className="font-medium text-primary hover:underline">
           {t('auth.signInInstead')}
         </Link>
       </p>

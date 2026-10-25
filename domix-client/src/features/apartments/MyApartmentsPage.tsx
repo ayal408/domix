@@ -1,3 +1,4 @@
+import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { useMemo } from 'react'
@@ -9,6 +10,9 @@ import { ApartmentManagementList } from '@/features/apartments/ApartmentManageme
 /** Every authenticated user's own listings — create/edit/delete/images, scoped to what they own. */
 export default function MyApartmentsPage() {
   const { t } = useTranslation()
+  const [params] = useSearchParams()
+  const returnTo = params.get('returnTo') ?? ''
+  const canReturn = returnTo === '/exchange' || returnTo.startsWith('/exchange?')
   const userId = useAuthStore((state) => state.user?.userId)
   const { data: apartments, isLoading, isError, refetch } = useApartments()
 
@@ -17,6 +21,8 @@ export default function MyApartmentsPage() {
   if (isError) return <EmptyState title={t('apartments.loadError')} action={<Button onClick={() => refetch()}>{t('common.retry')}</Button>} />
 
   return (
+    <div className="flex flex-col gap-4">
+    {canReturn && <Link className="text-primary underline" to={returnTo}>{t('discovery.returnSearch')}</Link>}
     <ApartmentManagementList
       apartments={own}
       isLoading={isLoading}
@@ -25,5 +31,6 @@ export default function MyApartmentsPage() {
       newApartmentLabel={t('admin.apartments.newApartment')}
       emptyLabel={t('myApartments.empty')}
     />
+    </div>
   )
 }

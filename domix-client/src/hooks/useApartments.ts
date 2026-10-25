@@ -12,8 +12,9 @@ import type {
 } from '@/types/api'
 
 /** Full, unfiltered catalog. The backend has no pagination, so this is the base dataset for both the public list and the admin table. */
-export function useApartments() {
+export function useApartments(enabled = true) {
   return useQuery({
+    enabled,
     queryKey: queryKeys.apartments.list(),
     queryFn: ({ signal }) => apartmentsApi.getAllApartments(signal),
   })
