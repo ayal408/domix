@@ -219,6 +219,13 @@ export type ApartmentStatusValue = (typeof APARTMENT_STATUSES)[number]
 
 /** `ApartmentDTO`. */
 export interface Apartment {
+  guestCapacity?: number | null
+  kosherKitchen?: boolean | null
+  separateBeds?: boolean | null
+  synagogueDistanceMeters?: number | null
+  kitchenNotes?: string | null
+  shabbatNotes?: string | null
+
   listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
   availableFrom?: string | null
   availableTo?: string | null
@@ -259,6 +266,13 @@ export interface Apartment {
  * guard, so it is required here too.
  */
 export interface CreateApartmentRequest {
+  guestCapacity?: number | null
+  kosherKitchen?: boolean | null
+  separateBeds?: boolean | null
+  synagogueDistanceMeters?: number | null
+  kitchenNotes?: string | null
+  shabbatNotes?: string | null
+
   listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
   availableFrom?: string | null
   availableTo?: string | null
@@ -289,6 +303,13 @@ export interface CreateApartmentRequest {
  * Status is changed separately via `PATCH /api/Apartment/{id}/status`.
  */
 export interface UpdateApartmentRequest {
+  guestCapacity?: number | null
+  kosherKitchen?: boolean | null
+  separateBeds?: boolean | null
+  synagogueDistanceMeters?: number | null
+  kitchenNotes?: string | null
+  shabbatNotes?: string | null
+
   listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
   availableFrom?: string | null
   availableTo?: string | null

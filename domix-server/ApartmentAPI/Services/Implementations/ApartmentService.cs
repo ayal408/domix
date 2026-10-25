@@ -150,6 +150,13 @@ namespace serverApi.Services.Implementations
                 Parking = dto.Parking,
                 PropertyType = dto.PropertyType,
                 ListingType = dto.ListingType,
+                GuestCapacity = dto.GuestCapacity,
+                KosherKitchen = dto.KosherKitchen,
+                SeparateBeds = dto.SeparateBeds,
+                SynagogueDistanceMeters = dto.SynagogueDistanceMeters,
+                KitchenNotes = dto.KitchenNotes,
+                ShabbatNotes = dto.ShabbatNotes,
+
                 AvailableFrom = dto.ListingType == "Exchange" ? dto.AvailableFrom : null,
                 AvailableTo = dto.ListingType == "Exchange" ? dto.AvailableTo : null,
                 DesiredCity = dto.ListingType == "Exchange" ? dto.DesiredCity?.Trim() : null,
@@ -202,6 +209,13 @@ namespace serverApi.Services.Implementations
             apartment.Parking = dto.Parking;
             apartment.PropertyType = dto.PropertyType;
             apartment.ListingType = dto.ListingType;
+            apartment.GuestCapacity = dto.GuestCapacity;
+            apartment.KosherKitchen = dto.KosherKitchen;
+            apartment.SeparateBeds = dto.SeparateBeds;
+            apartment.SynagogueDistanceMeters = dto.SynagogueDistanceMeters;
+            apartment.KitchenNotes = dto.KitchenNotes;
+            apartment.ShabbatNotes = dto.ShabbatNotes;
+
             apartment.AvailableFrom = dto.ListingType == "Exchange" ? dto.AvailableFrom : null;
             apartment.AvailableTo = dto.ListingType == "Exchange" ? dto.AvailableTo : null;
             apartment.DesiredCity = dto.ListingType == "Exchange" ? dto.DesiredCity?.Trim() : null;
@@ -224,6 +238,9 @@ namespace serverApi.Services.Implementations
 
         public async Task<bool?> DeleteApartmentAsync(Guid apartmentId, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
         {
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync<bool?>(async () => {
+            _context.ChangeTracker.Clear();
+            await using var transaction = await new ExchangeWorkflow(_context).LockHomes(new[] { apartmentId }, cancellationToken);
             var apartment = await _context.Apartments
                 .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId, cancellationToken);
 
@@ -236,12 +253,21 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
+            if (await _context.ExchangeAgreements.AnyAsync(x => x.Status == "Accepted" && x.End > ExchangeMatching.Today &&
+                (x.OfferedApartmentId == apartmentId || x.RequestedApartmentId == apartmentId), cancellationToken))
+                throw new ExchangeConflict("יש לבטל החלפה מאושרת לפני מחיקת הדירה");
+            _context.ExchangeCalendarPeriods.RemoveRange(_context.ExchangeCalendarPeriods.Where(x => x.ApartmentId == apartmentId));
+            _context.ExchangeWatches.RemoveRange(_context.ExchangeWatches.Where(x => x.OfferedApartmentId == apartmentId));
+            var pending = await _context.ExchangeAgreements.Where(x => x.Status == "Pending" && (x.OfferedApartmentId == apartmentId || x.RequestedApartmentId == apartmentId)).ToListAsync(cancellationToken);
+            foreach (var request in pending) { request.Status = "Cancelled"; request.Revision++; request.UpdatedAt = DateTime.UtcNow; }
             _context.Apartments.Remove(apartment);
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Successfully deleted apartment {ApartmentId} by user {UserId}", apartmentId, userId);
 
+            if (transaction != null) await transaction.CommitAsync(cancellationToken);
             return true;
+            });
         }
 
         public async Task<ApartmentDTO?> RateApartmentAsync(Guid apartmentId, Guid userId, int score, CancellationToken cancellationToken = default)
@@ -309,6 +335,13 @@ namespace serverApi.Services.Implementations
             Parking = a.Parking,
             PropertyType = a.PropertyType,
             ListingType = a.ListingType,
+            GuestCapacity = a.GuestCapacity,
+            KosherKitchen = a.KosherKitchen,
+            SeparateBeds = a.SeparateBeds,
+            SynagogueDistanceMeters = a.SynagogueDistanceMeters,
+            KitchenNotes = a.KitchenNotes,
+            ShabbatNotes = a.ShabbatNotes,
+
             AvailableFrom = a.AvailableFrom,
             AvailableTo = a.AvailableTo,
             DesiredCity = a.DesiredCity,

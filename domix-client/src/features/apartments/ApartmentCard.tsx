@@ -98,7 +98,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
         </p>
         <p className="truncate text-xs text-muted">{apartment.address}</p>
 
-        {apartment.ratingCount > 0 && (
+        {apartment.listingType !== 'Exchange' && apartment.ratingCount > 0 && (
           <StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />
         )}
 

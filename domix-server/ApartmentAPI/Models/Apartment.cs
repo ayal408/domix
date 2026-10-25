@@ -13,6 +13,12 @@ namespace serverApi.Models
         public DateOnly? AvailableFrom { get; set; }
         public DateOnly? AvailableTo { get; set; }
         public string? DesiredCity { get; set; }
+        public int? GuestCapacity { get; set; }
+        public bool? KosherKitchen { get; set; }
+        public bool? SeparateBeds { get; set; }
+        public int? SynagogueDistanceMeters { get; set; }
+        public string? KitchenNotes { get; set; }
+        public string? ShabbatNotes { get; set; }
         public int price { get; set; }
         [Required]
         public string city { get; set; } = string.Empty;

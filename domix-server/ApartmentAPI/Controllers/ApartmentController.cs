@@ -157,6 +157,10 @@ namespace serverApi.Controllers
             {
                 return Forbid();
             }
+            catch (serverApi.Services.Implementations.ExchangeConflict ex)
+            {
+                return Conflict(new { message = ex.Message });
+            }
             catch (Microsoft.EntityFrameworkCore.DbUpdateException ex)
             {
                 // Most likely a Restrict FK (e.g. existing Appointments) blocking the delete.

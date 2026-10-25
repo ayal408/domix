@@ -5,6 +5,12 @@ namespace serverApi.Models.DTOs;
 // DateOnly is intentional: availability is a calendar interval, not a UTC timestamp.
 public class ListingTerms : IValidatableObject
 {
+    [Range(1, 30)] public int? GuestCapacity { get; set; }
+    public bool? KosherKitchen { get; set; }
+    public bool? SeparateBeds { get; set; }
+    [Range(0, 10000)] public int? SynagogueDistanceMeters { get; set; }
+    [MaxLength(1000)] public string? KitchenNotes { get; set; }
+    [MaxLength(1000)] public string? ShabbatNotes { get; set; }
     public string ListingType { get; set; } = "Unspecified";
     public DateOnly? AvailableFrom { get; set; }
     public DateOnly? AvailableTo { get; set; }
