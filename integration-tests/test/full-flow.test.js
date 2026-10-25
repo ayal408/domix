@@ -279,11 +279,11 @@ test("a user cannot attach an image to another user's apartment", async () => {
 });
 
 test("exchange acceptance atomically reserves both homes and cancellation releases them", async () => {
-  async function user(suffix) {
-    const response = await authFetch("/register", { method: "POST", body: JSON.stringify({ userName: `swap${suffix}${runId}`, email: `swap-${suffix}-${runId}@example.com`, password: "password123" }) });
-    assert.equal(response.status, 200); return response.json();
-  }
-  const [a, b] = await Promise.all([user("a"), user("b")]);
+  // Reuse existing fixtures: this suite deliberately keeps the real registration rate limiter on.
+  const a = { accessToken: adminAccessToken, user: { userId: adminUserId } };
+  const login = await authFetch("/login", { method: "POST", body: JSON.stringify({ userName: `imageoutsider${runId}`, password: "password123" }) });
+  assert.equal(login.status, 200);
+  const b = await login.json();
   async function api(token, path, body, method = "POST") {
     return fetch(`${services.domixServerUrl}/api/exchange${path}`, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
   }
