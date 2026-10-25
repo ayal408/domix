@@ -155,3 +155,42 @@ jobs:
         run: npm test
         env:
           INTEGRATION_TEST_POSTGRES_URL: "Host=localhost;Port=5432;Database=domix_integration_test;Username=postgres;Password=postgres"
+
+  hosting:
+    name: Hosting containers (gateway + API)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: domix_hosting
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d domix_hosting"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build gateway and API images
+        run: |
+          docker build -f deploy/gateway.Dockerfile -t domix-gateway .
+          docker build -t domix-api domix-server
+      - name: Start disposable deployment
+        run: |
+          docker run -d --name domix-api --network host -e PORT=8081 \
+            -e DEFAULT_CONNECTION='Host=127.0.0.1;Port=5432;Database=domix_hosting;Username=postgres;Password=test-only' \
+            -e JWT_SECRET='ci-only-shared-secret-at-least-32-chars' \
+            -e INTERNAL_SERVICE_KEY='ci-only-internal-key-at-least-32-chars' domix-api
+          docker run -d --name domix-gateway --network host -e PORT=8080 \
+            -e DATA_SERVICE_URL=http://127.0.0.1:8081 \
+            -e JWT_SECRET='ci-only-shared-secret-at-least-32-chars' \
+            -e INTERNAL_SERVICE_KEY='ci-only-internal-key-at-least-32-chars' domix-gateway
+      - name: Verify deployed routing and registration
+        run: bash deploy/smoke-gateway.sh
+      - name: Container logs on failure
+        if: failure()
+        run: |
+          docker logs domix-api || true
+          docker logs domix-gateway || true

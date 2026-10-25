@@ -39,6 +39,12 @@ builder.Services.AddAppOptions(builder.Configuration);
 
 var app = builder.Build();
 
+if (builder.Configuration.GetValue<bool>("RequireRemoteImageStorage"))
+{
+    using var storageScope = app.Services.CreateScope();
+    storageScope.ServiceProvider.GetRequiredService<serverApi.Services.Implementations.CloudinaryImageStorage>().ValidateConfiguration();
+}
+
 // Applies any pending EF Core migrations on boot, including the very first one against an empty
 // database. EnsureCreated is never used alongside this — the two are mutually exclusive since
 // EnsureCreated bypasses the migrations history table entirely.

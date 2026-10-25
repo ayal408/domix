@@ -21,6 +21,7 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
+app.get("/auth/healthz", (_req, res) => res.json({ status: "ok" }));
 app.use("/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
