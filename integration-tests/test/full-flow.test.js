@@ -277,3 +277,39 @@ test("a user cannot attach an image to another user's apartment", async () => {
 
   assert.equal(imageRes.status, 403);
 });
+
+test("exchange preview works before publishing, stays private, and analytics run on Postgres", async () => {
+  // Reuse a fixture account to retain production registration rate limits.
+  const login = await authFetch("/login", {
+    method: "POST", body: JSON.stringify({ userName: `imageoutsider${runId}`, password: "password123" }),
+  });
+  assert.equal(login.status, 200);
+  const outsider = await login.json();
+  const start = new Date(Date.now() + 14 * 86400000).toISOString().slice(0, 10);
+  const end = new Date(Date.now() + 18 * 86400000).toISOString().slice(0, 10);
+  const city = `Discovery-${runId}`;
+  const created = await fetch(`${services.domixServerUrl}/api/Apartment`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${outsider.accessToken}` },
+    body: JSON.stringify({ city, address: "Test home", area: "Center", price: 0, listingType: "Exchange", desiredCity: "Jerusalem", availableFrom: start, availableTo: end }),
+  });
+  const home = await created.json();
+  assert.equal(created.status, 200, JSON.stringify(home));
+  const url = `${services.domixServerUrl}/api/exchange/preview?${new URLSearchParams({ destination: city, start, end })}`;
+  assert.equal((await fetch(url)).status, 401);
+  const preview = await fetch(url, { headers: { Authorization: `Bearer ${adminAccessToken}` } });
+  assert.equal(preview.status, 200);
+  const options = await preview.json();
+  assert.equal(options.length, 1);
+  assert.equal(options[0].apartment.apartmentId, home.apartmentId);
+  assert.equal(options[0].isMutual, false);
+  const own = await fetch(url, { headers: { Authorization: `Bearer ${outsider.accessToken}` } });
+  assert.equal(own.status, 200);
+  assert.deepEqual(await own.json(), []);
+  const summary = await fetch(`${services.domixServerUrl}/api/Analytics/summary`, { headers: { Authorization: `Bearer ${adminAccessToken}` } });
+  const metrics = await summary.json();
+  assert.equal(summary.status, 200, JSON.stringify(metrics));
+  assert.ok(metrics.availableExchangeHomes >= 1);
+  assert.ok(metrics.exchangeSupplyByCity.some(row => row.city === city && row.homes === 1));
+  assert.equal(typeof metrics.exchangeInquiriesWithReplyLast7Days, "number");
+});

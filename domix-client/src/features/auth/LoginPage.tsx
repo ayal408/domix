@@ -1,3 +1,4 @@
+import { authReturn } from '@/lib/authReturn'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -22,9 +23,7 @@ export default function LoginPage() {
   const [googleError, setGoogleError] = useState<string | null>(null)
 
   function redirectAfterSignIn() {
-    const from = (location.state as { from?: Location })?.from
-    const redirectTo = from ? from.pathname + (from.search ?? '') : '/'
-    navigate(redirectTo, { replace: true })
+    navigate(authReturn(location.state), { replace: true })
   }
 
   async function handleGoogleIdToken(idToken: string) {
@@ -105,7 +104,7 @@ export default function LoginPage() {
       </Card>
       <p className="text-center text-sm text-muted">
         {t('auth.noAccount')}{' '}
-        <Link to="/register" className="font-medium text-primary hover:underline">
+        <Link to="/register" state={location.state} className="font-medium text-primary hover:underline">
           {t('auth.createOne')}
         </Link>
       </p>

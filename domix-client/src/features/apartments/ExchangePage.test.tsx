@@ -46,10 +46,38 @@ describe('automatic exchange suggestions', () => {
     expect(dataClient.get).not.toHaveBeenCalled()
     expect(screen.getByText(/Your home is not available/)).toBeInTheDocument()
   })
+  it('lets users explore real suggestions before publishing their home', async () => {
+    list.data = []
+    page('/exchange?destination=Jerusalem&start=2099-01-02&end=2099-01-05')
+    await screen.findByRole('link', { name: 'Jerusalem, 1 Main' })
+    expect(dataClient.get).toHaveBeenCalledWith('/exchange/preview', expect.objectContaining({ params: { destination: 'Jerusalem', start: '2099-01-02', end: '2099-01-05' } }))
+    expect(screen.getByText('Initial option — your home has not been checked')).toBeInTheDocument()
+    expect(screen.queryByText('Mutual match: looking in your home city')).not.toBeInTheDocument()
+  })
+  it('keeps an anonymous draft without requesting private listings and carries it to registration', () => {
+    useAuthStore.setState({ status: 'unauthenticated', user: null })
+    page('/exchange?destination=Jerusalem&start=2099-01-02&end=2099-01-05')
+    expect(screen.getByLabelText('Desired city')).toHaveValue('Jerusalem')
+    expect(screen.getByRole('link', { name: 'Register and continue' })).toHaveAttribute('href', '/register')
+    expect(dataClient.get).not.toHaveBeenCalled()
+    expect(screen.queryByLabelText('My offered home')).not.toBeInTheDocument()
+  })
+  it('keeps existing dates when selecting a published home', async () => {
+    page('/exchange?destination=Jerusalem&start=2099-01-02&end=2099-01-05')
+    await userEvent.selectOptions(screen.getByLabelText('My offered home'), 'offer')
+    expect(screen.getByLabelText('Check-in date')).toHaveValue('2099-01-02')
+    expect(screen.getByLabelText('Check-out date')).toHaveValue('2099-01-05')
+  })
+  it('explains how to recover from no results', async () => {
+    vi.mocked(dataClient.get).mockResolvedValue({ data: [] })
+    page()
+    expect(await screen.findByRole('link', { name: 'Edit search' })).toHaveAttribute('href', '#exchange-search')
+    expect(screen.getByText(/Different choices do not guarantee results/)).toBeInTheDocument()
+  })
   it('offers publishing when the user has no exchange home', () => {
     list.data = []
     page('/exchange')
-    expect(screen.getByRole('link', { name: 'Publish my home' })).toHaveAttribute('href', '/my-apartments')
+    expect(screen.getByRole('link', { name: 'Publish my home' })).toHaveAttribute('href', '/my-apartments?returnTo=%2Fexchange')
     expect(dataClient.get).not.toHaveBeenCalled()
   })
 })

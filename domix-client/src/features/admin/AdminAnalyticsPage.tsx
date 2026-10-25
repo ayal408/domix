@@ -43,6 +43,18 @@ export default function AdminAnalyticsPage() {
       ) : (
         <>
           <section className="flex flex-col gap-3">
+            <h2 className="text-sm font-semibold">{t('discovery.metricsTitle')}</h2>
+            <p className="text-sm text-muted">{t('discovery.metricsHint')}</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <StatTile label={t('discovery.supply')} value={data.availableExchangeHomes ?? 0} />
+              <StatTile label={t('discovery.inquiries')} value={data.exchangeInquiriesLast7Days ?? 0} />
+              <StatTile label={t('discovery.seekers')} value={data.exchangeSeekersLast7Days ?? 0} />
+              <StatTile label={t('discovery.replies')} value={data.exchangeInquiriesWithReplyLast7Days ?? 0} />
+            </div>
+            <p className="text-sm text-muted">{t('discovery.replyHint')}</p>
+            <table className="w-full text-start"><caption className="text-start">{t('discovery.supplyHint')}</caption><thead><tr><th scope="col">{t('discovery.city')}</th><th scope="col">{t('discovery.supply')}</th></tr></thead><tbody>{(data.exchangeSupplyByCity ?? []).map(row => <tr key={row.city}><td>{row.city}</td><td>{row.homes}</td></tr>)}</tbody></table>
+          </section>
+          <section className="flex flex-col gap-3">
             <h2 className="text-sm font-semibold text-foreground">{t('admin.analytics.usersSection')}</h2>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <StatTile label={t('admin.analytics.totalUsers')} value={data.totalUsers} />

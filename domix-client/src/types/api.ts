@@ -520,6 +520,11 @@ export interface AnalyticsSummary {
   rentedApartments: number
   soldApartments: number
   newApartmentsLast7Days: number
+  availableExchangeHomes: number
+  exchangeInquiriesLast7Days: number
+  exchangeSeekersLast7Days: number
+  exchangeInquiriesWithReplyLast7Days: number
+  exchangeSupplyByCity: { city: string; homes: number }[]
   openSupportTickets: number
 }
 
