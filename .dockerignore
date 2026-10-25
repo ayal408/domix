@@ -1,0 +1,13 @@
+.git
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/.env
+**/.env.*
+!**/.env.example
+**/logs
+**/wwwroot/images
+*.zip
+*.tar
+*.gz

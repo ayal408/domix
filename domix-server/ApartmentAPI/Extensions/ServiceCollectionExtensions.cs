@@ -145,6 +145,7 @@ namespace serverApi.Extensions
 
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
         {
+            services.AddHttpClient<CloudinaryImageStorage>(client => client.Timeout = TimeSpan.FromSeconds(60));
             services.AddMemoryCache();
             services.AddSignalR();
             services.AddScoped<IImageService, ImageService>();

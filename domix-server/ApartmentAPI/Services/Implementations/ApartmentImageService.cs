@@ -13,13 +13,15 @@ namespace serverApi.Services.Implementations
     {
         private readonly ApartmentContext _context;
         private readonly ILogger<ApartmentImageService> _logger;
+        private readonly CloudinaryImageStorage? _remote;
         private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
         private const long MaxImageSizeBytes = 10 * 1024 * 1024; // 10 MB
 
-        public ApartmentImageService(ApartmentContext context, ILogger<ApartmentImageService> logger)
+        public ApartmentImageService(ApartmentContext context, ILogger<ApartmentImageService> logger, CloudinaryImageStorage? remote = null)
         {
             _context = context;
             _logger = logger;
+            _remote = remote;
         }
 
         public async Task<IEnumerable<ApartmentImageDTO>> GetAllImagesAsync(CancellationToken cancellationToken = default)
@@ -98,24 +100,26 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
-            var fileName = $"{Guid.NewGuid()}{extension}";
-            var folderPath = Path.Combine("wwwroot", "images");
-
-            if (!Directory.Exists(folderPath))
-                Directory.CreateDirectory(folderPath);
-
-            var fullPath = Path.Combine(folderPath, fileName);
-
-            using (var stream = new FileStream(fullPath, FileMode.Create))
+            string imageUrl;
+            if (_remote?.IsConfigured == true)
             {
+                imageUrl = await _remote.Upload(dto.Image, cancellationToken);
+            }
+            else
+            {
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var folderPath = Path.Combine("wwwroot", "images");
+                Directory.CreateDirectory(folderPath);
+                await using var stream = new FileStream(Path.Combine(folderPath, fileName), FileMode.CreateNew);
                 await dto.Image.CopyToAsync(stream, cancellationToken);
+                imageUrl = $"/images/{fileName}";
             }
 
             var img = new ApartmentImage
             {
                 ImageId = Guid.NewGuid(),
                 ApartmentId = dto.ApartmentId,
-                ImageUrl = $"/images/{fileName}",
+                ImageUrl = imageUrl,
                 CreatedAt = DateTime.UtcNow
             };
 
