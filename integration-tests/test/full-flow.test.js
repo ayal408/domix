@@ -277,3 +277,57 @@ test("a user cannot attach an image to another user's apartment", async () => {
 
   assert.equal(imageRes.status, 403);
 });
+
+test("exchange acceptance atomically reserves both homes and cancellation releases them", async () => {
+  async function user(suffix) {
+    const response = await authFetch("/register", { method: "POST", body: JSON.stringify({ userName: `swap${suffix}${runId}`, email: `swap-${suffix}-${runId}@example.com`, password: "password123" }) });
+    assert.equal(response.status, 200); return response.json();
+  }
+  const [a, b] = await Promise.all([user("a"), user("b")]);
+  async function api(token, path, body, method = "POST") {
+    return fetch(`${services.domixServerUrl}/api/exchange${path}`, { method, headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
+  }
+  const day = offset => new Date(Date.now() + offset * 86400000).toISOString().slice(0, 10);
+  const start = day(10), end = day(13);
+  async function home(token, address, city) {
+    const response = await fetch(`${services.domixServerUrl}/api/Apartment`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` }, body: JSON.stringify({ city, address, area: "Center", price: 0, listingType: "Exchange", desiredCity: "Haifa", availableFrom: day(5), availableTo: day(30), guestCapacity: 6, kosherKitchen: true }) });
+    assert.equal(response.status, 200); return response.json();
+  }
+  const offered = await home(a.accessToken, "Herzl 1", "Haifa");
+  const targets = [await home(b.accessToken, "Jaffa 1", "Jerusalem"), await home(b.accessToken, "Jaffa 2", "Jerusalem")];
+  const pending = [];
+  for (const target of targets) {
+    const response = await api(a.accessToken, "/requests", { offeredApartmentId: offered.apartmentId, requestedApartmentId: target.apartmentId, start, end, guests: 3 });
+    assert.equal(response.status, 200); pending.push(await response.json());
+  }
+  const selfAccept = await api(a.accessToken, `/requests/${pending[0].id}/decision`, { action: "Accept", revision: 0 });
+  assert.equal(selfAccept.status, 403);
+  const results = await Promise.all(pending.map(request => api(b.accessToken, `/requests/${request.id}/decision`, { action: "Accept", revision: 0, recipientGuests: 2 })));
+  const details = await Promise.all(results.map(async response => ({ status: response.status, body: await response.json() })));
+  assert.deepEqual(details.map(result => result.status).sort(), [200, 409], JSON.stringify(details));
+  const accepted = details.find(result => result.status === 200).body;
+  const ownerCalendar = await api(a.accessToken, `/calendar/${offered.apartmentId}`, undefined, "GET");
+  assert.equal((await ownerCalendar.json()).reservations.length, 1);
+  const foreignCalendar = await api(b.accessToken, `/calendar/${offered.apartmentId}`, undefined, "GET");
+  assert.equal(foreignCalendar.status, 403);
+  const block = await api(a.accessToken, `/calendar/${offered.apartmentId}`, { start, end, isAvailable: false });
+  assert.equal(block.status, 409);
+  const cancel = await api(a.accessToken, `/requests/${accepted.id}/decision`, { action: "Cancel", revision: accepted.revision });
+  assert.equal(cancel.status, 200);
+  const remaining = pending.find(request => request.id !== accepted.id);
+  const acceptRemaining = await api(b.accessToken, `/requests/${remaining.id}/decision`, { action: "Accept", revision: 0, recipientGuests: 2 });
+  assert.equal(acceptRemaining.status, 200, await acceptRemaining.text());
+  const watch = await api(a.accessToken, "/watches", { offeredApartmentId: offered.apartmentId, destination: "Jerusalem", start: day(15), end: day(18), frequency: "Daily" });
+  assert.equal(watch.status, 200); const savedWatch = await watch.json();
+  const stopAlerts = await api(a.accessToken, `/watches/${savedWatch.id}/frequency`, "Off", "PATCH");
+  assert.equal(stopAlerts.status, 204);
+  const foreignStop = await api(b.accessToken, `/watches/${savedWatch.id}/frequency`, "Off", "PATCH");
+  assert.equal(foreignStop.status, 404);
+  const report = await api(a.accessToken, "/reports", { apartmentId: targets[0].apartmentId, reason: "Please check this listing" });
+  assert.equal(report.status, 200);
+  const blockUser = await api(a.accessToken, `/blocks/${b.user.userId}`);
+  assert.equal(blockUser.status, 204);
+  const matches = await api(a.accessToken, `/matches?offeredApartmentId=${offered.apartmentId}&destination=Jerusalem&start=${day(15)}&end=${day(18)}`, undefined, "GET");
+  assert.equal(matches.status, 200); assert.equal((await matches.json()).length, 0);
+
+});

@@ -1,3 +1,5 @@
+import { ExchangeTrustControls } from './ExchangeTrustControls'
+import { ExchangeProposalForm } from './ExchangeProposalForm'
 import { formatExchangeDate } from './exchangeDates'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
@@ -128,7 +130,7 @@ export default function ApartmentDetailPage() {
             {apartment.city} · {apartment.area}
           </p>
           <p className="text-sm text-muted">{apartment.address}</p>
-          {apartment.ratingCount > 0 && (
+          {apartment.listingType !== 'Exchange' && apartment.ratingCount > 0 && (
             <div className="mt-2">
               <StarRating value={apartment.rating} count={apartment.ratingCount} />
             </div>
@@ -159,6 +161,19 @@ export default function ApartmentDetailPage() {
         <Stat label={t('apartments.fields.parking')} value={apartment.parking == null ? t('exchange.unknown') : apartment.parking ? t('common.yes') : t('common.no')} />
       </dl>
 
+      <Card className="flex flex-col gap-2 p-4">
+        <h2 className="font-semibold">{t('hospitality.title')}</h2>
+        <p className="text-sm text-muted">{t('hospitality.declaration')}</p>
+        <dl className="grid grid-cols-2 gap-3">
+          <Stat label={t('hospitality.capacity')} value={apartment.guestCapacity ?? t('exchange.unknown')} />
+          <Stat label={t('hospitality.synagogue')} value={apartment.synagogueDistanceMeters ?? t('exchange.unknown')} />
+          <Stat label={t('hospitality.kosherKitchen')} value={apartment.kosherKitchen == null ? t('exchange.unknown') : t(apartment.kosherKitchen ? 'common.yes' : 'common.no')} />
+          <Stat label={t('hospitality.separateBeds')} value={apartment.separateBeds == null ? t('exchange.unknown') : t(apartment.separateBeds ? 'common.yes' : 'common.no')} />
+        </dl>
+        {apartment.kitchenNotes && <p className="whitespace-pre-line text-sm">{t('hospitality.kitchenNotes')}: {apartment.kitchenNotes}</p>}
+        {apartment.shabbatNotes && <p className="whitespace-pre-line text-sm">{t('hospitality.shabbatNotes')}: {apartment.shabbatNotes}</p>}
+      </Card>
+      <ExchangeTrustControls apartmentId={apartment.apartmentId} ownerId={apartment.userId} />
       <OwnerProfileCard
         ownerId={apartment.userId}
         currentApartmentId={apartment.apartmentId}
@@ -175,9 +190,10 @@ export default function ApartmentDetailPage() {
 
       <p className="text-xs text-muted">{t('apartments.detail.posted', { date: formatDate(apartment.dateInsert, i18n.language) })}</p>
 
+      {currentUser && currentUser.userId !== apartment.userId && apartment.listingType === 'Exchange' && <ExchangeProposalForm key={apartment.apartmentId} requestedApartmentId={apartment.apartmentId} offeredId={params.get('offeredApartmentId') ?? undefined} initialStart={params.get('start') ?? undefined} initialEnd={params.get('end') ?? undefined} />}
       {currentUser && currentUser.userId !== apartment.userId && (
         <>
-          <Card className="flex flex-col gap-2 p-4">
+          {apartment.listingType !== 'Exchange' && <Card className="flex flex-col gap-2 p-4">
             <h2 className="text-base font-semibold text-foreground">{t('rating.rateThis')}</h2>
             <StarRatingInput
               disabled={rateMutation.isPending}
@@ -191,7 +207,7 @@ export default function ApartmentDetailPage() {
                 }
               }}
             />
-          </Card>
+          </Card>}
           <ContactOwnerForm apartmentId={apartment.apartmentId} listingAddress={apartment.address} ownerId={apartment.userId} senderId={currentUser.userId}
             offeredApartmentId={apartment.listingType === 'Exchange' ? params.get('offeredApartmentId') ?? undefined : undefined}
             exchangeStart={params.get('start') ?? undefined} exchangeEnd={params.get('end') ?? undefined} />

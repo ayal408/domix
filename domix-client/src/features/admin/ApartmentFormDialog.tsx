@@ -234,6 +234,15 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                     </div>
                   </div>
 
+                  <fieldset className="grid gap-4 rounded-lg border border-border p-4 sm:grid-cols-2">
+                    <legend className="px-2 font-medium">{t('hospitality.title')}</legend>
+                    <p className="text-sm text-muted sm:col-span-2">{t('hospitality.declaration')}</p>
+                    <InputField type="number" min={1} max={30} label={t('hospitality.capacity')} error={errors.guestCapacity?.message} {...register('guestCapacity')} />
+                    <InputField type="number" min={0} max={10000} label={t('hospitality.synagogue')} error={errors.synagogueDistanceMeters?.message} {...register('synagogueDistanceMeters')} />
+                    {(['kosherKitchen', 'separateBeds'] as const).map(name => <Controller key={name} name={name} control={control} render={({ field }) => <SelectField label={t(`hospitality.${name}`)} value={field.value == null ? '' : String(field.value)} onChange={event => field.onChange(event.target.value === '' ? null : event.target.value === 'true')}><option value="">{t('exchange.unknown')}</option><option value="true">{t('common.yes')}</option><option value="false">{t('common.no')}</option></SelectField>} />)}
+                    <TextareaField label={t('hospitality.kitchenNotes')} hint={t('hospitality.kitchenHint')} maxLength={1000} error={errors.kitchenNotes?.message} {...register('kitchenNotes')} />
+                    <TextareaField label={t('hospitality.shabbatNotes')} hint={t('hospitality.shabbatHint')} maxLength={1000} error={errors.shabbatNotes?.message} {...register('shabbatNotes')} />
+                  </fieldset>
                   <TextareaField
                     label={t('apartments.fields.description')}
                     error={errors.description?.message}

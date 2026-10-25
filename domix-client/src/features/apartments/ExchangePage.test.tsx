@@ -41,10 +41,9 @@ describe('automatic exchange suggestions', () => {
     expect(screen.getByLabelText('Desired city')).toHaveValue('Jerusalem')
     expect(screen.getByLabelText('Check-in date')).toHaveValue('2099-01-01')
   })
-  it('does not request suggestions outside the offered availability', () => {
+  it('asks the server about additional calendar windows beyond base availability', async () => {
     page('/exchange?offeredApartmentId=offer&destination=Jerusalem&start=2099-01-02&end=2099-01-20')
-    expect(dataClient.get).not.toHaveBeenCalled()
-    expect(screen.getByText(/Your home is not available/)).toBeInTheDocument()
+    await waitFor(() => expect(dataClient.get).toHaveBeenCalledWith('/exchange/matches', expect.objectContaining({ params: expect.objectContaining({ end: '2099-01-20' }) })))
   })
   it('offers publishing when the user has no exchange home', () => {
     list.data = []

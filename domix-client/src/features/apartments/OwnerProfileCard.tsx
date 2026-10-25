@@ -1,3 +1,4 @@
+import { ExchangeReviews } from './ExchangeTrustControls'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useUserById } from '@/hooks/useUser'
@@ -75,7 +76,7 @@ export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, lis
         </div>
       </div>
 
-      {owner.phoneNumber && <p className="text-sm text-foreground">{owner.phoneNumber}</p>}
+      {owner.phoneNumber && <div className="flex flex-wrap items-center gap-3"><span dir="ltr">{owner.phoneNumber}</span><a className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white" href={`tel:${owner.phoneNumber.replace(/[^+0-9]/g, '')}`}>{t('hospitality.call')}</a></div>}
 
       {whatsappLink && (
         <a
@@ -89,6 +90,7 @@ export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, lis
         </a>
       )}
 
+      <ExchangeReviews userId={ownerId} />
       {otherActiveListings > 0 && (
         <Link
           to={`/?owner=${owner.userId}`}

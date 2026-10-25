@@ -169,6 +169,7 @@ namespace serverApi.Extensions
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRefreshTokenService, RefreshTokenService>();
             services.AddHostedService<SavedSearchAlertBackgroundService>();
+            services.AddHostedService<ExchangeWatchBackgroundService>();
             services.AddHostedService<RefreshTokenCleanupBackgroundService>();
             return services;
         }

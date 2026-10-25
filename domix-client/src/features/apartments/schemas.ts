@@ -19,6 +19,12 @@ function emptyToUndefined<T extends z.ZodTypeAny>(schema: T) {
  * dedicated status action, not through this form.
  */
 export const apartmentFormSchema = z.object({
+  guestCapacity: emptyToUndefined(z.coerce.number().int('validation.integer').min(1).max(30)),
+  kosherKitchen: z.boolean().nullable().optional(),
+  separateBeds: z.boolean().nullable().optional(),
+  synagogueDistanceMeters: emptyToUndefined(z.coerce.number().int('validation.integer').min(0).max(10000)),
+  kitchenNotes: z.string().max(1000, 'validation.long').optional(),
+  shabbatNotes: z.string().max(1000, 'validation.long').optional(),
   listingType: z.enum(['Unspecified', 'Exchange', 'Rent', 'Sale']).optional(),
   availableFrom: z.string().optional(),
   availableTo: z.string().optional(),
@@ -79,6 +85,12 @@ export const APARTMENT_FORM_DEFAULTS: ApartmentFormValues = {
 
 export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues {
   return {
+    guestCapacity: apartment.guestCapacity ?? undefined,
+    kosherKitchen: apartment.kosherKitchen ?? null,
+    separateBeds: apartment.separateBeds ?? null,
+    synagogueDistanceMeters: apartment.synagogueDistanceMeters ?? undefined,
+    kitchenNotes: apartment.kitchenNotes ?? '',
+    shabbatNotes: apartment.shabbatNotes ?? '',
     listingType: apartment.listingType ?? 'Unspecified',
     availableFrom: apartment.availableFrom ?? '',
     availableTo: apartment.availableTo ?? '',
@@ -101,6 +113,12 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
 
 export function toCreateApartmentRequest(values: ApartmentFormValues): CreateApartmentRequest {
   return {
+    guestCapacity: values.guestCapacity ?? null,
+    kosherKitchen: values.kosherKitchen ?? null,
+    separateBeds: values.separateBeds ?? null,
+    synagogueDistanceMeters: values.synagogueDistanceMeters ?? null,
+    kitchenNotes: values.kitchenNotes || null,
+    shabbatNotes: values.shabbatNotes || null,
     listingType: values.listingType ?? 'Unspecified',
     availableFrom: values.listingType === 'Exchange' ? values.availableFrom || null : null,
     availableTo: values.listingType === 'Exchange' ? values.availableTo || null : null,

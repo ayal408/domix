@@ -232,9 +232,22 @@ namespace serverApi.Services.Implementations
 
         public async Task<bool> DeleteAccountAsync(Guid userId, CancellationToken cancellationToken = default)
         {
+            return await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () => {
+            _context.ChangeTracker.Clear();
+            await using var transaction = await new ExchangeWorkflow(_context).LockHomes(Array.Empty<Guid>(), cancellationToken, userId);
             var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
             if (user == null) return false;
 
+            if (await _context.ExchangeAgreements.AnyAsync(x => x.Status == "Accepted" && x.End > ExchangeMatching.Today &&
+                (x.RequesterId == userId || x.RecipientId == userId), cancellationToken))
+                throw new ExchangeConflict("יש לבטל החלפות מאושרות לפני מחיקת החשבון");
+            var pending = await _context.ExchangeAgreements.Where(x => x.Status == "Pending" && (x.RequesterId == userId || x.RecipientId == userId)).ToListAsync(cancellationToken);
+            foreach (var request in pending) { request.Status = "Cancelled"; request.Revision++; request.UpdatedAt = DateTime.UtcNow; }
+            _context.ExchangeWatches.RemoveRange(_context.ExchangeWatches.Where(x => x.UserId == userId));
+            _context.ExchangeUserBlocks.RemoveRange(_context.ExchangeUserBlocks.Where(x => x.UserId == userId || x.BlockedUserId == userId));
+            _context.ExchangeReviews.RemoveRange(_context.ExchangeReviews.Where(x => x.ReviewerId == userId || x.ReviewedUserId == userId));
+            var homeIds = await _context.Apartments.Where(x => x.UserId == userId).Select(x => x.ApartmentId).ToListAsync(cancellationToken);
+            _context.ExchangeCalendarPeriods.RemoveRange(_context.ExchangeCalendarPeriods.Where(x => homeIds.Contains(x.ApartmentId)));
             // Every other FK to Users cascades (Apartments, Messages, Favorites, SavedSearches,
             // RefreshTokens, SearchRequests) or SETs NULL (SupportTickets, Notifications) — this is
             // the one Restrict relationship, so it must be cleared explicitly or the delete below
@@ -246,7 +259,9 @@ namespace serverApi.Services.Implementations
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User {UserId} account deleted.", userId);
+            if (transaction != null) await transaction.CommitAsync(cancellationToken);
             return true;
+            });
         }
 
         private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)

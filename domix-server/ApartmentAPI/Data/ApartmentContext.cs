@@ -26,9 +26,25 @@ namespace serverApi.Data
         public DbSet<SystemEmailSettings> SystemEmailSettings { get; set; }
         public DbSet<EmailDelivery> EmailDeliveries { get; set; }
 
+        public DbSet<ExchangeUserBlock> ExchangeUserBlocks { get; set; }
+        public DbSet<ExchangeReview> ExchangeReviews { get; set; }
+        public DbSet<ExchangeWatch> ExchangeWatches { get; set; }
+        public DbSet<ExchangeAgreement> ExchangeAgreements { get; set; }
+        public DbSet<ExchangeCalendarPeriod> ExchangeCalendarPeriods { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ExchangeUserBlock>().HasIndex(x => new { x.UserId, x.BlockedUserId }).IsUnique();
+            modelBuilder.Entity<ExchangeReview>().HasIndex(x => new { x.AgreementId, x.ReviewerId }).IsUnique();
+            modelBuilder.Entity<ExchangeWatch>().Property(x => x.Revision).IsConcurrencyToken();
+            modelBuilder.Entity<ExchangeWatch>().HasIndex(x => new { x.UserId, x.OfferedApartmentId, x.Destination, x.Start, x.End }).IsUnique();
+            modelBuilder.Entity<ExchangeAgreement>().Property(x => x.Revision).IsConcurrencyToken();
+            modelBuilder.Entity<ExchangeAgreement>().HasIndex(x => new { x.RequesterId, x.Status });
+            modelBuilder.Entity<ExchangeAgreement>().HasIndex(x => new { x.RecipientId, x.Status });
+            modelBuilder.Entity<ExchangeAgreement>().HasIndex(x => new { x.OfferedApartmentId, x.Start, x.End });
+            modelBuilder.Entity<ExchangeAgreement>().HasIndex(x => new { x.RequestedApartmentId, x.Start, x.End });
+            modelBuilder.Entity<ExchangeCalendarPeriod>().HasIndex(x => x.ApartmentId);
             modelBuilder.Entity<SystemEmailSettings>().Property(x => x.Id).ValueGeneratedNever();
             modelBuilder.Entity<EmailDelivery>().HasIndex(x => x.CreatedAt);
 

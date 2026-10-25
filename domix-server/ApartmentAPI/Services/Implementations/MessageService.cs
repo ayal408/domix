@@ -29,6 +29,7 @@ namespace serverApi.Services.Implementations
 
         public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
         {
+            if (await _context.ExchangeUserBlocks.AnyAsync(x => (x.UserId == senderId && x.BlockedUserId == dto.OwnerId) || (x.UserId == dto.OwnerId && x.BlockedUserId == senderId), cancellationToken)) throw new ArgumentException("אי אפשר לשלוח הודעה למשתמש זה");
             if (dto.ApartmentId.HasValue)
             {
                 var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
@@ -40,8 +41,8 @@ namespace serverApi.Services.Implementations
                         a => a.ApartmentId == dto.OfferedApartmentId && a.UserId == senderId, cancellationToken);
                     if (offer == null || senderId == dto.OwnerId || !dto.ExchangeStart.HasValue || !dto.ExchangeEnd.HasValue ||
                         dto.ExchangeStart < ExchangeMatching.Today || dto.ExchangeEnd <= dto.ExchangeStart ||
-                        !ExchangeMatching.Covers(offer, dto.ExchangeStart.Value, dto.ExchangeEnd.Value) ||
-                        !ExchangeMatching.Covers(listing, dto.ExchangeStart.Value, dto.ExchangeEnd.Value))
+                        !await new ExchangeWorkflow(_context).IsAvailable(offer, dto.ExchangeStart.Value, dto.ExchangeEnd.Value, cancellationToken) ||
+                        !await new ExchangeWorkflow(_context).IsAvailable(listing, dto.ExchangeStart.Value, dto.ExchangeEnd.Value, cancellationToken))
                         throw new ArgumentException("הצעת ההחלפה או התאריכים אינם תקינים");
                 }
             }

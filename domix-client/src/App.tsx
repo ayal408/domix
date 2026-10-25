@@ -12,6 +12,9 @@ import { Spinner } from '@/components/ui/Spinner'
 import { LanguagePreferenceSync } from '@/components/LanguagePreferenceSync'
 import './i18n'
 
+const ExchangeWatchesPage = lazyWithReload(() => import('@/features/apartments/ExchangeWatchesPage'))
+const ExchangeRequestsPage = lazyWithReload(() => import('@/features/apartments/ExchangeRequestsPage'))
+const ExchangeCalendarPage = lazyWithReload(() => import('@/features/apartments/ExchangeCalendarPage'))
 const ExchangePage = lazyWithReload(() => import('@/features/apartments/ExchangePage'))
 const HomePage = lazyWithReload(() => import('@/pages/HomePage'))
 const ApartmentsCatalogPage = lazyWithReload(() => import('@/features/apartments/ApartmentsCatalogPage'))
@@ -99,6 +102,9 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<IndexRoute />} />
           <Route path="apartments/:apartmentId" element={<ApartmentDetailPage />} />
+          <Route path="exchange/watches" element={<ProtectedRoute><ExchangeWatchesPage /></ProtectedRoute>} />
+          <Route path="exchange/requests" element={<ProtectedRoute><ExchangeRequestsPage /></ProtectedRoute>} />
+          <Route path="exchange/calendar" element={<ProtectedRoute><ExchangeCalendarPage /></ProtectedRoute>} />
           <Route path="exchange" element={<ProtectedRoute><ExchangePage /></ProtectedRoute>} />
           <Route path="map" element={<MapPage />} />
           <Route path="mortgage-calculator" element={<MortgageCalculatorPage />} />

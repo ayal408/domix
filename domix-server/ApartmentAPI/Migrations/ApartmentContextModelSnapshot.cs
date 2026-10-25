@@ -52,7 +52,16 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<string>("DesiredCity")
                         .HasColumnType("text");
 
+                    b.Property<int?>("GuestCapacity")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsAnonymous")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("KitchenNotes")
+                        .HasColumnType("text");
+
+                    b.Property<bool?>("KosherKitchen")
                         .HasColumnType("boolean");
 
                     b.Property<double?>("Latitude")
@@ -77,6 +86,12 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<int>("RatingCount")
                         .HasColumnType("integer");
 
+                    b.Property<bool?>("SeparateBeds")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ShabbatNotes")
+                        .HasColumnType("text");
+
                     b.Property<int?>("SquareMeters")
                         .HasColumnType("integer");
 
@@ -88,6 +103,9 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.Property<decimal?>("SumOfRooms")
                         .HasColumnType("numeric");
+
+                    b.Property<int?>("SynagogueDistanceMeters")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
@@ -251,6 +269,225 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasIndex("CreatedAt");
 
                     b.ToTable("EmailDeliveries");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ExchangeAgreement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateOnly>("End")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Guests")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("OfferedApartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OfferedHome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RecipientCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("RecipientGuests")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RecipientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReplacesId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RequestedApartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RequestedHome")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("RequesterCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("Start")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecipientId", "Status");
+
+                    b.HasIndex("RequesterId", "Status");
+
+                    b.HasIndex("OfferedApartmentId", "Start", "End");
+
+                    b.HasIndex("RequestedApartmentId", "Start", "End");
+
+                    b.ToTable("ExchangeAgreements");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ExchangeCalendarPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("End")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly>("Start")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApartmentId");
+
+                    b.ToTable("ExchangeCalendarPeriods");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ExchangeReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AgreementId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ReviewedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AgreementId", "ReviewerId")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeReviews");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ExchangeUserBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("BlockedUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "BlockedUserId")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeUserBlocks");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ExchangeWatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("End")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Guests")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("KosherKitchen")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("LastSentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LeaseUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("MaxSynagogueDistance")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OfferedApartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SeenIds")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("SeparateBeds")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly>("Start")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId", "OfferedApartmentId", "Destination", "Start", "End")
+                        .IsUnique();
+
+                    b.ToTable("ExchangeWatches");
                 });
 
             modelBuilder.Entity("serverApi.Models.Favorite", b =>

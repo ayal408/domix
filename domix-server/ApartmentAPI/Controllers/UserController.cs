@@ -181,8 +181,11 @@ namespace serverApi.Controllers
             if (!isSelf && !isAdmin)
                 return Forbid();
 
-            var deleted = await _userService.DeleteAccountAsync(id, cancellationToken);
-            return deleted ? NoContent() : NotFound();
+            try {
+                var deleted = await _userService.DeleteAccountAsync(id, cancellationToken);
+                return deleted ? NoContent() : NotFound();
+            }
+            catch (serverApi.Services.Implementations.ExchangeConflict ex) { return Conflict(new { message = ex.Message }); }
         }
 
         // ================= UPDATE PROFILE IMAGE =================
