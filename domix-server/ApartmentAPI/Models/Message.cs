@@ -7,6 +7,10 @@ namespace serverApi.Models
         public Guid MessageId { get; set; }
         public Guid SenderId { get; set; }
         public Guid OwnerId { get; set; }
+        public Guid? ApartmentId { get; set; }
+        public Guid? OfferedApartmentId { get; set; }
+        public DateOnly? ExchangeStart { get; set; }
+        public DateOnly? ExchangeEnd { get; set; }
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
         public bool IsRead { get; set; } = false;

@@ -35,6 +35,7 @@ export function SaveSearchButton({ query }: { query: ApartmentSearchQuery | null
     try {
       await createSavedSearch.mutateAsync({
         name: values.name,
+        listingType: query?.listingType ?? null,
         city: query?.city ?? null,
         area: query?.area ?? null,
         minPrice: query?.minPrice ?? null,

@@ -29,11 +29,35 @@ namespace serverApi.Services.Implementations
 
         public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
         {
+            if (dto.ApartmentId.HasValue)
+            {
+                var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
+                    a => a.ApartmentId == dto.ApartmentId && a.UserId == dto.OwnerId, cancellationToken);
+                if (listing == null) throw new KeyNotFoundException("הנכס אינו זמין");
+                if (dto.OfferedApartmentId.HasValue)
+                {
+                    var offer = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
+                        a => a.ApartmentId == dto.OfferedApartmentId && a.UserId == senderId, cancellationToken);
+                    if (offer == null || senderId == dto.OwnerId || !dto.ExchangeStart.HasValue || !dto.ExchangeEnd.HasValue ||
+                        dto.ExchangeStart < ExchangeMatching.Today || dto.ExchangeEnd <= dto.ExchangeStart ||
+                        !ExchangeMatching.Covers(offer, dto.ExchangeStart.Value, dto.ExchangeEnd.Value) ||
+                        !ExchangeMatching.Covers(listing, dto.ExchangeStart.Value, dto.ExchangeEnd.Value))
+                        throw new ArgumentException("הצעת ההחלפה או התאריכים אינם תקינים");
+                }
+            }
+            else if (dto.OfferedApartmentId.HasValue || dto.ExchangeStart.HasValue || dto.ExchangeEnd.HasValue)
+                throw new ArgumentException("הצעת החלפה חייבת להיות משויכת לנכס");
+            if (!dto.OfferedApartmentId.HasValue && (dto.ExchangeStart.HasValue || dto.ExchangeEnd.HasValue))
+                throw new ArgumentException("יש לבחור דירה מוצעת להחלפה");
             var message = new Message
             {
                 MessageId = Guid.NewGuid(),
                 SenderId = senderId,
                 OwnerId = dto.OwnerId,
+                ApartmentId = dto.ApartmentId,
+                OfferedApartmentId = dto.OfferedApartmentId,
+                ExchangeStart = dto.ExchangeStart,
+                ExchangeEnd = dto.ExchangeEnd,
                 Content = dto.Content,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false,
@@ -77,6 +101,10 @@ namespace serverApi.Services.Implementations
                 SenderId = message.SenderId,
                 OwnerId = message.OwnerId,
                 SenderName = sender?.UserName,
+                ApartmentId = message.ApartmentId,
+                OfferedApartmentId = message.OfferedApartmentId,
+                ExchangeStart = message.ExchangeStart,
+                ExchangeEnd = message.ExchangeEnd,
                 Content = message.Content,
                 CreatedAt = message.CreatedAt,
                 IsRead = message.IsRead,
@@ -172,6 +200,10 @@ namespace serverApi.Services.Implementations
                     SenderId = m.SenderId,
                     OwnerId = m.OwnerId,
                     SenderName = sender?.UserName,
+                    ApartmentId = m.ApartmentId,
+                    OfferedApartmentId = m.OfferedApartmentId,
+                    ExchangeStart = m.ExchangeStart,
+                    ExchangeEnd = m.ExchangeEnd,
                     Content = m.Content,
                     CreatedAt = m.CreatedAt,
                     IsRead = m.IsRead,

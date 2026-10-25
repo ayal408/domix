@@ -37,6 +37,7 @@ namespace serverApi.Services.Implementations
                 SavedSearchId = Guid.NewGuid(),
                 UserId = userId,
                 Name = dto.Name.Trim(),
+                ListingType = dto.ListingType,
                 City = dto.City?.Trim(),
                 Area = dto.Area?.Trim(),
                 MinPrice = dto.MinPrice,
@@ -81,7 +82,7 @@ namespace serverApi.Services.Implementations
             var query = ApartmentService.ApplySearchFilters(
                 _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking(),
                 savedSearch.City, savedSearch.Area, savedSearch.MinPrice, savedSearch.MaxPrice,
-                savedSearch.MinRooms, savedSearch.MaxRooms, savedSearch.PropertyType, savedSearch.Parking, savedSearch.Elevator);
+                savedSearch.MinRooms, savedSearch.MaxRooms, savedSearch.PropertyType, savedSearch.Parking, savedSearch.Elevator, savedSearch.ListingType);
 
             var matches = await query
                 .Where(a => a.dateInsert > savedSearch.LastNotifiedAt)
@@ -107,6 +108,7 @@ namespace serverApi.Services.Implementations
         {
             SavedSearchId = s.SavedSearchId,
             Name = s.Name,
+            ListingType = s.ListingType,
             City = s.City,
             Area = s.Area,
             MinPrice = s.MinPrice,

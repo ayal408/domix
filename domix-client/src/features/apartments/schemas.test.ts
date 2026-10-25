@@ -86,3 +86,24 @@ describe('apartmentSearchSchema', () => {
     expect(apartmentSearchSchema.safeParse({ propertyType: 'Castle' }).success).toBe(false)
   })
 })
+
+describe('exchange listing rules', () => {
+  const exchange = {
+    city: 'Haifa', address: 'Main 1', area: 'Center', price: 0,
+    listingType: 'Exchange', availableFrom: '2099-01-01', availableTo: '2099-01-05', desiredCity: 'Jerusalem',
+  }
+  it('allows a free temporary exchange but not a free rental or sale', () => {
+    expect(apartmentFormSchema.safeParse(exchange).success).toBe(true)
+    expect(apartmentFormSchema.safeParse({ ...exchange, listingType: 'Rent' }).success).toBe(false)
+    expect(apartmentFormSchema.safeParse({ ...exchange, listingType: 'Sale' }).success).toBe(false)
+  })
+  it('requires a destination and a non-empty increasing stay interval', () => {
+    expect(apartmentFormSchema.safeParse({ ...exchange, desiredCity: '' }).success).toBe(false)
+    expect(apartmentFormSchema.safeParse({ ...exchange, availableTo: exchange.availableFrom }).success).toBe(false)
+  })
+  it('does not turn unknown parking and elevator into negative facts', () => {
+    const result = apartmentFormSchema.parse({ ...exchange, parking: null, elevator: null })
+    expect(result.parking).toBeNull()
+    expect(result.elevator).toBeNull()
+  })
+})

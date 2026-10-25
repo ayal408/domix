@@ -1,3 +1,5 @@
+import { EmptyState } from '@/components/ui/EmptyState'
+import { Button } from '@/components/ui/Button'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApartments } from '@/hooks/useApartments'
@@ -8,9 +10,11 @@ import { ApartmentManagementList } from '@/features/apartments/ApartmentManageme
 export default function MyApartmentsPage() {
   const { t } = useTranslation()
   const userId = useAuthStore((state) => state.user?.userId)
-  const { data: apartments, isLoading } = useApartments()
+  const { data: apartments, isLoading, isError, refetch } = useApartments()
 
   const own = useMemo(() => apartments?.filter((apartment) => apartment.userId === userId), [apartments, userId])
+
+  if (isError) return <EmptyState title={t('apartments.loadError')} action={<Button onClick={() => refetch()}>{t('common.retry')}</Button>} />
 
   return (
     <ApartmentManagementList

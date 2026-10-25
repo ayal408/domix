@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
 import { useCompareStore, MAX_COMPARE } from '@/stores/compare.store'
@@ -13,6 +13,7 @@ import { StarRating } from '@/components/ui/StarRating'
 
 export function ApartmentCard({ apartment }: { apartment: Apartment }) {
   const { t, i18n } = useTranslation()
+  const location = useLocation()
   const cover = safeUrl(apartment.apartmentImages?.[0]?.imageUrl)
   const isAuthenticated = useAuthStore((state) => state.status === 'authenticated')
   const { ids: favoriteIds } = useFavoriteIds()
@@ -40,10 +41,10 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
   }
 
   return (
-    <Link
-      to={`/apartments/${apartment.apartmentId}`}
-      className="group flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+    <article
+      className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
+      <Link to={`/apartments/${apartment.apartmentId}${location.pathname === '/exchange' ? location.search : ''}`} state={{ returnTo: location.pathname + location.search }} className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${apartment.city}, ${apartment.address}`} />
       <div className="relative h-44 w-full overflow-hidden bg-card-muted">
         {cover ? (
           <img
@@ -68,7 +69,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
             onClick={handleToggleFavorite}
             aria-pressed={isFavorited}
             aria-label={t(isFavorited ? 'favorites.remove' : 'favorites.add')}
-            className="absolute start-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute z-20 start-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <HeartIcon filled={isFavorited} />
           </button>
@@ -78,7 +79,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
           onClick={handleToggleCompare}
           aria-pressed={isSelectedForCompare}
           className={cn(
-            'absolute bottom-2 start-2 rounded-full px-2 py-1 text-xs font-medium text-white transition-colors',
+            'absolute z-20 bottom-2 start-2 rounded-full px-2 py-1 text-xs font-medium text-white transition-colors',
             isSelectedForCompare ? 'bg-primary' : 'bg-black/40 hover:bg-black/60',
           )}
         >
@@ -88,8 +89,10 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
 
       <div className="flex flex-1 flex-col gap-1.5 p-4">
         <p className="text-lg font-semibold text-foreground">
-          {formatCurrency(apartment.price, i18n.language)}
+          {apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}
+          {apartment.listingType === 'Rent' && <span className="text-sm"> {t('exchange.perMonth')}</span>}
         </p>
+        <Badge tone="neutral">{t(`exchange.types.${apartment.listingType ?? 'Unspecified'}`)}</Badge>
         <p className="truncate text-sm font-medium text-foreground">
           {apartment.city} · {apartment.area}
         </p>
@@ -109,7 +112,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
           {apartment.floor != null && <span>{t('apartments.card.floorShort', { floor: apartment.floor })}</span>}
         </div>
       </div>
-    </Link>
+    </article>
   )
 }
 

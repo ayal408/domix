@@ -11,7 +11,7 @@ import { base64ToImageSrc, initialsOf } from '@/lib/sanitize'
 
 const navLinkClasses = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'rounded px-3 py-1.5 text-sm font-medium transition-colors duration-200',
+    'shrink-0 whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors duration-200',
     isActive ? 'bg-primary/15 text-primary' : 'text-foreground hover:bg-card-muted',
   )
 
@@ -41,10 +41,11 @@ export function Header() {
             {env.appName}
           </NavLink>
           {status === 'authenticated' && (
-            <nav className="hidden items-center gap-1 sm:flex">
+            <nav className="hidden max-w-[55vw] items-center gap-1 overflow-x-auto sm:flex">
               <NavLink to="/" end className={navLinkClasses}>
                 {t('nav.home')}
               </NavLink>
+              <NavLink to="/exchange" className={navLinkClasses}>{t('exchange.nav')}</NavLink>
               <NavLink to="/map" className={navLinkClasses}>
                 {t('nav.map')}
               </NavLink>
@@ -110,7 +111,8 @@ export function Header() {
           <NavLink to="/" end className={navLinkClasses}>
             {t('nav.home')}
           </NavLink>
-          <NavLink to="/map" className={navLinkClasses}>
+          <NavLink to="/exchange" className={navLinkClasses}>{t('exchange.nav')}</NavLink>
+              <NavLink to="/map" className={navLinkClasses}>
             {t('nav.map')}
           </NavLink>
           <NavLink to="/mortgage-calculator" className={navLinkClasses}>

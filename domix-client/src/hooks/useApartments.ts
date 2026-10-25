@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as apartmentsApi from '@/api/apartments.api'
 import { queryKeys } from '@/api/queryKeys'
@@ -44,12 +43,11 @@ export function useCities() {
  * hasn't been fetched yet this triggers that same query.
  */
 export function useApartmentDetail(apartmentId: Guid | undefined) {
-  const list = useApartments()
-  const apartment = useMemo(
-    () => list.data?.find((item) => item.apartmentId === apartmentId),
-    [list.data, apartmentId],
-  )
-  return { ...list, data: apartment }
+  return useQuery({
+    queryKey: queryKeys.apartments.detail(apartmentId ?? ''),
+    queryFn: ({ signal }) => apartmentsApi.getApartment(apartmentId!, signal),
+    enabled: !!apartmentId,
+  })
 }
 
 function invalidateApartments(queryClient: ReturnType<typeof useQueryClient>) {

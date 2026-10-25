@@ -132,3 +132,23 @@
     outline-offset: 2px;
   }
 }
+
+.domix-datepicker {
+  --rhdp-primary: var(--color-primary);
+  --rhdp-on-primary: var(--color-primary-foreground);
+  --rhdp-font: inherit;
+  --rhdp-surface: var(--color-card);
+  --rhdp-text: var(--color-foreground);
+  --rhdp-muted: var(--color-muted);
+  --rhdp-border: var(--color-border);
+  --rhdp-day-border: var(--color-border);
+  --rhdp-gregorian: var(--color-muted);
+  --rhdp-gregorian-bar: var(--color-card-muted);
+  --rhdp-disabled-bg: var(--color-card-muted);
+  --rhdp-disabled-text: var(--color-muted);
+}
+.domix-datepicker > .rhdp {
+  max-width: none !important;
+  width: 100%;
+  margin: 0 !important;
+}

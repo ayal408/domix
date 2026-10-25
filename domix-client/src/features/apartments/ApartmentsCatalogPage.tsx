@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useApartments, useApartmentSearch } from '@/hooks/useApartments'
@@ -29,6 +29,7 @@ function toSearchQuery(values: ApartmentSearchFormValues): ApartmentSearchQuery 
 
 function isEmptyQuery(query: ApartmentSearchQuery): boolean {
   return (
+    !query.listingType &&
     !query.city &&
     !query.area &&
     query.minPrice == null &&
@@ -46,6 +47,8 @@ function isEmptyQuery(query: ApartmentSearchQuery): boolean {
 function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSearchQuery | null; formValues: ApartmentSearchFormValues } {
   const propertyType = searchParams.get('propertyType')
   const query: ApartmentSearchQuery = {
+    listingType: searchParams.get('listingType') || undefined,
+    sortBy: ['newest', 'price_asc', 'price_desc', 'rating'].includes(searchParams.get('sortBy') ?? '') ? searchParams.get('sortBy') as ApartmentSearchQuery['sortBy'] : undefined,
     city: searchParams.get('city') || undefined,
     area: searchParams.get('area') || undefined,
     minPrice: searchParams.has('minPrice') ? Number(searchParams.get('minPrice')) : undefined,
@@ -61,6 +64,7 @@ function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSear
     query: isEmptyQuery(query) ? null : query,
     formValues: {
       ...APARTMENT_SEARCH_DEFAULTS,
+      sortBy: query.sortBy,
       city: query.city ?? '',
       area: query.area ?? '',
       minPrice: query.minPrice,
@@ -76,9 +80,9 @@ function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSear
 
 export default function ApartmentsCatalogPage() {
   const { t } = useTranslation()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const initial = useMemo(() => fromSearchParams(searchParams), [searchParams])
-  const [activeQuery, setActiveQuery] = useState<ApartmentSearchQuery | null>(initial.query)
+  const activeQuery = initial.query
   const ownerId = searchParams.get('owner')
 
   const allApartments = useApartments()
@@ -91,13 +95,17 @@ export default function ApartmentsCatalogPage() {
     // `useApartments()` is the unfiltered dataset shared with the admin/my-apartments tables, so
     // Rented/Sold listings must be dropped here for the public browse view. Server-side search
     // (`isSearching`) already excludes them.
-    const base = (data ?? []).filter((apartment) => isSearching || apartment.status === 'Available')
+    const base = (data ?? []).filter((apartment) => (isSearching || apartment.status === 'Available') && (!searchParams.get('listingType') || apartment.listingType === searchParams.get('listingType')))
     return ownerId ? base.filter((apartment) => apartment.userId === ownerId) : base
-  }, [data, ownerId, isSearching])
+  }, [data, ownerId, isSearching, searchParams])
 
   function handleSearchSubmit(values: ApartmentSearchFormValues) {
-    const query = toSearchQuery(values)
-    setActiveQuery(isEmptyQuery(query) ? null : query)
+    const query = { ...toSearchQuery(values), listingType: searchParams.get('listingType') || undefined }
+    const next = new URLSearchParams()
+    if (ownerId) next.set('owner', ownerId)
+    if (searchParams.get('listingType')) next.set('listingType', searchParams.get('listingType')!)
+    for (const [key, value] of Object.entries(query)) if (value != null) next.set(key, String(value))
+    setSearchParams(next)
   }
 
   return (
@@ -107,9 +115,16 @@ export default function ApartmentsCatalogPage() {
         <p className="mt-1 text-sm text-muted">{t('apartments.catalogSubtitle')}</p>
       </div>
 
+      <label className="flex flex-col gap-2 text-sm">{t('exchange.listingType')}
+        <select className="rounded border border-border bg-card p-2" value={searchParams.get('listingType') ?? ''} onChange={e => { const next = new URLSearchParams(searchParams); if (e.target.value) next.set('listingType', e.target.value); else next.delete('listingType'); setSearchParams(next) }}>
+          <option value="">{t('apartments.filters.any')}</option>
+          {['Exchange', 'Rent', 'Sale', 'Unspecified'].map(type => <option key={type} value={type}>{t(`exchange.types.${type}`)}</option>)}
+        </select>
+      </label>
       <ApartmentSearchForm
+        key={searchParams.toString()}
         onSubmit={handleSearchSubmit}
-        onClear={() => setActiveQuery(null)}
+        onClear={() => setSearchParams(ownerId ? { owner: ownerId } : {})}
         initialValues={initial.formValues}
       />
 

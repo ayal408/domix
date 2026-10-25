@@ -46,6 +46,11 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Hebrew calendar timezone regression
+        run: |
+          TZ=Asia/Jerusalem npx vitest run src/components/ui/HebrewDateField.test.tsx
+          TZ=America/Los_Angeles npx vitest run src/components/ui/HebrewDateField.test.tsx
+
       - name: Build
         run: npm run build
 

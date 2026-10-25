@@ -19,24 +19,37 @@ function emptyToUndefined<T extends z.ZodTypeAny>(schema: T) {
  * dedicated status action, not through this form.
  */
 export const apartmentFormSchema = z.object({
-  city: z.string().trim().min(1, 'City is required').max(100, 'City is too long'),
-  address: z.string().trim().min(1, 'Address is required').max(200, 'Address is too long'),
-  area: z.string().trim().min(1, 'Area / neighbourhood is required').max(100, 'Area is too long'),
+  listingType: z.enum(['Unspecified', 'Exchange', 'Rent', 'Sale']).optional(),
+  availableFrom: z.string().optional(),
+  availableTo: z.string().optional(),
+  desiredCity: z.string().trim().max(100).optional(),
+  city: z.string().trim().min(1, 'validation.city').max(100, 'validation.long'),
+  address: z.string().trim().min(1, 'validation.address').max(200, 'validation.long'),
+  area: z.string().trim().min(1, 'validation.area').max(100, 'validation.long'),
   price: z.coerce
-    .number({ error: 'Enter a valid price' })
-    .positive('Price must be greater than 0')
-    .max(1_000_000_000, 'Price is unrealistically high'),
-  description: emptyToUndefined(z.string().trim().max(2000, 'Description is too long')),
+    .number({ error: 'validation.price' })
+    .nonnegative('validation.price')
+    .max(1_000_000_000, 'validation.price'),
+  description: emptyToUndefined(z.string().trim().max(2000, 'validation.long')),
   squareMeters: emptyToUndefined(
-    z.coerce.number().int('Whole numbers only').positive('Must be greater than 0').max(100_000),
+    z.coerce.number().int('validation.integer').positive('validation.positive').max(100_000),
   ),
-  sumOfRooms: emptyToUndefined(z.coerce.number().positive('Must be greater than 0').max(100)),
-  sumOfBeds: emptyToUndefined(z.coerce.number().int('Whole numbers only').nonnegative().max(100)),
-  floor: emptyToUndefined(z.coerce.number().int('Whole numbers only').min(-5).max(300)),
-  elevator: z.boolean().optional(),
-  parking: z.boolean().optional(),
+  sumOfRooms: emptyToUndefined(z.coerce.number().positive('validation.positive').max(100)),
+  sumOfBeds: emptyToUndefined(z.coerce.number().int('validation.integer').nonnegative().max(100)),
+  floor: emptyToUndefined(z.coerce.number().int('validation.integer').min(-5).max(300)),
+  elevator: z.boolean().nullable().optional(),
+  parking: z.boolean().nullable().optional(),
   propertyType: emptyToUndefined(z.enum(PROPERTY_TYPES)),
   isAnonymous: z.boolean().optional(),
+}).superRefine((data, ctx) => {
+  if (data.listingType === 'Exchange') {
+    if (!data.availableFrom || !data.availableTo || data.availableTo <= data.availableFrom)
+      ctx.addIssue({ code: 'custom', path: ['availableTo'], message: 'validation.dates' })
+    if (!data.desiredCity?.trim())
+      ctx.addIssue({ code: 'custom', path: ['desiredCity'], message: 'validation.destination' })
+  } else if (data.price <= 0) {
+    ctx.addIssue({ code: 'custom', path: ['price'], message: 'validation.price' })
+  }
 })
 
 /** Parsed/coerced shape — what `onSubmit` receives and what the API mappers below consume. */
@@ -45,6 +58,10 @@ export type ApartmentFormValues = z.output<typeof apartmentFormSchema>
 export type ApartmentFormInput = z.input<typeof apartmentFormSchema>
 
 export const APARTMENT_FORM_DEFAULTS: ApartmentFormValues = {
+  listingType: 'Exchange',
+  availableFrom: '',
+  availableTo: '',
+  desiredCity: '',
   city: '',
   address: '',
   area: '',
@@ -62,6 +79,10 @@ export const APARTMENT_FORM_DEFAULTS: ApartmentFormValues = {
 
 export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues {
   return {
+    listingType: apartment.listingType ?? 'Unspecified',
+    availableFrom: apartment.availableFrom ?? '',
+    availableTo: apartment.availableTo ?? '',
+    desiredCity: apartment.desiredCity ?? '',
     city: apartment.city,
     address: apartment.address,
     area: apartment.area,
@@ -71,8 +92,8 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
     sumOfRooms: apartment.sumOfRooms ?? undefined,
     sumOfBeds: apartment.sumOfBeds ?? undefined,
     floor: apartment.floor ?? undefined,
-    elevator: apartment.elevator ?? false,
-    parking: apartment.parking ?? false,
+    elevator: apartment.elevator ?? null,
+    parking: apartment.parking ?? null,
     propertyType: (apartment.propertyType as ApartmentFormValues['propertyType']) ?? undefined,
     isAnonymous: apartment.isAnonymous,
   }
@@ -80,6 +101,10 @@ export function apartmentToFormValues(apartment: Apartment): ApartmentFormValues
 
 export function toCreateApartmentRequest(values: ApartmentFormValues): CreateApartmentRequest {
   return {
+    listingType: values.listingType ?? 'Unspecified',
+    availableFrom: values.listingType === 'Exchange' ? values.availableFrom || null : null,
+    availableTo: values.listingType === 'Exchange' ? values.availableTo || null : null,
+    desiredCity: values.listingType === 'Exchange' ? values.desiredCity || null : null,
     city: values.city,
     address: values.address,
     area: values.area,
@@ -117,11 +142,11 @@ export const apartmentSearchSchema = z
     sortBy: emptyToUndefined(z.enum(SORT_OPTIONS)),
   })
   .refine((data) => data.minPrice == null || data.maxPrice == null || data.minPrice <= data.maxPrice, {
-    message: 'Minimum price must not exceed maximum price',
+    message: 'validation.priceRange',
     path: ['maxPrice'],
   })
   .refine((data) => data.minRooms == null || data.maxRooms == null || data.minRooms <= data.maxRooms, {
-    message: 'Minimum rooms must not exceed maximum rooms',
+    message: 'validation.roomsRange',
     path: ['maxRooms'],
   })
 

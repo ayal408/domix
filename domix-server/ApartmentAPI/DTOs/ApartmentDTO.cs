@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace serverApi.Models.DTOs
 {
-    public class ApartmentDTO
+    public class ApartmentDTO : ListingTerms
     {
         public Guid ApartmentId { get; set; }
         public Guid UserId { get; set; }
@@ -17,7 +17,7 @@ namespace serverApi.Models.DTOs
         public string address { get; set; } = string.Empty;
         public string? description { get; set; }
         public int? SquareMeters { get; set; }
-        public int? SumOfRooms { get; set; }
+        public decimal? SumOfRooms { get; set; }
         public int? SumOfBeds { get; set; }
         public int? floor { get; set; }
         public bool? elevator { get; set; }
@@ -39,7 +39,7 @@ namespace serverApi.Models.DTOs
         public int Score { get; set; }
     }
 
-    public class CreateApartmentDTO
+    public class CreateApartmentDTO : ListingTerms
     {
         public string city { get; set; } = string.Empty;
         public string address { get; set; } = string.Empty;
@@ -47,7 +47,7 @@ namespace serverApi.Models.DTOs
         public decimal price { get; set; }
         public string? description { get; set; }
         public int? SquareMeters { get; set; }
-        public int? SumOfRooms { get; set; }
+        public decimal? SumOfRooms { get; set; }
         public int? SumOfBeds { get; set; }
         public int? floor { get; set; }
         public bool? elevator { get; set; }
@@ -57,7 +57,7 @@ namespace serverApi.Models.DTOs
         public bool IsAnonymous { get; set; }
     }
 
-    public class UpdateApartmentDTO
+    public class UpdateApartmentDTO : ListingTerms
     {
         public string city { get; set; } = string.Empty;
         public string address { get; set; } = string.Empty;
@@ -65,7 +65,7 @@ namespace serverApi.Models.DTOs
         public decimal price { get; set; }
         public string? description { get; set; }
         public int? SquareMeters { get; set; }
-        public int? SumOfRooms { get; set; }
+        public decimal? SumOfRooms { get; set; }
         public int? SumOfBeds { get; set; }
         public int? floor { get; set; }
         public bool? elevator { get; set; }

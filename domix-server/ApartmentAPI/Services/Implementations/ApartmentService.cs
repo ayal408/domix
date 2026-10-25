@@ -55,17 +55,17 @@ namespace serverApi.Services.Implementations
             string? area,
             int? minPrice,
             int? maxPrice,
-            int? minRooms,
-            int? maxRooms,
+            decimal? minRooms,
+            decimal? maxRooms,
             string? propertyType,
             bool? parking,
             bool? elevator,
             string? sortBy,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default, string? listingType = null)
         {
             var query = ApplySearchFilters(
                 _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking().AsQueryable(),
-                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator);
+                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, listingType);
 
             query = sortBy switch
             {
@@ -86,15 +86,18 @@ namespace serverApi.Services.Implementations
             string? area,
             int? minPrice,
             int? maxPrice,
-            int? minRooms,
-            int? maxRooms,
+            decimal? minRooms,
+            decimal? maxRooms,
             string? propertyType,
             bool? parking,
-            bool? elevator)
+            bool? elevator, string? listingType = null)
         {
             // Rented/Sold listings are "removed from the pool" without being deleted:
             // they never surface through search or saved-search alert matching.
             query = query.Where(a => a.Status == ApartmentStatus.Available);
+
+            if (!string.IsNullOrWhiteSpace(listingType))
+                query = query.Where(a => a.ListingType == listingType);
 
             if (!string.IsNullOrWhiteSpace(city))
                 query = query.Where(a => a.city.Contains(city));
@@ -146,6 +149,10 @@ namespace serverApi.Services.Implementations
                 elevator = dto.elevator,
                 Parking = dto.Parking,
                 PropertyType = dto.PropertyType,
+                ListingType = dto.ListingType,
+                AvailableFrom = dto.ListingType == "Exchange" ? dto.AvailableFrom : null,
+                AvailableTo = dto.ListingType == "Exchange" ? dto.AvailableTo : null,
+                DesiredCity = dto.ListingType == "Exchange" ? dto.DesiredCity?.Trim() : null,
                 dateInsert = DateTime.UtcNow,
                 date = DateTime.UtcNow,
                 Status = ApartmentStatus.Available,
@@ -194,6 +201,10 @@ namespace serverApi.Services.Implementations
             apartment.elevator = dto.elevator;
             apartment.Parking = dto.Parking;
             apartment.PropertyType = dto.PropertyType;
+            apartment.ListingType = dto.ListingType;
+            apartment.AvailableFrom = dto.ListingType == "Exchange" ? dto.AvailableFrom : null;
+            apartment.AvailableTo = dto.ListingType == "Exchange" ? dto.AvailableTo : null;
+            apartment.DesiredCity = dto.ListingType == "Exchange" ? dto.DesiredCity?.Trim() : null;
             if (dto.IsAnonymous.HasValue)
                 apartment.IsAnonymous = dto.IsAnonymous.Value;
 
@@ -297,6 +308,10 @@ namespace serverApi.Services.Implementations
             elevator = a.elevator,
             Parking = a.Parking,
             PropertyType = a.PropertyType,
+            ListingType = a.ListingType,
+            AvailableFrom = a.AvailableFrom,
+            AvailableTo = a.AvailableTo,
+            DesiredCity = a.DesiredCity,
             dateInsert = a.dateInsert,
             Latitude = a.Latitude,
             Longitude = a.Longitude,

@@ -1,4 +1,5 @@
-import { useParams, Link } from 'react-router-dom'
+import { formatExchangeDate } from './exchangeDates'
+import { useParams, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApartmentDetail, useRateApartment } from '@/hooks/useApartments'
@@ -21,8 +22,12 @@ import type { Guid } from '@/types/api'
 
 export default function ApartmentDetailPage() {
   const { t, i18n } = useTranslation()
+  const location = useLocation()
+  const returnTo = (location.state as { returnTo?: string } | null)?.returnTo
+  const back = returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/'
+  const params = new URLSearchParams(location.search)
   const { apartmentId } = useParams<{ apartmentId: Guid }>()
-  const { data: apartment, isLoading } = useApartmentDetail(apartmentId)
+  const { data: apartment, isLoading, isError, error, refetch } = useApartmentDetail(apartmentId)
   const currentUser = useAuthStore((state) => state.user)
   const isAuthenticated = useAuthStore((state) => state.status === 'authenticated')
   const rateMutation = useRateApartment()
@@ -40,6 +45,10 @@ export default function ApartmentDetailPage() {
         <Skeleton className="h-4 w-1/2" />
       </div>
     )
+  }
+
+  if (isError && !(error && 'response' in error && (error.response as { status?: number })?.status === 404)) {
+    return <EmptyState title={t('apartments.loadError')} action={<Button onClick={() => refetch()}>{t('common.retry')}</Button>} />
   }
 
   if (!apartment) {
@@ -60,7 +69,7 @@ export default function ApartmentDetailPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <Link to="/" className="w-fit text-sm font-medium text-primary hover:underline">
+      <Link to={back} className="w-fit text-sm font-medium text-primary hover:underline">
         &larr; {t('apartments.detail.back')}
       </Link>
 
@@ -70,6 +79,7 @@ export default function ApartmentDetailPage() {
             <button
               key={src + index}
               type="button"
+              aria-label={t('exchange.openImage', { index: index + 1, count: images.length })}
               onClick={() => setLightboxIndex(index)}
               className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -96,7 +106,7 @@ export default function ApartmentDetailPage() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
-              {formatCurrency(apartment.price, i18n.language)}
+              {apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}{apartment.listingType === 'Rent' ? ` ${t('exchange.perMonth')}` : ''}
             </h1>
             {isAuthenticated && (
               <Button
@@ -129,6 +139,14 @@ export default function ApartmentDetailPage() {
         )}
       </div>
 
+      <Card className="flex flex-col gap-2 p-4">
+        <strong>{t(`exchange.types.${apartment.listingType ?? 'Unspecified'}`)}</strong>
+        {apartment.listingType === 'Exchange' && <>
+          <p>{t('exchange.availability')}: {formatExchangeDate(apartment.availableFrom, i18n.language)} — {formatExchangeDate(apartment.availableTo, i18n.language)}</p>
+          <p>{t('exchange.destination')}: {apartment.desiredCity}</p>
+          <Link className="text-primary underline" to="/exchange">{t('exchange.find')}</Link>
+        </>}
+      </Card>
       <dl className="grid grid-cols-2 gap-4 rounded-xl border border-border bg-card p-4 sm:grid-cols-4">
         <Stat label={t('apartments.fields.sumOfRooms')} value={apartment.sumOfRooms ?? '—'} />
         <Stat label={t('apartments.fields.sumOfBeds')} value={apartment.sumOfBeds ?? '—'} />
@@ -137,8 +155,8 @@ export default function ApartmentDetailPage() {
         {apartment.propertyType && (
           <Stat label={t('apartments.fields.propertyType')} value={t(`apartments.propertyTypes.${apartment.propertyType}`)} />
         )}
-        <Stat label={t('apartments.fields.elevator')} value={apartment.elevator ? t('common.yes') : t('common.no')} />
-        <Stat label={t('apartments.fields.parking')} value={apartment.parking ? t('common.yes') : t('common.no')} />
+        <Stat label={t('apartments.fields.elevator')} value={apartment.elevator == null ? t('exchange.unknown') : apartment.elevator ? t('common.yes') : t('common.no')} />
+        <Stat label={t('apartments.fields.parking')} value={apartment.parking == null ? t('exchange.unknown') : apartment.parking ? t('common.yes') : t('common.no')} />
       </dl>
 
       <OwnerProfileCard
@@ -174,7 +192,9 @@ export default function ApartmentDetailPage() {
               }}
             />
           </Card>
-          <ContactOwnerForm ownerId={apartment.userId} senderId={currentUser.userId} />
+          <ContactOwnerForm apartmentId={apartment.apartmentId} listingAddress={apartment.address} ownerId={apartment.userId} senderId={currentUser.userId}
+            offeredApartmentId={apartment.listingType === 'Exchange' ? params.get('offeredApartmentId') ?? undefined : undefined}
+            exchangeStart={params.get('start') ?? undefined} exchangeEnd={params.get('end') ?? undefined} />
         </>
       )}
     </div>

@@ -219,6 +219,11 @@ export type ApartmentStatusValue = (typeof APARTMENT_STATUSES)[number]
 
 /** `ApartmentDTO`. */
 export interface Apartment {
+  listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
+  availableFrom?: string | null
+  availableTo?: string | null
+  desiredCity?: string | null
+
   apartmentId: Guid
   userId: Guid
   status: ApartmentStatusValue
@@ -254,6 +259,11 @@ export interface Apartment {
  * guard, so it is required here too.
  */
 export interface CreateApartmentRequest {
+  listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
+  availableFrom?: string | null
+  availableTo?: string | null
+  desiredCity?: string | null
+
   city: string
   address: string
   area: string
@@ -279,6 +289,11 @@ export interface CreateApartmentRequest {
  * Status is changed separately via `PATCH /api/Apartment/{id}/status`.
  */
 export interface UpdateApartmentRequest {
+  listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
+  availableFrom?: string | null
+  availableTo?: string | null
+  desiredCity?: string | null
+
   city: string
   address: string
   area: string
@@ -310,6 +325,7 @@ export type SortOption = (typeof SORT_OPTIONS)[number]
 
 /** Query string accepted by `GET /api/Apartment/Search`. */
 export interface ApartmentSearchQuery {
+  listingType?: string
   city?: string
   area?: string
   minPrice?: number
@@ -352,6 +368,7 @@ export interface Favorite {
 
 /** `SavedSearchDTO`. */
 export interface SavedSearch {
+  listingType?: string | null
   savedSearchId: Guid
   name: string
   city?: string | null
@@ -368,6 +385,7 @@ export interface SavedSearch {
 
 /** `CreateSavedSearchDTO` — `POST /api/SavedSearch`. */
 export interface CreateSavedSearchRequest {
+  listingType?: string | null
   name: string
   city?: string | null
   area?: string | null
@@ -386,6 +404,10 @@ export interface CreateSavedSearchRequest {
 
 /** `MessageResponseDto`. */
 export interface Message {
+  apartmentId?: Guid | null
+  offeredApartmentId?: Guid | null
+  exchangeStart?: string | null
+  exchangeEnd?: string | null
   messageId: Guid
   senderId: Guid
   senderName?: string | null
@@ -408,6 +430,10 @@ export interface Message {
  * with the authenticated `userId` claim, so it is informational only.
  */
 export interface CreateMessageRequest {
+  apartmentId?: Guid
+  offeredApartmentId?: Guid
+  exchangeStart?: string
+  exchangeEnd?: string
   senderId: Guid
   ownerId: Guid
   content: string
