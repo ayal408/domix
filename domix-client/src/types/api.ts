@@ -46,6 +46,7 @@ export type RegistrationMethod = 'Password' | 'Google' | 'Password+Google' | 'Fa
 
 /** `UserResponseDto` — the canonical user projection from the data API. */
 export interface UserResponse {
+  sharePhone?: boolean
   userId: Guid
   userName: string
   registrationMethod: RegistrationMethod
@@ -465,6 +466,7 @@ export type SupportTicketStatus = (typeof SUPPORT_TICKET_STATUSES)[number]
 
 /** `CreateSupportTicketDto` — `POST /api/Support`. Open to anonymous visitors, same as chat. */
 export interface CreateSupportTicketRequest {
+  includeTranscript?: boolean
   contactName?: string | null
   contactEmail?: string | null
   message: string

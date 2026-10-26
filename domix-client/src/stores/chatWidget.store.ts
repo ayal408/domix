@@ -54,5 +54,5 @@ export const useChatWidgetStore = create<ChatWidgetState>((set) => ({
 
   setStreaming: (streaming) => set({ isStreaming: streaming }),
 
-  reset: () => set({ messages: [], isStreaming: false }),
+  reset: () => set({ isOpen: false, messages: [], isStreaming: false }),
 }))

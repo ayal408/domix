@@ -25,12 +25,13 @@ namespace serverApi.Services.Implementations
         public async Task<IEnumerable<ApartmentImageDTO>> GetAllImagesAsync(CancellationToken cancellationToken = default)
         {
             return await _context.ApartmentImages
+                .Where(i => i.ImageUrl.StartsWith("/images/") && _context.Apartments.Any(a => a.ApartmentId == i.ApartmentId))
                 .OrderByDescending(i => i.CreatedAt)
                 .Select(i => new ApartmentImageDTO
                 {
                     ImageId = i.ImageId,
                     ApartmentId = i.ApartmentId,
-                    ImageUrl = i.ImageUrl,
+                    ImageUrl = i.ImageUrl + "?v=privacy1",
                     CreatedAt = i.CreatedAt
                 })
                 .AsNoTracking()
@@ -51,24 +52,8 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
-            var image = new ApartmentImage
-            {
-                ImageId = Guid.NewGuid(),
-                ApartmentId = dto.ApartmentId,
-                ImageUrl = dto.ImageUrl,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.ApartmentImages.Add(image);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            return new ApartmentImageDTO
-            {
-                ImageId = image.ImageId,
-                ApartmentId = image.ApartmentId,
-                ImageUrl = image.ImageUrl,
-                CreatedAt = image.CreatedAt
-            };
+            // New arbitrary URLs can track viewers and bypass image processing. Use upload instead.
+            throw new ArgumentException("יש להעלות קובץ תמונה דרך מסלול ההעלאה");
         }
 
         public async Task<ApartmentImageDTO> UploadImageAsync(UploadImageDto dto, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
@@ -98,7 +83,9 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
-            var fileName = $"{Guid.NewGuid()}{extension}";
+            await using var input = dto.Image.OpenReadStream();
+            var sanitized = await PrivacyImages.SanitizeAsync(input, cancellationToken);
+            var fileName = $"{Guid.NewGuid()}.jpg";
             var folderPath = Path.Combine("wwwroot", "images");
 
             if (!Directory.Exists(folderPath))
@@ -106,10 +93,7 @@ namespace serverApi.Services.Implementations
 
             var fullPath = Path.Combine(folderPath, fileName);
 
-            using (var stream = new FileStream(fullPath, FileMode.Create))
-            {
-                await dto.Image.CopyToAsync(stream, cancellationToken);
-            }
+            await File.WriteAllBytesAsync(fullPath, sanitized, cancellationToken);
 
             var img = new ApartmentImage
             {

@@ -30,12 +30,17 @@ namespace serverApi.Services.Implementations
         public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
         {
             string? apartmentSnapshot = null, offeredSnapshot = null;
+            var anonymousRecipient = false;
             if (dto.ApartmentId.HasValue)
             {
                 var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
-                    a => a.ApartmentId == dto.ApartmentId && a.UserId == dto.OwnerId, cancellationToken);
+                    a => a.ApartmentId == dto.ApartmentId, cancellationToken);
                 if (listing == null) throw new KeyNotFoundException("הנכס אינו זמין");
-                apartmentSnapshot = listing.city + ", " + listing.address;
+                if (dto.OwnerId != Guid.Empty && dto.OwnerId != listing.UserId)
+                    throw new ArgumentException("הנמען אינו בעל המודעה");
+                dto.OwnerId = listing.UserId;
+                anonymousRecipient = listing.IsAnonymous;
+                apartmentSnapshot = listing.city + ", " + (listing.IsAnonymous ? listing.area : listing.address);
                 if (dto.OfferedApartmentId.HasValue)
                 {
                     var offer = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
@@ -91,7 +96,7 @@ namespace serverApi.Services.Implementations
                 try
                 {
                     var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
-                    var emailMessage = EmailText.Message(sender.UserName, dto.Content, $"{clientAppUrl}/messages", owner.LanguagePreference);
+                    var emailMessage = EmailText.Message("DOMIX", "התקבלה הודעה חדשה. לצפייה יש להיכנס לחשבון.", $"{clientAppUrl}/messages", owner.LanguagePreference);
                     await _emailService.SendEmailAsync(owner.EmailAddress, emailMessage.Subject, emailMessage.Html, cancellationToken);
                 }
                 catch (Exception ex)
@@ -104,7 +109,7 @@ namespace serverApi.Services.Implementations
             {
                 MessageId = message.MessageId,
                 SenderId = message.SenderId,
-                OwnerId = message.OwnerId,
+                OwnerId = anonymousRecipient ? Guid.Empty : message.OwnerId,
                 SenderName = sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
                 ApartmentId = message.ApartmentId,
                 OfferedApartmentId = message.OfferedApartmentId,
@@ -197,6 +202,8 @@ namespace serverApi.Services.Implementations
                 .Where(u => senderIds.Contains(u.UserId))
                 .ToListAsync(cancellationToken);
 
+            var avatars = new Dictionary<Guid, string?>();
+            foreach (var user in users) avatars[user.UserId] = await PrivacyImages.AvatarAsync(user.ProfileImage, cancellationToken);
             return messages.Select(m =>
             {
                 var sender = users.FirstOrDefault(u => u.UserId == m.SenderId);
@@ -216,9 +223,7 @@ namespace serverApi.Services.Implementations
                     Content = m.Content,
                     CreatedAt = m.CreatedAt,
                     IsRead = m.IsRead,
-                    SenderImageBase64 = sender?.ProfileImage != null
-                        ? Convert.ToBase64String(sender.ProfileImage)
-                        : null
+                    SenderImageBase64 = sender is null ? null : avatars.GetValueOrDefault(sender.UserId)
                 };
             }).ToList();
         }

@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { streamChatReply } from '@/api/chat.api'
 import { useChatWidgetStore } from '@/stores/chatWidget.store'
@@ -16,6 +16,8 @@ export function useChat() {
   const { t } = useTranslation()
   const pushToast = useToastStore((state) => state.push)
   const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const sendMessage = useCallback(
     async (text: string) => {

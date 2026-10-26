@@ -18,6 +18,7 @@ namespace serverApi.Extensions
     {
         public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
         {
+            services.AddHttpContextAccessor();
             // DotNetEnv.Env.Load() (called in Program.cs) populates these as real
             // process environment variables — read them directly rather than via
             // IConfiguration, since "DEFAULT_CONNECTION"/"JWT_SECRET" don't follow
@@ -178,6 +179,8 @@ namespace serverApi.Extensions
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+            services.AddScoped<PrivacyMaintenance>();
+            services.AddHostedService<PrivacyMaintenanceBackgroundService>();
             services.AddScoped<SavedSearchEmailDispatcher>();
             services.AddHostedService<SavedSearchAlertBackgroundService>();
             services.AddHostedService<RefreshTokenCleanupBackgroundService>();

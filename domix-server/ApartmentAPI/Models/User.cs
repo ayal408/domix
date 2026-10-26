@@ -10,6 +10,7 @@ namespace serverApi.Models
         public string RegistrationMethod { get; set; } = "Password"; // Password / Google / Facebook / OTP
 
         public string? PhoneNumber { get; set; }
+        public bool SharePhone { get; set; }
         public string? GoogleId { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }

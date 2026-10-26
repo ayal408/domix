@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -11,27 +12,45 @@ namespace serverApi.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [EnableRateLimiting("chat")]
+    [Authorize]
     public class ChatController : ControllerBase
     {
-        private const int MaxTurns = 40;
-        private const int MaxTurnLength = 4000;
+        private const int MaxTurns = 8;
+        private const int MaxTurnLength = 2000;
 
         private readonly IChatService _chatService;
+        private readonly IConfiguration _configuration;
         private readonly ILogger<ChatController> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
 
-        public ChatController(IChatService chatService, ILogger<ChatController> logger, IOptions<Microsoft.AspNetCore.Mvc.JsonOptions> jsonOptions)
+        public ChatController(IChatService chatService, ILogger<ChatController> logger, IOptions<Microsoft.AspNetCore.Mvc.JsonOptions> jsonOptions, IConfiguration configuration)
         {
             _chatService = chatService;
+            _configuration = configuration;
             _logger = logger;
             _jsonOptions = jsonOptions.Value.JsonSerializerOptions;
         }
+
+        [AllowAnonymous, HttpGet("status")]
+        public IActionResult Status() => Ok(new { enabled = _configuration.GetValue<bool>("Privacy:ChatEnabled") });
 
         // ================= STREAM CHAT REPLY =================
         [HttpPost("stream")]
         public async Task StreamReply([FromBody] ChatStreamRequestDto dto, CancellationToken cancellationToken)
         {
-            if (dto?.History == null || dto.History.Count == 0)
+            if (!_configuration.GetValue<bool>("Privacy:ChatEnabled"))
+            {
+                Response.StatusCode = 503;
+                await Response.WriteAsJsonAsync(new { code = "CHAT_UNAVAILABLE" }, cancellationToken);
+                return;
+            }
+            if (dto is null || !dto.PrivacyAccepted || !dto.IsAdult)
+            {
+                Response.StatusCode = 400;
+                await Response.WriteAsJsonAsync(new { code = "CHAT_PRIVACY_REQUIRED" }, cancellationToken);
+                return;
+            }
+            if (dto.History == null || dto.History.Count == 0)
             {
                 Response.StatusCode = StatusCodes.Status400BadRequest;
                 await Response.WriteAsync("Invalid request: history is required.", cancellationToken);

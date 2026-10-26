@@ -1,3 +1,6 @@
+import { Link } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
+import { dataClient } from '@/api/http'
 import { useEffect, useRef, useState } from 'react'
 import { Transition } from '@headlessui/react'
 import { useTranslation } from 'react-i18next'
@@ -16,6 +19,11 @@ export function FloatingChatWidget() {
   const { t } = useTranslation()
   const { isOpen, messages, isStreaming, toggle, close } = useChatWidgetStore()
   const { sendMessage, cancel } = useChat()
+  const { t: p } = useTranslation('privacy')
+  const user = useAuthStore(state => state.user)
+  const [accepted, setAccepted] = useState(false)
+  const { data: chatStatus } = useQuery({ queryKey: ['chat-status'], queryFn: async () => (await dataClient.get<{ enabled: boolean }>('/Chat/status')).data, enabled: isOpen })
+  const allowed = !!user && accepted && chatStatus?.enabled === true
   const [input, setInput] = useState('')
   const [mode, setMode] = useState<'chat' | 'contact'>('chat')
   const listRef = useRef<HTMLDivElement>(null)
@@ -30,7 +38,7 @@ export function FloatingChatWidget() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!input.trim() || isStreaming) return
+    if (!input.trim() || isStreaming || !allowed) return
     void sendMessage(input)
     setInput('')
   }
@@ -98,13 +106,20 @@ export function FloatingChatWidget() {
                 )}
               </div>
 
+              <div className="border-t border-border px-4 py-2 text-xs text-muted">
+                {!user ? <Link to="/login" className="underline">{p('chatLogin')}</Link> : chatStatus?.enabled !== true ? <p>{p('chatDisabled')}</p> : <>
+                  <p>{p('chatNotice')} <Link to="/privacy" className="underline">{p('title')}</Link></p>
+                  <label className="mt-2 flex gap-2"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />{p('chatAccept')}</label>
+                </>}
+              </div>
               <form onSubmit={handleSubmit} className="flex items-center gap-2 border-t border-border p-3">
                 <input
                   type="text"
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder={t('chat.inputPlaceholder')}
-                  disabled={isStreaming}
+                  disabled={isStreaming || !allowed}
+                  maxLength={2000}
                   className="h-10 flex-1 rounded border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {isStreaming ? (
@@ -112,7 +127,7 @@ export function FloatingChatWidget() {
                     {t('chat.stop')}
                   </Button>
                 ) : (
-                  <Button type="submit" size="sm" disabled={!input.trim()}>
+                  <Button type="submit" size="sm" disabled={!input.trim() || !allowed}>
                     {t('chat.send')}
                   </Button>
                 )}
@@ -169,6 +184,9 @@ function ContactTeamForm({ onCancel, onSent }: { onCancel: () => void; onSent: (
   const [contactName, setContactName] = useState('')
   const [contactEmail, setContactEmail] = useState('')
 
+  const { t: p } = useTranslation('privacy')
+  const [includeTranscript, setIncludeTranscript] = useState(false)
+  const [transcriptText, setTranscriptText] = useState(() => messages.filter(m => !m.apartments).slice(-8).map(m => `${m.role}: ${m.text.slice(0, 1800)}`).join('\n\n').slice(0, 1800))
   const needsContactInfo = !currentUser
 
   async function handleSubmit(event: React.FormEvent) {
@@ -180,10 +198,8 @@ function ContactTeamForm({ onCancel, onSent }: { onCancel: () => void; onSent: (
         message: message.trim(),
         contactName: needsContactInfo ? contactName.trim() || undefined : undefined,
         contactEmail: needsContactInfo ? contactEmail.trim() : undefined,
-        transcript:
-          messages.length > 0
-            ? messages.filter((m) => !m.apartments).map((m) => ({ role: m.role, text: m.text }))
-            : undefined,
+        includeTranscript,
+        transcript: includeTranscript && transcriptText.trim() ? [{ role: 'user', text: transcriptText.trim() }] : undefined,
       })
       pushToast({ variant: 'success', title: t('chat.contactTeam.sent') })
       onSent()
@@ -217,11 +233,15 @@ function ContactTeamForm({ onCancel, onSent }: { onCancel: () => void; onSent: (
       <textarea
         required
         rows={5}
+        maxLength={8000}
         value={message}
         onChange={(event) => setMessage(event.target.value)}
         placeholder={t('chat.contactTeam.messagePlaceholder')}
         className="flex-1 resize-none rounded border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-primary"
       />
+      <p className="text-xs text-muted">{p('supportNotice')}</p>
+      <label className="flex gap-2 text-sm"><input type="checkbox" checked={includeTranscript} onChange={e => setIncludeTranscript(e.target.checked)} />{p('includeTranscript')}</label>
+      {includeTranscript && <textarea aria-label={p('transcriptPreview')} maxLength={2000} value={transcriptText} onChange={e => setTranscriptText(e.target.value)} className="min-h-24 rounded border border-border bg-background p-2 text-sm" />}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" size="sm" onClick={onCancel} disabled={createTicket.isPending}>
           {t('common.cancel')}

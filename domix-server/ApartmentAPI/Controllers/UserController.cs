@@ -28,6 +28,9 @@ namespace serverApi.Controllers
         [HttpGet("by-id/{userId}")]
         public async Task<IActionResult> GetById(string userId, CancellationToken cancellationToken)
         {
+            if (User.Identity?.IsAuthenticated == true && !User.IsInRole("Admin") &&
+                (User.FindFirst("userId")?.Value ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value) != userId)
+                return Forbid();
             var user = await _userService.GetUserByIdAsync(userId, cancellationToken);
             return user == null ? NotFound() : Ok(user);
         }
@@ -121,17 +124,18 @@ namespace serverApi.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
+                _logger.LogError("User lookup failed ({FailureType}).", ex.GetType().Name);
+                return StatusCode(500, new { code = "LOOKUP_FAILED" });
             }
         }
 
         // ================= LIST ALL (ADMIN) =================
-        [Authorize(Policy = "ManagerOrAdmin")]
+        [Authorize(Policy = "AdminOnly")]
         [HttpGet("all")]
         public async Task<IActionResult> GetAll(CancellationToken cancellationToken)
         {
             var users = await _userService.GetAllUsersAsync(cancellationToken);
-            return Ok(users);
+            return Ok(users.Select(u => { u.GoogleId = null; return u; }));
         }
 
         // ================= BLOCK / UNBLOCK (ADMIN) =================

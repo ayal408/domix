@@ -59,6 +59,7 @@ export default function RegisterPage() {
     <div className="mx-auto flex max-w-sm flex-col gap-6 py-8">
       <h1 className="text-center text-2xl font-bold text-foreground">{t('auth.registerTitle')}</h1>
       <Card className="p-6">
+        <p className="mb-4 text-sm text-muted"><Link to="/privacy" className="text-primary underline">{t('privacy:title')}</Link></p>
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
           <InputField
             label={t('auth.username')}

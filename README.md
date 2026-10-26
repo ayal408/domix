@@ -208,3 +208,7 @@ Portfolio: [A4U](https://ayal408.github.io/a4u/)
 ## Database integrity and administrator setup
 
 Public registration never grants administrator privileges. See [database integrity and upgrade instructions](docs/database-integrity.md) for the verified-account bootstrap CLI, read-only preflight, migration compatibility, historical ratings and deletion policy.
+
+## פרטיות
+
+מפת מידע, תצורה, כללי חשיפה ותהליך בקשות משתמשים: [ממשל נתונים ופרטיות](docs/privacy-governance.md).

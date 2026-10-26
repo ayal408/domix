@@ -1,3 +1,4 @@
+import { PrivacyControls } from './PrivacyControls'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
@@ -152,6 +153,7 @@ export default function AccountPage() {
         </div>
       </Card>
 
+      <PrivacyControls />
       <Card className="flex flex-col gap-3 border-danger/40 p-6">
         <h2 className="text-base font-semibold text-danger">{t('account.dangerZone')}</h2>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

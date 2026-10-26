@@ -1,3 +1,4 @@
+import { getAccessToken } from '@/api/tokenStore'
 import { env } from '@/config/env'
 import { apiEndpoints } from '@/api/endpoints'
 import type { ChatRole } from '@/stores/chatWidget.store'
@@ -23,8 +24,8 @@ export async function* streamChatReply(
 ): AsyncGenerator<ChatStreamEvent> {
   const response = await fetch(`${env.apiUrl}${apiEndpoints.chat.stream()}`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ history }),
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getAccessToken() ?? ''}` },
+    body: JSON.stringify({ history: history.slice(-8).map(turn => ({ ...turn, text: turn.text.slice(0, 2000) })), privacyAccepted: true, isAdult: true }),
     signal,
   })
 

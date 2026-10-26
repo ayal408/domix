@@ -30,8 +30,9 @@ async function legacyHome(c) {
 }
 test('exported complete migration SQL executes and database enforces new writes', async () => fixture(async c => {
   await c.query(sql('schema-all.sql'));
-  assert.equal(Number((await c.query('SELECT count(*) AS n FROM "__EFMigrationsHistory"')).rows[0].n), 7);
+  assert.equal(Number((await c.query('SELECT count(*) AS n FROM "__EFMigrationsHistory"')).rows[0].n), 8);
   await legacyUser(c); await legacyHome(c);
+  if ((await c.query(`SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='Users' AND column_name='SharePhone'`)).rows.length) assert.equal((await c.query('SELECT "SharePhone" FROM "Users"')).rows[0].SharePhone, false);
   await assert.rejects(c.query('UPDATE "Apartments" SET price=-1 WHERE "ApartmentId"=$1', [home]), e => e.code === '23514');
   await assert.rejects(c.query('UPDATE "Apartments" SET "Status"=999 WHERE "ApartmentId"=$1', [home]), e => e.code === '23514');
   await assert.rejects(legacyUser(c, '33333333-3333-3333-3333-333333333333', 'case@example.com', 'Other'), e => e.code === '23505');

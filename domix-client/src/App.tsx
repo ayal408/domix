@@ -11,7 +11,9 @@ import { lazyWithReload } from '@/lib/lazyWithReload'
 import { Spinner } from '@/components/ui/Spinner'
 import { LanguagePreferenceSync } from '@/components/LanguagePreferenceSync'
 import './i18n'
+import './features/privacy/privacy.i18n'
 
+const PrivacyPage = lazyWithReload(() => import('@/pages/PrivacyPage'))
 const ExchangePage = lazyWithReload(() => import('@/features/apartments/ExchangePage'))
 const HomePage = lazyWithReload(() => import('@/pages/HomePage'))
 const ApartmentsCatalogPage = lazyWithReload(() => import('@/features/apartments/ApartmentsCatalogPage'))
@@ -159,11 +161,12 @@ export default function App() {
           >
             <Route path="apartments" element={<AdminApartmentsPage />} />
             <Route path="support" element={<AdminSupportPage />} />
-            <Route path="users" element={<AdminUsersPage />} />
+            <Route path="users" element={<ProtectedRoute policy="AdminOnly"><AdminUsersPage /></ProtectedRoute>} />
             <Route path="analytics" element={<AdminAnalyticsPage />} />
             <Route path="notifications" element={<AdminNotificationsPage />} />
             <Route path="email" element={<ProtectedRoute policy="AdminOnly"><AdminEmailPage /></ProtectedRoute>} />
           </Route>
+          <Route path="privacy" element={<PrivacyPage />} />
           <Route path="login" element={<LoginPage />} />
           <Route path="register" element={<RegisterPage />} />
           <Route path="verify-email" element={<VerifyEmailPage />} />

@@ -1,3 +1,6 @@
+import { queryClient } from '@/api/queryClient'
+import { useChatWidgetStore } from '@/stores/chatWidget.store'
+import { useCompareStore } from '@/stores/compare.store'
 import { create } from 'zustand'
 import * as authApi from '@/api/auth.api'
 import * as usersApi from '@/api/users.api'
@@ -110,6 +113,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   signOut: async () => {
+    clearAccessToken()
+    set({ status: 'unauthenticated', user: null })
     try {
       await authApi.logout()
     } catch {
@@ -175,4 +180,15 @@ setSessionExpiredHandler(() => {
   if (status !== 'authenticated') return
   useAuthStore.setState({ status: 'unauthenticated', user: null })
   emitSessionExpired()
+})
+
+// Clear private data on logout, expiration and account switching; cancel requests before clearing.
+useAuthStore.subscribe((state, previous) => {
+  if (state.user?.userId !== previous.user?.userId ||
+      (state.status === 'unauthenticated' && previous.status !== 'unauthenticated')) {
+    void queryClient.cancelQueries()
+    queryClient.clear()
+    useChatWidgetStore.getState().reset()
+    useCompareStore.getState().clear()
+  }
 })

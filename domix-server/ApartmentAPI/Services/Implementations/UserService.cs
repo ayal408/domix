@@ -95,7 +95,7 @@ namespace serverApi.Services.Implementations
 
             if (!string.IsNullOrEmpty(dto.ProfileImageBase64))
             {
-                imageBytes = Convert.FromBase64String(dto.ProfileImageBase64);
+                imageBytes = await SanitizeProfileAsync(dto.ProfileImageBase64, cancellationToken);
             }
             else
             {
@@ -237,6 +237,14 @@ namespace serverApi.Services.Implementations
             var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
             if (user == null) return false;
 
+            // Scrub support copies explicitly: SET NULL on the relationship alone does not remove contact data.
+            var tickets = await _context.SupportTickets.Where(t => t.UserId == userId).ToListAsync(cancellationToken);
+            foreach (var ticket in tickets)
+            {
+                ticket.ContactName = null; ticket.ContactEmail = null; ticket.Transcript = null;
+                ticket.Message = "תוכן הפנייה הוסר בעקבות מחיקת החשבון";
+                ticket.UserId = null; ticket.Status = SupportTicketStatus.Resolved; ticket.ResolvedAt = DateTime.UtcNow;
+            }
             // Tombstone the account and withdraw its listings; retain both sides' message/deal history.
             user.IsDeleted = true;
             user.DeletedAt = DateTime.UtcNow;
@@ -248,6 +256,7 @@ namespace serverApi.Services.Implementations
             user.GoogleId = null;
             user.PasswordHash = null;
             user.PhoneNumber = null;
+            user.SharePhone = false;
             user.ProfileImage = null;
             user.ProfileColor = null;
             user.EmailVerificationToken = null;
@@ -257,8 +266,23 @@ namespace serverApi.Services.Implementations
             var apartments = await _context.Apartments.Where(a => a.UserId == userId).ToListAsync(cancellationToken);
             foreach (var apartment in apartments) { apartment.IsDeleted = true; apartment.DeletedAt = user.DeletedAt; }
             var queued = await _context.SavedSearchEmails.Where(x => x.SavedSearch.UserId == userId &&
-                (x.Status == "Pending" || x.Status == "Blocked")).ToListAsync(cancellationToken);
-            foreach (var item in queued) item.Status = "Cancelled";
+                x.Status != "Sending").ToListAsync(cancellationToken);
+            foreach (var item in queued)
+            {
+                if (item.Status is "Pending" or "Blocked") item.Status = "Cancelled";
+                item.Recipient = ""; item.Subject = ""; item.HtmlBody = "";
+            }
+            var searches = await _context.SavedSearches.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+            foreach (var search in searches)
+            {
+                search.Name = "חיפוש שנמחק"; search.City = null; search.Area = null; search.PropertyType = null;
+                search.ListingType = null; search.MinPrice = null; search.MaxPrice = null;
+                search.MinRooms = null; search.MaxRooms = null; search.Parking = null; search.Elevator = null;
+            }
+            var oldSearches = await _context.SearchRequests.Where(x => x.UserId == userId).ToListAsync(cancellationToken);
+            _context.SearchRequests.RemoveRange(oldSearches);
+            var favorites = await _context.Favorites.Where(f => f.UserId == userId).ToListAsync(cancellationToken);
+            _context.Favorites.RemoveRange(favorites);
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User {UserId} account deleted.", userId);
@@ -314,6 +338,18 @@ namespace serverApi.Services.Implementations
             return user;
         }
 
+        private static async Task<byte[]> SanitizeProfileAsync(string value, CancellationToken ct)
+        {
+            if (value.Length > 14_000_000) throw new ArgumentException("התמונה גדולה מדי");
+            try
+            {
+                var base64 = value.Contains(',') ? value.Split(',')[1] : value;
+                using var input = new MemoryStream(Convert.FromBase64String(base64));
+                return await PrivacyImages.SanitizeAsync(input, ct);
+            }
+            catch (FormatException) { throw new ArgumentException("התמונה אינה תקינה"); }
+        }
+
         public async Task<UserResponseDto?> UpdateProfileImageAsync(Guid userId, string profileImageBase64, CancellationToken cancellationToken = default)
         {
             var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
@@ -323,7 +359,7 @@ namespace serverApi.Services.Implementations
             if (string.IsNullOrWhiteSpace(base64))
                 throw new ArgumentException("Empty image after split");
 
-            byte[] imageBytes = Convert.FromBase64String(base64);
+            byte[] imageBytes = await SanitizeProfileAsync(base64, cancellationToken);
 
             var oldImage = user.ProfileImage != null ? (byte[])user.ProfileImage.Clone() : null;
             user.ProfileImage = imageBytes;
@@ -440,6 +476,7 @@ namespace serverApi.Services.Implementations
                 UserName = user.UserName,
                 EmailAddress = user.EmailAddress,
                 PhoneNumber = user.PhoneNumber,
+                SharePhone = user.SharePhone,
                 Role = user.Role,
                 JoiningDate = user.JoiningDate,
                 ProfileColor = user.ProfileColor,

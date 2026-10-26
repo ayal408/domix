@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useUserById } from '@/hooks/useUser'
+import { useQuery } from '@tanstack/react-query'
+import { dataClient } from '@/api/http'
+import type { UserResponse } from '@/types/api'
 import { useApartments } from '@/hooks/useApartments'
 import { base64ToImageSrc, initialsOf } from '@/lib/sanitize'
 import { formatDate, toWhatsAppLink } from '@/lib/format'
@@ -20,7 +22,11 @@ interface Props {
 /** The listing owner's mini "broker" profile — shown on `ApartmentDetailPage`. */
 export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, listingAddress }: Props) {
   const { t, i18n } = useTranslation()
-  const { data: owner, isLoading } = useUserById(ownerId)
+  const { data: owner, isLoading } = useQuery({
+    queryKey: ['listing-contact', currentApartmentId],
+    queryFn: async () => (await dataClient.get<Pick<UserResponse, 'userId' | 'userName' | 'joiningDate' | 'phoneNumber' | 'profileImageBase64'>>(`/privacy/listing-contact/${currentApartmentId}`)).data,
+    enabled: !isAnonymous,
+  })
   const { data: apartments } = useApartments()
 
   const otherActiveListings = (apartments ?? []).filter(
@@ -40,8 +46,6 @@ export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, lis
     )
   }
 
-  if (!owner) return null
-
   if (isAnonymous) {
     return (
       <Card className="flex flex-col gap-3 p-4">
@@ -55,6 +59,8 @@ export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, lis
       </Card>
     )
   }
+
+  if (!owner) return null
 
   const avatar = base64ToImageSrc(owner.profileImageBase64)
   const whatsappLink = toWhatsAppLink(

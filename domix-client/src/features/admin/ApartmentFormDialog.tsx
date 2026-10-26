@@ -126,6 +126,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                 </DialogTitle>
 
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4">
+          <p className="text-xs text-muted">{t('privacy:listingNotice')}</p>
                   <SelectField label={t('exchange.listingType')} {...register('listingType')}>
                     {['Exchange', 'Rent', 'Sale', 'Unspecified'].map(type => <option key={type} value={type}>{t(`exchange.types.${type}`)}</option>)}
                   </SelectField>
