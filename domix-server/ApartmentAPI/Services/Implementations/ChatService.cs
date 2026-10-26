@@ -87,7 +87,7 @@ namespace serverApi.Services.Implementations
                 .Select(turn => new Content
                 {
                     Role = turn.Role,
-                    Parts = new List<Part> { new Part { Text = turn.Text } }
+                    Parts = new List<Part> { new Part { Text = PrivacyText.Minimize(turn.Text) } }
                 })
                 .ToList();
 

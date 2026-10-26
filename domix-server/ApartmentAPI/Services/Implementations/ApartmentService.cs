@@ -12,12 +12,14 @@ namespace serverApi.Services.Implementations
         private readonly ApartmentContext _context;
         private readonly IGeocodingService _geocodingService;
         private readonly ILogger<ApartmentService> _logger;
+        private readonly IHttpContextAccessor? _http;
 
-        public ApartmentService(ApartmentContext context, IGeocodingService geocodingService, ILogger<ApartmentService> logger)
+        public ApartmentService(ApartmentContext context, IGeocodingService geocodingService, ILogger<ApartmentService> logger, IHttpContextAccessor? http = null)
         {
             _context = context;
             _geocodingService = geocodingService;
             _logger = logger;
+            _http = http;
         }
 
         public async Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default, int offset = 0, int pageSize = 100)
@@ -29,7 +31,7 @@ namespace serverApi.Services.Implementations
                 .Skip(Math.Max(0, offset)).Take(Math.Clamp(pageSize, 1, 100))
                 .ToListAsync(cancellationToken);
 
-            return apartments.Select(ToDTO);
+            return apartments.Select(Map);
         }
 
         public async Task<ApartmentDTO?> GetApartmentByIdAsync(Guid apartmentId, CancellationToken cancellationToken = default)
@@ -39,7 +41,7 @@ namespace serverApi.Services.Implementations
                 .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId, cancellationToken);
 
-            return apartment == null ? null : ToDTO(apartment);
+            return apartment == null ? null : Map(apartment);
         }
 
         public async Task<IEnumerable<string>> GetCitiesAsync(CancellationToken cancellationToken = default)
@@ -69,7 +71,14 @@ namespace serverApi.Services.Implementations
                 _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking().AsQueryable(),
                 city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, listingType);
 
-            if (ownerId.HasValue) query = query.Where(a => a.UserId == ownerId.Value);
+            if (ownerId.HasValue)
+            {
+                var viewer = _http?.HttpContext?.User;
+                var own = viewer?.FindFirst("userId")?.Value == ownerId.Value.ToString() ||
+                    viewer?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value == ownerId.Value.ToString();
+                var privileged = viewer?.IsInRole("Admin") == true || viewer?.IsInRole("Manager") == true;
+                query = query.Where(a => a.UserId == ownerId.Value && (!a.IsAnonymous || own || privileged));
+            }
 
             var ordered = sortBy switch
             {
@@ -81,7 +90,7 @@ namespace serverApi.Services.Implementations
 
             var result = await ordered.ThenBy(a => a.ApartmentId)
                 .Skip(Math.Max(0, offset)).Take(Math.Clamp(pageSize, 1, 100)).ToListAsync(cancellationToken);
-            return result.Select(ToDTO);
+            return result.Select(Map);
         }
 
         /// <summary>Shared by <see cref="SearchApartmentsAsync"/> and saved-search matching so the two never drift apart.</summary>
@@ -172,7 +181,7 @@ namespace serverApi.Services.Implementations
 
             _logger.LogInformation("Successfully created apartment {ApartmentId} for user {UserId}", apartment.ApartmentId, userId);
 
-            return ToDTO(apartment);
+            return Map(apartment);
         }
 
         public async Task<ApartmentDTO?> UpdateApartmentAsync(Guid apartmentId, UpdateApartmentDTO dto, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
@@ -226,7 +235,7 @@ namespace serverApi.Services.Implementations
 
             _logger.LogInformation("Successfully updated apartment {ApartmentId} for user {UserId}", apartment.ApartmentId, userId);
 
-            return ToDTO(apartment);
+            return Map(apartment);
         }
 
         public async Task<bool?> DeleteApartmentAsync(Guid apartmentId, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
@@ -281,7 +290,7 @@ namespace serverApi.Services.Implementations
                 }
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
-                result = ToDTO(apartment);
+                result = Map(apartment);
             });
             return result;
         }
@@ -306,20 +315,29 @@ namespace serverApi.Services.Implementations
 
             _logger.LogInformation("Apartment {ApartmentId} status set to {Status} by user {UserId}", apartmentId, status, userId);
 
-            return ToDTO(apartment);
+            return Map(apartment);
         }
 
-        internal static ApartmentDTO ToDTO(Apartment a) => new ApartmentDTO
+        private ApartmentDTO Map(Apartment a)
+        {
+            var user = _http?.HttpContext?.User;
+            var id = user?.FindFirst("userId")?.Value ?? user?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            return ToDTO(a, id == a.UserId.ToString() || user?.IsInRole("Admin") == true || user?.IsInRole("Manager") == true);
+        }
+
+        internal static ApartmentDTO ToDTO(Apartment a) => ToDTO(a, false);
+
+        internal static ApartmentDTO ToDTO(Apartment a, bool includePrivate) => new ApartmentDTO
         {
             ApartmentId = a.ApartmentId,
-            UserId = a.UserId,
+            UserId = a.IsAnonymous && !includePrivate ? Guid.Empty : a.UserId,
             Status = a.Status,
             IsAnonymous = a.IsAnonymous,
             price = a.price,
             date = a.date,
             city = a.city,
             area = a.area,
-            address = a.address,
+            address = a.IsAnonymous && !includePrivate ? a.area : a.address,
             description = a.description,
             SquareMeters = a.SquareMeters,
             SumOfRooms = a.SumOfRooms,
@@ -333,19 +351,20 @@ namespace serverApi.Services.Implementations
             AvailableTo = a.AvailableTo,
             DesiredCity = a.DesiredCity,
             dateInsert = a.dateInsert,
-            Latitude = a.Latitude,
-            Longitude = a.Longitude,
+            Latitude = a.IsAnonymous && !includePrivate ? null : a.Latitude,
+            Longitude = a.IsAnonymous && !includePrivate ? null : a.Longitude,
             Rating = a.CurrentRating,
             RatingCount = a.RecordedRatingCount > 0 ? a.RecordedRatingCount : a.RatingCount,
             LegacyRating = a.Rating,
             LegacyRatingCount = a.RatingCount,
             RatingIsLegacy = a.RecordedRatingCount == 0 && a.RatingCount > 0,
             ApartmentImages = a.ApartmentImages?
+                .Where(i => PrivacyImages.LocalPath(i.ImageUrl) != null)
                 .Select(i => new ApartmentImageDTO
                 {
                     ImageId = i.ImageId,
                     ApartmentId = i.ApartmentId,
-                    ImageUrl = i.ImageUrl,
+                    ImageUrl = i.ImageUrl + "?v=privacy1",
                     CreatedAt = i.CreatedAt
                 }).ToList()
         };

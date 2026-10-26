@@ -29,6 +29,7 @@ namespace serverApi.Models.DTOs
         public string? LanguagePreference { get; set; }
         public bool IsEmailVerified { get; set; }
         public bool IsBlocked { get; set; }
+        public bool SharePhone { get; set; }
         public string? ThemePreference { get; set; }
     }
 

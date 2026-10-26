@@ -335,8 +335,13 @@ test("chat without provider configuration returns a structured availability erro
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ history: [{ role: "user", text: "Hello" }] }),
   });
-  assert.equal(result.status, 503);
-  assert.equal((await result.json()).code, "CHAT_UNAVAILABLE");
+  assert.equal(result.status, 401);
+  const authenticated = await fetch(`${services.domixServerUrl}/api/Chat/stream`, {
+    method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${adminAccessToken}` },
+    body: JSON.stringify({ history: [{ role: "user", text: "Hello" }], privacyAccepted: true, isAdult: true }),
+  });
+  assert.equal(authenticated.status, 503);
+  assert.equal((await authenticated.json()).code, "CHAT_UNAVAILABLE");
 });
 
 test("parallel ratings are exact and repeated votes update rather than duplicate", async () => {
@@ -383,4 +388,39 @@ test("account deletion revokes API access while preserving the recipient's histo
   assert.equal(listing.status, 404);
   const account = (await testQuery(POSTGRES_URL, 'SELECT "IsDeleted","EmailAddress","PasswordHash" FROM "Users" WHERE "UserId"=$1', [session.user.userId])).rows[0];
   assert.equal(account.IsDeleted, true); assert.equal(account.EmailAddress, null); assert.equal(account.PasswordHash, null);
+});
+
+test("privacy boundaries protect anonymous listings, contacts, exports and support copies", async () => {
+  const registration = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.200' },
+    body: JSON.stringify({ userName: `privacy${runId}`, email: `privacy-${runId}@example.com`, password: 'password123' }) });
+  assert.equal(registration.status, 200);
+  const session = await registration.json();
+  const request = (path, token, method = 'GET', body) => fetch(`${services.domixServerUrl}/api${path}`, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: body ? JSON.stringify(body) : undefined,
+  });
+  const created = await request('/Apartment', adminAccessToken, 'POST', { city: 'Privacy city', area: 'Center', address: 'Secret street 81', price: 1234.56, listingType: 'Rent', isAnonymous: true });
+  assert.equal(created.status, 200); const own = await created.json();
+  assert.equal(own.userId, adminUserId);
+  const viewed = await request(`/Apartment/${own.apartmentId}`, session.accessToken);
+  const listing = await viewed.json(); assert.equal(listing.userId, '00000000-0000-0000-0000-000000000000');
+  assert.equal(listing.address, 'Center'); assert.equal(listing.latitude, null); assert.equal(listing.longitude, null);
+  assert.equal((await request(`/User/by-id/${adminUserId}`, session.accessToken)).status, 403);
+  assert.equal((await request(`/privacy/listing-contact/${own.apartmentId}`, session.accessToken)).status, 404);
+  const filtered = await (await request(`/Apartment/Search?ownerId=${adminUserId}`, session.accessToken)).json();
+  assert.equal(filtered.some(a => a.apartmentId === own.apartmentId), false);
+  const preview = await fetch(`${services.domixServerUrl}/api/Apartment/${own.apartmentId}/og`);
+  assert.equal(preview.status, 200); const html = await preview.text(); assert.equal(html.includes('Secret street 81'), false); assert.equal(html.includes('og:image'), false);
+  const inquiry = await request('/Message', session.accessToken, 'POST', { apartmentId: own.apartmentId, content: 'Private inquiry' });
+  assert.equal(inquiry.status, 200);
+  const stored = await testQuery(POSTGRES_URL, 'SELECT "OwnerId" FROM "Messages" WHERE "MessageId"=$1', [(await inquiry.json()).messageId]);
+  assert.equal(stored.rows[0].OwnerId, adminUserId);
+  const ticket = await request('/Support', session.accessToken, 'POST', { message: 'Private support', contactEmail: 'copy@example.com', transcript: [{ role: 'user', text: 'Do not attach this' }] });
+  assert.equal(ticket.status, 200); const support = await ticket.json(); assert.equal(support.transcript, null);
+  const exported = await request('/privacy/export', session.accessToken); assert.equal(exported.status, 200);
+  const exportText = await exported.text(); assert.equal(exportText.includes('passwordHash'), false); assert.equal(exportText.includes('secret-google-id'), false);
+  assert.equal(exportText.includes('Private support'), true);
+  const deleted = await request(`/User/${session.user.userId}`, session.accessToken, 'DELETE'); assert.equal(deleted.status, 204);
+  assert.equal((await request('/privacy/export', session.accessToken)).status, 401);
+  const scrubbed = (await testQuery(POSTGRES_URL, 'SELECT "ContactEmail","Transcript","Message" FROM "SupportTickets" WHERE "SupportTicketId"=$1', [support.supportTicketId])).rows[0];
+  assert.equal(scrubbed.ContactEmail, null); assert.equal(scrubbed.Transcript, null); assert.equal(scrubbed.Message.includes('Private support'), false);
 });

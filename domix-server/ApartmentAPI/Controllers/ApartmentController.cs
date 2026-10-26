@@ -241,7 +241,7 @@ namespace serverApi.Controllers
         public async Task<IActionResult> GetOgPreview(Guid id, CancellationToken cancellationToken)
         {
             var apartment = await _apartmentService.GetApartmentByIdAsync(id, cancellationToken);
-            if (apartment == null)
+            if (apartment == null || apartment.Status != serverApi.Models.ApartmentStatus.Available)
                 return NotFound();
 
             var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
@@ -251,10 +251,10 @@ namespace serverApi.Controllers
             var descriptionParts = new List<string>();
             if (apartment.SumOfRooms is decimal rooms) descriptionParts.Add($"{rooms} rooms");
             if (apartment.SquareMeters is int sqm) descriptionParts.Add($"{sqm} m²");
-            descriptionParts.Add(apartment.address);
+            // A public share preview deliberately excludes the address and listing photos.
             var description = string.Join(" · ", descriptionParts);
 
-            var imageUrl = apartment.ApartmentImages?.FirstOrDefault()?.ImageUrl;
+            string? imageUrl = null;
             var absoluteImageUrl = string.IsNullOrEmpty(imageUrl) ? null : $"{clientAppUrl}{imageUrl}";
 
             string Enc(string value) => System.Net.WebUtility.HtmlEncode(value);

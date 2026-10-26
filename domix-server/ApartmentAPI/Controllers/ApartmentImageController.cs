@@ -48,6 +48,7 @@ namespace serverApi.Controllers
                 var result = await _imageService.CreateImageAsync(dto, userId, IsPrivileged(), cancellationToken);
                 return Ok(result);
             }
+            catch (ArgumentException ex) { return BadRequest(ex.Message); }
             catch (KeyNotFoundException ex)
             {
                 return BadRequest(ex.Message);
@@ -78,6 +79,7 @@ namespace serverApi.Controllers
                 var result = await _imageService.UploadImageAsync(dto, userId, IsPrivileged(), cancellationToken);
                 return Ok(result);
             }
+
             catch (KeyNotFoundException ex)
             {
                 return BadRequest(ex.Message);

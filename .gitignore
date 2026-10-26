@@ -44,3 +44,6 @@ Desktop.ini
 
 # Generated migration scripts for disposable database tests
 /integration-tests/schema*.sql
+
+# Also ignore node_modules symlinks in local verification worktrees.
+**/node_modules

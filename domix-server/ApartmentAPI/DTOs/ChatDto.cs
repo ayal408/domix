@@ -9,6 +9,8 @@ namespace serverApi.Models.DTOs
     public class ChatStreamRequestDto
     {
         public required List<ChatTurnDto> History { get; set; }
+        public bool PrivacyAccepted { get; set; }
+        public bool IsAdult { get; set; }
     }
 
     public abstract class ChatStreamEvent

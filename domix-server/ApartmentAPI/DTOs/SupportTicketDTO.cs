@@ -12,6 +12,7 @@ namespace serverApi.Models.DTOs
         public string Message { get; set; } = string.Empty;
         /// <summary>The chat conversation so far, if the visitor escalated from the chat widget.</summary>
         public List<ChatTurnDto>? Transcript { get; set; }
+        public bool IncludeTranscript { get; set; }
     }
 
     public class SupportTicketDto

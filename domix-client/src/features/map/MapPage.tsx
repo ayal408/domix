@@ -43,6 +43,9 @@ function MapController({ apartments, selected }: { apartments: Apartment[]; sele
 
 export default function MapPage() {
   const { t, i18n } = useTranslation()
+  const { t: p } = useTranslation('privacy')
+  const [loadMap, setLoadMap] = useState(false)
+  const [locateMe, setLocateMe] = useState(false)
   const navigate = useNavigate()
   const { data, isLoading, isError } = useApartments()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -52,14 +55,14 @@ export default function MapPage() {
 
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null)
   useEffect(() => {
-    if (!navigator.geolocation) return
+    if (!locateMe || !navigator.geolocation) return
     const watchId = navigator.geolocation.watchPosition(
       (pos) => setUserPosition([pos.coords.latitude, pos.coords.longitude]),
       () => {},
       { enableHighAccuracy: false, maximumAge: 300_000, timeout: 10_000 },
     )
     return () => navigator.geolocation.clearWatch(watchId)
-  }, [])
+  }, [locateMe])
 
   if (isLoading) {
     return (
@@ -78,6 +81,8 @@ export default function MapPage() {
     <div className="grid h-[calc(100svh-8rem)] grid-cols-1 gap-4 lg:grid-cols-[22rem_1fr]">
       <aside className="flex flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card p-3 lg:order-1">
         <h1 className="px-1 text-base font-semibold text-foreground">{t('map.title')}</h1>
+        <label className="flex gap-2 text-xs"><input type="checkbox" checked={loadMap} onChange={e => setLoadMap(e.target.checked)} />{p('loadMap')}</label>
+        <label className="flex gap-2 text-xs"><input type="checkbox" checked={locateMe} onChange={e => setLocateMe(e.target.checked)} />{p('locateMe')}</label>
         {listings.length === 0 ? (
           <p className="px-1 text-sm text-muted">{t('map.noPinned')}</p>
         ) : (
@@ -107,7 +112,7 @@ export default function MapPage() {
           can't escape — without it they render above the app's sticky header (z-40),
           covering things like the theme switcher. */}
       <div className="isolate overflow-hidden rounded-xl border border-border lg:order-2">
-        <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }}>
+        {loadMap ? <MapContainer center={DEFAULT_CENTER} zoom={DEFAULT_ZOOM} style={{ height: '100%', width: '100%' }}>
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution="&copy; OpenStreetMap contributors"
@@ -121,7 +126,7 @@ export default function MapPage() {
           )}
 
           <ClusterMarkers apartments={listings} selectedId={selectedId} onSelect={setSelectedId} />
-        </MapContainer>
+        </MapContainer> : <p className="p-6 text-sm text-muted">{p('mapNotice')}</p>}
       </div>
     </div>
   )

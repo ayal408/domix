@@ -45,7 +45,7 @@ namespace serverApi.Services.Implementations
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to fetch geocoding coordinates for City: {City}, Address: {Address}", city, address);
+                _logger.LogWarning("Geocoding failed ({FailureType}).", ex.GetType().Name);
             }
 
             return (null, null);

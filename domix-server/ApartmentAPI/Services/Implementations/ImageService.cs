@@ -1,71 +1,19 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using serverApi.Data;
-using serverApi.Models;
+using serverApi.Models.DTOs;
 using serverApi.Services.Interfaces;
+using System.Security.Claims;
+namespace serverApi.Services.Implementations;
 
-namespace serverApi.Services.Implementations
+public class ImageService(IApartmentImageService images, IHttpContextAccessor http) : IImageService
 {
-    public class ImageService : IImageService
+    public async Task<string> UploadImageAsync(IFormFile file, Guid apartmentId, CancellationToken cancellationToken = default)
     {
-        private readonly ApartmentContext _context;
-        private readonly IWebHostEnvironment _env;
-        private readonly ILogger<ImageService> _logger;
-        private readonly string[] _allowedExtensions = { ".jpg", ".jpeg", ".png", ".webp" };
-
-        public ImageService(ApartmentContext context, IWebHostEnvironment env, ILogger<ImageService> logger)
-        {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _env = env ?? throw new ArgumentNullException(nameof(env));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        public async Task<string> UploadImageAsync(IFormFile file, Guid apartmentId, CancellationToken cancellationToken = default)
-        {
-            if (file == null || file.Length == 0)
-            {
-                throw new ArgumentException("No image file provided.", nameof(file));
-            }
-
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            if (!_allowedExtensions.Contains(extension))
-            {
-                throw new ArgumentException("Invalid file type. Only JPG, PNG, and WEBP are allowed.");
-            }
-
-            var webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
-            var folder = Path.Combine(webRootPath, "images", "apartments");
-
-            if (!Directory.Exists(folder))
-            {
-                Directory.CreateDirectory(folder);
-            }
-
-            var fileName = $"{Guid.NewGuid()}{extension}";
-            var filePath = Path.Combine(folder, fileName);
-
-            using (var stream = new FileStream(filePath, FileMode.Create))
-            {
-                await file.CopyToAsync(stream, cancellationToken);
-            }
-
-            var imageUrl = $"/images/apartments/{fileName}";
-
-            var image = new ApartmentImage
-            {
-                ImageId = Guid.NewGuid(),
-                ApartmentId = apartmentId,
-                ImageUrl = imageUrl,
-                CreatedAt = DateTime.UtcNow
-            };
-
-            _context.ApartmentImages.Add(image);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Successfully uploaded image {ImageId} for apartment {ApartmentId}", image.ImageId, apartmentId);
-
-            return imageUrl;
-        }
+        var user = http.HttpContext?.User;
+        var claim = user?.FindFirst("userId")?.Value ?? user?.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (user?.Identity?.IsAuthenticated != true || !Guid.TryParse(claim, out var id)) throw new UnauthorizedAccessException();
+        var result = await images.UploadImageAsync(new UploadImageDto { ApartmentId = apartmentId, Image = file }, id,
+            user.IsInRole("Admin") || user.IsInRole("Manager"), cancellationToken);
+        return result.ImageUrl;
     }
 }

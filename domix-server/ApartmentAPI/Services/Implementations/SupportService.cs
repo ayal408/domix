@@ -23,6 +23,9 @@ namespace serverApi.Services.Implementations
 
         public async Task<SupportTicketDto> CreateAsync(CreateSupportTicketDto dto, Guid? userId, CancellationToken cancellationToken = default)
         {
+            if (dto.Message?.Length > 8000 || dto.ContactName?.Length > 100 || dto.ContactEmail?.Length > 254 ||
+                (dto.IncludeTranscript && (dto.Transcript?.Count > 8 || dto.Transcript?.Any(t => t is null || t.Text?.Length > 2000 || t.Role is not ("user" or "model")) == true)))
+                throw new ArgumentException("הפנייה ארוכה מדי");
             if (string.IsNullOrWhiteSpace(dto.Message))
                 throw new ArgumentException("Message is required.");
 
@@ -36,7 +39,7 @@ namespace serverApi.Services.Implementations
                 ContactName = dto.ContactName?.Trim(),
                 ContactEmail = dto.ContactEmail?.Trim(),
                 Message = dto.Message.Trim(),
-                Transcript = FormatTranscript(dto.Transcript, dto.LanguagePreference),
+                Transcript = dto.IncludeTranscript ? FormatTranscript(dto.Transcript, dto.LanguagePreference) : null,
                 Status = SupportTicketStatus.Open,
                 CreatedAt = DateTime.UtcNow,
             };
@@ -108,7 +111,7 @@ namespace serverApi.Services.Implementations
             var contact = ticket.ContactEmail ?? ticket.User?.EmailAddress;
             if (!string.IsNullOrWhiteSpace(contact)) from += " (" + contact + ")";
             var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
-            var mail = EmailText.Support(from, ticket.Message, ticket.Transcript, ticket.SupportTicketId.ToString(),
+            var mail = EmailText.Support("DOMIX", "התקבלה פנייה חדשה. פרטי הפנייה זמינים במסך התמיכה המוגן.", null, ticket.SupportTicketId.ToString(),
                 $"{clientAppUrl}/admin/support", recipientLanguage, receipt: false);
 
             try
@@ -128,7 +131,7 @@ namespace serverApi.Services.Implementations
         {
             var recipient = ticket.User?.EmailAddress ?? ticket.ContactEmail;
             if (!EmailService.IsMailbox(recipient)) return;
-            var mail = EmailText.Support(ticket.ContactName ?? ticket.User?.UserName ?? "", ticket.Message, null,
+            var mail = EmailText.Support("", "פנייתך התקבלה. הצוות יטפל בה בהקדם.", null,
                 ticket.SupportTicketId.ToString(), "", language, receipt: true);
             try { await _emailService.SendEmailAsync(recipient!, mail.Subject, mail.Html, ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { throw; }

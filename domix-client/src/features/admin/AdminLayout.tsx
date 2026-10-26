@@ -24,9 +24,9 @@ export function AdminLayout() {
         <NavLink to="/admin/support" className={tabClasses}>
           {t('admin.nav.support')}
         </NavLink>
-        <NavLink to="/admin/users" className={tabClasses}>
+        {can('AdminOnly') && <NavLink to="/admin/users" className={tabClasses}>
           {t('admin.nav.users')}
-        </NavLink>
+        </NavLink>}
         <NavLink to="/admin/analytics" className={tabClasses}>
           {t('admin.nav.analytics')}
         </NavLink>

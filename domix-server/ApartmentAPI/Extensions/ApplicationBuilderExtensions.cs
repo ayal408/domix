@@ -9,8 +9,13 @@ namespace serverApi.Extensions
         {
             // Serves ApartmentImageService's uploads from wwwroot/images/{file} at /images/{file} —
             // without this, every uploaded photo 404s regardless of the nginx routing fix alongside it.
-            app.UseStaticFiles();
+            // Listing media is served by MediaController after lifecycle and metadata checks.
 
+            app.Use(async (context, next) =>
+            {
+                if (context.Request.Path.StartsWithSegments("/api")) context.Response.Headers.CacheControl = "no-store";
+                await next();
+            });
             app.UseRouting();
             
             app.UseCors("AllowAll");
