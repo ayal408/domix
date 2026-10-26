@@ -11,6 +11,9 @@ namespace serverApi.Models
 
         public string? PhoneNumber { get; set; }
         public string? GoogleId { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public string? NormalizedEmail { get; set; }
         public string? EmailAddress { get; set; }
         public string? PasswordHash { get; set; }
         public string Role { get; set; } = "User";

@@ -48,6 +48,16 @@ using (var scope = app.Services.CreateScope())
     await db.Database.MigrateAsync();
 }
 
+if (args.Contains("--bootstrap-admin"))
+{
+    if (args.Length != 2 || args[0] != "--bootstrap-admin" || !Guid.TryParse(args[1], out var target))
+        throw new ArgumentException("Usage: dotnet domix-server.dll --bootstrap-admin <verified-user-id>");
+    using var bootstrapScope = app.Services.CreateScope();
+    await serverApi.Services.Implementations.AdminBootstrap.PromoteAsync(bootstrapScope.ServiceProvider.GetRequiredService<ApartmentContext>(), target);
+    Log.Information("Administrator bootstrap completed for {UserId}.", target);
+    return;
+}
+
 app.ConfigurePipeline();
 
 if (app.Environment.IsDevelopment())

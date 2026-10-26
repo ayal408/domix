@@ -131,6 +131,8 @@ export default function ApartmentDetailPage() {
           {apartment.ratingCount > 0 && (
             <div className="mt-2">
               <StarRating value={apartment.rating} count={apartment.ratingCount} />
+              {apartment.ratingIsLegacy && <p className="mt-1 text-xs text-muted">{t('rating.legacy')}</p>}
+              {!apartment.ratingIsLegacy && (apartment.legacyRatingCount ?? 0) > 0 && <p className="mt-1 text-xs text-muted">{t('rating.legacySummary', { score: apartment.legacyRating, count: apartment.legacyRatingCount })}</p>}
             </div>
           )}
         </div>

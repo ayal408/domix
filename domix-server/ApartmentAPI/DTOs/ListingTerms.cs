@@ -10,7 +10,7 @@ public class ListingTerms : IValidatableObject
     public DateOnly? AvailableTo { get; set; }
     [MaxLength(100)] public string? DesiredCity { get; set; }
 
-    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    public virtual IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (ListingType is not ("Unspecified" or "Exchange" or "Rent" or "Sale"))
             yield return new("סוג עסקה אינו תקין", new[] { nameof(ListingType) });

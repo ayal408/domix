@@ -13,7 +13,10 @@ namespace serverApi.Models
         public DateOnly? AvailableFrom { get; set; }
         public DateOnly? AvailableTo { get; set; }
         public string? DesiredCity { get; set; }
-        public int price { get; set; }
+        public bool IsDeleted { get; set; }
+        public DateTime? DeletedAt { get; set; }
+        public string NormalizedCity { get; set; } = "";
+        public decimal price { get; set; }
         [Required]
         public string city { get; set; } = string.Empty;
         public DateTime date { get; set; }
@@ -32,11 +35,12 @@ namespace serverApi.Models
         public int Rating { get; set; } = 0;
         public int RatingCount { get; set; } = 0;
 
-        public void AddRating(int score)
-        {
-            Rating = (Rating * RatingCount + score) / (RatingCount + 1);
-            RatingCount++;
-        }
+        // Rating/RatingCount are the untouched legacy aggregates; their original votes cannot be reconstructed.
+        public long RatingSum { get; set; }
+        public int RecordedRatingCount { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+        public decimal CurrentRating => RecordedRatingCount > 0 ? (decimal)RatingSum / RecordedRatingCount : Rating;
 
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }

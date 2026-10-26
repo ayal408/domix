@@ -29,11 +29,13 @@ namespace serverApi.Services.Implementations
 
         public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
         {
+            string? apartmentSnapshot = null, offeredSnapshot = null;
             if (dto.ApartmentId.HasValue)
             {
                 var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
                     a => a.ApartmentId == dto.ApartmentId && a.UserId == dto.OwnerId, cancellationToken);
                 if (listing == null) throw new KeyNotFoundException("הנכס אינו זמין");
+                apartmentSnapshot = listing.city + ", " + listing.address;
                 if (dto.OfferedApartmentId.HasValue)
                 {
                     var offer = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
@@ -43,6 +45,7 @@ namespace serverApi.Services.Implementations
                         !ExchangeMatching.Covers(offer, dto.ExchangeStart.Value, dto.ExchangeEnd.Value) ||
                         !ExchangeMatching.Covers(listing, dto.ExchangeStart.Value, dto.ExchangeEnd.Value))
                         throw new ArgumentException("הצעת ההחלפה או התאריכים אינם תקינים");
+                    offeredSnapshot = offer.city + ", " + offer.address;
                 }
             }
             else if (dto.OfferedApartmentId.HasValue || dto.ExchangeStart.HasValue || dto.ExchangeEnd.HasValue)
@@ -58,6 +61,8 @@ namespace serverApi.Services.Implementations
                 OfferedApartmentId = dto.OfferedApartmentId,
                 ExchangeStart = dto.ExchangeStart,
                 ExchangeEnd = dto.ExchangeEnd,
+                ApartmentSnapshot = apartmentSnapshot,
+                OfferedApartmentSnapshot = offeredSnapshot,
                 Content = dto.Content,
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false,
@@ -100,11 +105,13 @@ namespace serverApi.Services.Implementations
                 MessageId = message.MessageId,
                 SenderId = message.SenderId,
                 OwnerId = message.OwnerId,
-                SenderName = sender?.UserName,
+                SenderName = sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
                 ApartmentId = message.ApartmentId,
                 OfferedApartmentId = message.OfferedApartmentId,
                 ExchangeStart = message.ExchangeStart,
                 ExchangeEnd = message.ExchangeEnd,
+                ApartmentSnapshot = message.ApartmentSnapshot,
+                OfferedApartmentSnapshot = message.OfferedApartmentSnapshot,
                 Content = message.Content,
                 CreatedAt = message.CreatedAt,
                 IsRead = message.IsRead,
@@ -121,8 +128,8 @@ namespace serverApi.Services.Implementations
 
             var messages = await _context.Messages
                 .AsNoTracking()
-                .Where(m => m.OwnerId == ownerId && !m.IsArchived)
-                .OrderByDescending(m => m.CreatedAt)
+                .Where(m => m.OwnerId == ownerId && !m.IsArchived && !m.IsDeleted)
+                .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.MessageId)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync(cancellationToken);
@@ -134,8 +141,8 @@ namespace serverApi.Services.Implementations
         {
             var messages = await _context.Messages
                 .AsNoTracking()
-                .Where(m => m.OwnerId == ownerId && m.IsArchived)
-                .OrderByDescending(m => m.CreatedAt)
+                .Where(m => m.OwnerId == ownerId && m.IsArchived && !m.IsDeleted)
+                .OrderByDescending(m => m.CreatedAt).ThenByDescending(m => m.MessageId)
                 .ToListAsync(cancellationToken);
 
             return await MapMessagesWithUsersAsync(messages, cancellationToken);
@@ -185,7 +192,7 @@ namespace serverApi.Services.Implementations
         {
             var senderIds = messages.Select(m => m.SenderId).Distinct().ToList();
 
-            var users = await _context.Users
+            var users = await _context.Users.IgnoreQueryFilters()
                 .AsNoTracking()
                 .Where(u => senderIds.Contains(u.UserId))
                 .ToListAsync(cancellationToken);
@@ -199,11 +206,13 @@ namespace serverApi.Services.Implementations
                     MessageId = m.MessageId,
                     SenderId = m.SenderId,
                     OwnerId = m.OwnerId,
-                    SenderName = sender?.UserName,
+                    SenderName = sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
                     ApartmentId = m.ApartmentId,
                     OfferedApartmentId = m.OfferedApartmentId,
                     ExchangeStart = m.ExchangeStart,
                     ExchangeEnd = m.ExchangeEnd,
+                    ApartmentSnapshot = m.ApartmentSnapshot,
+                    OfferedApartmentSnapshot = m.OfferedApartmentSnapshot,
                     Content = m.Content,
                     CreatedAt = m.CreatedAt,
                     IsRead = m.IsRead,

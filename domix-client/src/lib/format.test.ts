@@ -21,6 +21,10 @@ describe('toIntlLocale', () => {
 })
 
 describe('formatCurrency', () => {
+  it('preserves agorot in displayed listing prices', () => {
+    expect(formatCurrency(5000.90, 'en')).toContain('5,000.90')
+  })
+
   it('formats a whole-number ILS amount with no decimals', () => {
     expect(formatCurrency(4500, 'en')).toContain('4,500')
   })

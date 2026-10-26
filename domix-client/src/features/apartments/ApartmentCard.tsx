@@ -99,7 +99,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
         <p className="truncate text-xs text-muted">{apartment.address}</p>
 
         {apartment.ratingCount > 0 && (
-          <StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />
+          <div><StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />{apartment.ratingIsLegacy && <span className="text-xs text-muted">{t('rating.legacy')}</span>}</div>
         )}
 
         <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-muted">

@@ -57,6 +57,16 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
     domixServerUrl: `http://localhost:${domixServerPort}`,
     authServerUrl: `http://localhost:${authServerPort}`,
     internalServiceKey,
+    async bootstrapAdmin(userId) {
+      const child = spawn("dotnet", ["run", "--no-launch-profile", "--configuration", "Release", "--", "--bootstrap-admin", userId], {
+        cwd: path.join(ROOT, "domix-server"),
+        env: { ...process.env, DEFAULT_CONNECTION: postgresUrl, JWT_SECRET: jwtSecret,
+          INTERNAL_SERVICE_KEY: internalServiceKey, ASPNETCORE_ENVIRONMENT: "Production" },
+      });
+      pipeToConsole(child, "bootstrap-admin");
+      const code = await new Promise(resolve => child.once("exit", resolve));
+      if (code !== 0) throw new Error("Administrator bootstrap failed.");
+    },
     async stop() {
       domixServer.kill("SIGTERM");
       authServer.kill("SIGTERM");

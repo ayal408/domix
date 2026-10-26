@@ -154,6 +154,22 @@ jobs:
         working-directory: domix-server
         run: dotnet build domix-server.csproj --configuration Release
 
+      - name: Install migration tooling
+        run: dotnet tool install --tool-path "${{ runner.temp }}/domix-ef" dotnet-ef --version 8.0.10
+
+      - name: Export migration scripts for clean and populated upgrade tests
+        working-directory: domix-server
+        env:
+          DOTNET_ROLL_FORWARD: Major
+          DEFAULT_CONNECTION: "Host=localhost;Database=domix_integration_test;Username=postgres;Password=postgres"
+          JWT_SECRET: "integration-test-secret-at-least-32-characters-long"
+          INTERNAL_SERVICE_KEY: "integration-test-internal-key-at-least-32-characters-long"
+        run: |
+          "${{ runner.temp }}/domix-ef/dotnet-ef" migrations has-pending-model-changes --configuration Release --no-build
+          "${{ runner.temp }}/domix-ef/dotnet-ef" migrations script --configuration Release --no-build --output ../integration-tests/schema-all.sql
+          "${{ runner.temp }}/domix-ef/dotnet-ef" migrations script 0 20261026205318_IntegrationResilience --configuration Release --no-build --output ../integration-tests/schema-before.sql
+          "${{ runner.temp }}/domix-ef/dotnet-ef" migrations script 20261026205318_IntegrationResilience --configuration Release --no-build --output ../integration-tests/schema-upgrade.sql
+
       - name: Run integration tests
         run: npm test
         env:

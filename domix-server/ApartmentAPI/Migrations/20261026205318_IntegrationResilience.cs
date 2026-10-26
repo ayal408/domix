@@ -56,7 +56,7 @@ namespace domix_server.ApartmentAPI.Migrations
             // Keep the longest retention so an unexpired token never becomes usable again.
             migrationBuilder.Sql(@"DELETE FROM ""RefreshTokens"" a USING ""RefreshTokens"" b
                 WHERE a.""Token"" = b.""Token"" AND
-                (a.""Expires"" < b.""Expires"" OR (a.""Expires"" = b.""Expires"" AND a.""Id"" < b.""Id""))");
+                (a.""Expires"" < b.""Expires"" OR (a.""Expires"" = b.""Expires"" AND a.""Id"" < b.""Id""));");
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_Token",
                 table: "RefreshTokens",

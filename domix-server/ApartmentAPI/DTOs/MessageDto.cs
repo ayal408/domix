@@ -21,6 +21,8 @@ namespace serverApi.Models.DTOs
         public Guid? OfferedApartmentId { get; set; }
         public DateOnly? ExchangeStart { get; set; }
         public DateOnly? ExchangeEnd { get; set; }
+        public string? ApartmentSnapshot { get; set; }
+        public string? OfferedApartmentSnapshot { get; set; }
         public string? OwnerName { get; set; }
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }

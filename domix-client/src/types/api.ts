@@ -248,6 +248,9 @@ export interface Apartment {
   /** Running average, 0-5. 0 with `ratingCount` 0 means unrated. */
   rating: number
   ratingCount: number
+  legacyRating?: number
+  legacyRatingCount?: number
+  ratingIsLegacy?: boolean
   apartmentImages?: ApartmentImage[] | null
 }
 
@@ -413,6 +416,8 @@ export interface Message {
   senderName?: string | null
   ownerId: Guid
   ownerName?: string | null
+  apartmentSnapshot?: string | null
+  offeredApartmentSnapshot?: string | null
   content: string
   createdAt: IsoDateTime
   isRead: boolean

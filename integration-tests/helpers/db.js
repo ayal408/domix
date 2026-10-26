@@ -4,8 +4,7 @@ import pg from "pg";
  * Wipes every table domix-server owns before a test run starts. Needed for test isolation:
  * a fresh Postgres service container in CI gives this for free, but a developer re-running
  * `npm test` locally against the same long-lived database would otherwise see leftover users
- * from the previous run — in particular breaking the "first user in the database becomes
- * Admin" assumption the self-block test below relies on.
+ * from the previous run — including the explicit administrator bootstrap fixture.
  */
 export async function resetDatabase(postgresUrl) {
   const client = new pg.Client(parseDotNetConnectionString(postgresUrl));
@@ -27,7 +26,7 @@ export async function resetDatabase(postgresUrl) {
 }
 
 /** Converts EF Core's "Host=...;Port=...;Database=...;Username=...;Password=..." into node-pg's config shape. */
-function parseDotNetConnectionString(connectionString) {
+export function parseDotNetConnectionString(connectionString) {
   const config = {};
   for (const part of connectionString.split(";")) {
     if (!part.trim()) continue;
@@ -51,4 +50,13 @@ function parseDotNetConnectionString(connectionString) {
     }
   }
   return config;
+}
+
+
+/** Explicit fixture setup/read, used only against the disposable integration-test database. */
+export async function testQuery(postgresUrl, text, values = []) {
+  const client = new pg.Client(parseDotNetConnectionString(postgresUrl));
+  await client.connect();
+  try { return await client.query(text, values); }
+  finally { await client.end(); }
 }

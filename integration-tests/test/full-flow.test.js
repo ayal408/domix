@@ -7,7 +7,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { startServices } from "../helpers/services.js";
-import { resetDatabase } from "../helpers/db.js";
+import { resetDatabase, testQuery } from "../helpers/db.js";
 
 const POSTGRES_URL =
   process.env.INTEGRATION_TEST_POSTGRES_URL ||
@@ -20,7 +20,7 @@ const runId = Date.now();
 before(async () => {
   // A fresh Postgres service container gives CI a clean database automatically; this makes
   // repeated local `npm test` runs against the same long-lived database behave the same way
-  // -- in particular, the "first user in the database becomes Admin" test below depends on it.
+  // Administrator setup is explicit below; there is no public first-user elevation.
   await resetDatabase(POSTGRES_URL);
 
   services = await startServices({
@@ -41,9 +41,8 @@ function authFetch(path, options) {
   });
 }
 
-// domix-server makes the very first user ever registered in the database an Admin (see
-// UserService.CreateUserAsync's isFirstUser check) -- captured here so the self-block test
-// below has real admin credentials to work with, without a separate bootstrap step.
+// A test operator verifies the first account and uses the same one-off bootstrap CLI as production.
+// Public registration remains unprivileged.
 let adminAccessToken;
 let adminUserId;
 
@@ -71,7 +70,12 @@ test("register creates a user that is actually persisted in domix-server's datab
   const directBody = await directRes.json();
   assert.equal(directRes.status, 200);
   assert.equal(directBody.userId, body.user.userId);
-  assert.equal(directBody.role, "Admin"); // first user in a fresh database
+  assert.equal(directBody.role, "User"); // Public registration never elevates roles, even on an empty database.
+  await testQuery(POSTGRES_URL, 'UPDATE "Users" SET "IsEmailVerified"=TRUE WHERE "UserId"=$1', [adminUserId]);
+  await services.bootstrapAdmin(adminUserId);
+  await services.bootstrapAdmin(adminUserId); // Same operator action is idempotent.
+  const promoted = await fetch(`${services.domixServerUrl}/api/User/by-id/${adminUserId}`, { headers: { "X-Internal-Api-Key": services.internalServiceKey } });
+  assert.equal((await promoted.json()).role, "Admin");
 });
 
 test("domix-server rejects internal-only endpoints without the internal service key", async () => {
@@ -333,4 +337,50 @@ test("chat without provider configuration returns a structured availability erro
   });
   assert.equal(result.status, 503);
   assert.equal((await result.json()).code, "CHAT_UNAVAILABLE");
+});
+
+test("parallel ratings are exact and repeated votes update rather than duplicate", async () => {
+  const apartmentId = '66777777-7777-7777-7777-777777777777';
+  await testQuery(POSTGRES_URL, `INSERT INTO "Apartments" ("ApartmentId","UserId","Status","IsAnonymous",price,city,date,area,address,description,"ViewsCount","dateInsert","Rating","RatingCount","ListingType","IsDeleted","RatingSum","RecordedRatingCount") VALUES ($1,$2,0,false,5000.90,'Test',now(),'Center','Street','',0,now(),4,9,'Rent',false,0,0)`, [apartmentId, adminUserId]);
+  const sessions = [];
+  for (let i = 0; i < 3; i++) {
+    const res = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': `192.0.2.${110+i}` }, body: JSON.stringify({ userName: `rating${runId}_${i}`, email: `rating${runId}_${i}@example.com`, password: 'password123' }) });
+    assert.equal(res.status, 200); sessions.push(await res.json());
+  }
+  const rate = (session, score) => fetch(`${services.domixServerUrl}/api/Apartment/${apartmentId}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.accessToken}` }, body: JSON.stringify({ score }) });
+  const results = await Promise.all(sessions.map((session, i) => rate(session, [5,4,5][i])));
+  for (const result of results) assert.equal(result.status, 200);
+  const listing = await fetch(`${services.domixServerUrl}/api/Apartment/${apartmentId}`, { headers: { Authorization: `Bearer ${adminAccessToken}` } }).then(r => r.json());
+  assert.equal(listing.ratingCount, 3); assert.ok(Math.abs(listing.rating - 14/3) < 1e-9);
+  assert.equal(listing.legacyRating, 4); assert.equal(listing.legacyRatingCount, 9); assert.equal(listing.price, 5000.90);
+  const repeat = await Promise.all(Array.from({ length: 4 }, () => rate(sessions[0], 3)));
+  for (const result of repeat) assert.equal(result.status, 200);
+  const rows = (await testQuery(POSTGRES_URL, 'SELECT "RatingSum","RecordedRatingCount" FROM "Apartments" WHERE "ApartmentId"=$1', [apartmentId])).rows[0];
+  assert.equal(Number(rows.RatingSum), 12); assert.equal(rows.RecordedRatingCount, 3);
+  assert.equal(Number((await testQuery(POSTGRES_URL, 'SELECT count(*) AS n FROM "ApartmentRatings" WHERE "ApartmentId"=$1', [apartmentId])).rows[0].n), 3);
+});
+
+test("registration with a case-variant email cannot create a second identity", async () => {
+  const res = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.125' }, body: JSON.stringify({ userName: `case${runId}`, email: `FLOW-${runId}@EXAMPLE.COM`, password: 'password123' }) });
+  assert.equal(res.status, 400); assert.equal((await res.json()).code, 'EMAIL_EXISTS');
+});
+
+test("account deletion revokes API access while preserving the recipient's history", async () => {
+  const registered = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.140' }, body: JSON.stringify({ userName: `delete${runId}`, email: `delete${runId}@example.com`, password: 'password123' }) });
+  assert.equal(registered.status, 200);
+  const session = await registered.json();
+  const homeId = '88777777-7777-7777-7777-777777777777';
+  const messageId = '99777777-7777-7777-7777-777777777777';
+  await testQuery(POSTGRES_URL, `INSERT INTO "Apartments" ("ApartmentId","UserId","Status","IsAnonymous",price,city,date,area,address,description,"ViewsCount","dateInsert","Rating","RatingCount","ListingType","IsDeleted","RatingSum","RecordedRatingCount") VALUES ($1,$2,0,false,5000,'Test',now(),'Center','Street','',0,now(),0,0,'Rent',false,0,0)`, [homeId, session.user.userId]);
+  await testQuery(POSTGRES_URL, `INSERT INTO "Messages" ("MessageId","SenderId","OwnerId","ApartmentId","Content","CreatedAt","IsRead","IsDeleted","IsArchived") VALUES ($1,$2,$3,$4,'Retained history',now(),false,false,false)`, [messageId, session.user.userId, adminUserId, homeId]);
+  const deleted = await fetch(`${services.domixServerUrl}/api/User/${session.user.userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${session.accessToken}` } });
+  assert.equal(deleted.status, 204);
+  const access = await fetch(`${services.domixServerUrl}/api/Apartment/all`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
+  assert.equal(access.status, 401);
+  const history = (await testQuery(POSTGRES_URL, 'SELECT "Content","SenderId" FROM "Messages" WHERE "MessageId"=$1', [messageId])).rows;
+  assert.equal(history.length, 1); assert.equal(history[0].Content, 'Retained history');
+  const listing = await fetch(`${services.domixServerUrl}/api/Apartment/${homeId}`, { headers: { Authorization: `Bearer ${adminAccessToken}` } });
+  assert.equal(listing.status, 404);
+  const account = (await testQuery(POSTGRES_URL, 'SELECT "IsDeleted","EmailAddress","PasswordHash" FROM "Users" WHERE "UserId"=$1', [session.user.userId])).rows[0];
+  assert.equal(account.IsDeleted, true); assert.equal(account.EmailAddress, null); assert.equal(account.PasswordHash, null);
 });

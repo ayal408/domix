@@ -22,7 +22,7 @@ public class ExchangeController(ApartmentContext context) : ControllerBase
         var city = destination.Trim().ToLower();
         var homes = await context.Apartments.AsNoTracking().Include(a => a.ApartmentImages)
             .Where(a => a.UserId != userId && a.ListingType == "Exchange" &&
-                a.Status == serverApi.Models.ApartmentStatus.Available && a.city.Trim().ToLower() == city &&
+                a.Status == serverApi.Models.ApartmentStatus.Available && a.NormalizedCity == city &&
                 a.AvailableFrom <= start && a.AvailableTo >= end &&
                 !context.Users.Any(u => u.UserId == a.UserId && u.IsBlocked))
             .OrderBy(a => a.ApartmentId).ToListAsync(cancellationToken);
@@ -47,7 +47,7 @@ public class ExchangeController(ApartmentContext context) : ControllerBase
         var city = destination.Trim().ToLower();
         var candidates = await context.Apartments.AsNoTracking().Include(a => a.ApartmentImages)
             .Where(a => a.UserId != userId && a.ListingType == "Exchange" &&
-                a.Status == serverApi.Models.ApartmentStatus.Available && a.city.Trim().ToLower() == city &&
+                a.Status == serverApi.Models.ApartmentStatus.Available && a.NormalizedCity == city &&
                 a.AvailableFrom <= start && a.AvailableTo >= end &&
                 !context.Users.Any(u => u.UserId == a.UserId && u.IsBlocked))
             .ToListAsync(cancellationToken);

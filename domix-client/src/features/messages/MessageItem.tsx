@@ -45,6 +45,8 @@ export function MessageItem({
           <span className="text-xs text-muted">{formatRelativeTime(message.createdAt, i18n.language)}</span>
         </div>
 
+        {message.apartmentSnapshot && <p className="text-sm text-muted">{message.apartmentSnapshot}</p>}
+        {message.offeredApartmentSnapshot && <p className="text-sm text-muted">{message.offeredApartmentSnapshot}</p>}
         {message.apartmentId && <Link className="text-sm text-primary underline" to={`/apartments/${message.apartmentId}`}>{t('exchange.viewListing')}</Link>}
         {message.offeredApartmentId && <>
           <Link className="text-sm text-primary underline" to={`/apartments/${message.offeredApartmentId}`}>{t('exchange.viewOffer')}</Link>

@@ -69,6 +69,14 @@ namespace serverApi.Extensions
                     // for the hub path (every other endpoint still requires a real Authorization header).
                     options.Events = new JwtBearerEvents
                     {
+                        OnTokenValidated = async context =>
+                        {
+                            var id = context.Principal?.FindFirst("userId")?.Value
+                                ?? context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                            var db = context.HttpContext.RequestServices.GetRequiredService<ApartmentContext>();
+                            if (!Guid.TryParse(id, out var userId) || !await db.Users.AnyAsync(u => u.UserId == userId && !u.IsBlocked, context.HttpContext.RequestAborted))
+                                context.Fail("Account is not active.");
+                        },
                         OnMessageReceived = context =>
                         {
                             var accessToken = context.Request.Query["access_token"];

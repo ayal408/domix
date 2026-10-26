@@ -17,6 +17,8 @@ namespace serverApi.Services.Implementations
 {
     public class UserService : IUserService
     {
+        internal static string? NormalizeEmail(string? email) => string.IsNullOrWhiteSpace(email) ? null : email.Trim().ToLowerInvariant();
+
         private static readonly TimeSpan VerificationTokenLifetime = TimeSpan.FromHours(24);
 
         private readonly ApartmentContext _context;
@@ -45,7 +47,7 @@ namespace serverApi.Services.Implementations
         {
             var user = await _context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.EmailAddress == email, cancellationToken);
+                .FirstOrDefaultAsync(x => x.NormalizedEmail == NormalizeEmail(email), cancellationToken);
 
             return user == null ? null : ToDto(user);
         }
@@ -76,7 +78,7 @@ namespace serverApi.Services.Implementations
                 user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.GoogleId == googleId, cancellationToken);
 
             if (user == null && !string.IsNullOrWhiteSpace(email))
-                user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.EmailAddress == email, cancellationToken);
+                user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.NormalizedEmail == NormalizeEmail(email), cancellationToken);
 
             if (user == null && !string.IsNullOrWhiteSpace(username))
                 user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(x => x.UserName == username, cancellationToken);
@@ -86,6 +88,9 @@ namespace serverApi.Services.Implementations
 
         public async Task<UserResponseDto> CreateUserAsync(UserDto dto, CancellationToken cancellationToken = default)
         {
+            if (string.IsNullOrWhiteSpace(dto.UserName) || dto.UserName.Length > 100 ||
+                (!string.IsNullOrWhiteSpace(dto.EmailAddress) && !EmailService.IsMailbox(dto.EmailAddress.Trim())))
+                throw new ArgumentException("Invalid account details.");
             byte[] imageBytes;
 
             if (!string.IsNullOrEmpty(dto.ProfileImageBase64))
@@ -103,22 +108,19 @@ namespace serverApi.Services.Implementations
             // need to click a link we email them before IsEmailVerified flips to true.
             var isGoogleVerified = dto.RegistrationMethod == "Google";
 
-            // Bootstraps the very first account as Admin — there is no seed data and no other way to
-            // reach the admin panel on a fresh database. Every account after it defaults to "User".
-            var isFirstUser = !await _context.Users.AnyAsync(cancellationToken);
-
             var newUser = new User
             {
                 UserId = Guid.NewGuid(),
                 RegistrationMethod = dto.RegistrationMethod,
                 LanguagePreference = EmailText.Language(dto.LanguagePreference),
-                UserName = dto.UserName,
+                UserName = dto.UserName.Trim(),
                 PhoneNumber = dto.PhoneNumber,
-                EmailAddress = dto.EmailAddress,
+                EmailAddress = dto.EmailAddress?.Trim(),
+                NormalizedEmail = NormalizeEmail(dto.EmailAddress),
                 PasswordHash = dto.PasswordHash,
                 GoogleId = dto.GoogleId,
                 JoiningDate = DateTime.UtcNow,
-                Role = isFirstUser ? "Admin" : "User",
+                Role = "User",
                 ProfileImage = imageBytes,
                 ProfileColor = $"#{hash[0]:X2}{hash[1]:X2}{hash[2]:X2}",
                 IsEmailVerified = isGoogleVerified,
@@ -177,7 +179,7 @@ namespace serverApi.Services.Implementations
 
         public async Task RequestPasswordResetAsync(string email, CancellationToken cancellationToken = default)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.EmailAddress == email, cancellationToken);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.NormalizedEmail == NormalizeEmail(email), cancellationToken);
             // Deliberately silent on a miss — the caller (AuthController) always returns 200 either
             // way, so this can't be used to enumerate registered emails.
             if (user == null || string.IsNullOrWhiteSpace(user.EmailAddress))
@@ -235,14 +237,28 @@ namespace serverApi.Services.Implementations
             var user = await _context.Users.FindAsync(new object[] { userId }, cancellationToken);
             if (user == null) return false;
 
-            // Every other FK to Users cascades (Apartments, Messages, Favorites, SavedSearches,
-            // RefreshTokens, SearchRequests) or SETs NULL (SupportTickets, Notifications) — this is
-            // the one Restrict relationship, so it must be cleared explicitly or the delete below
-            // fails at the database level.
-            var ownAppointments = _context.Appointments.Where(a => a.UserId == userId);
-            _context.Appointments.RemoveRange(ownAppointments);
-
-            _context.Users.Remove(user);
+            // Tombstone the account and withdraw its listings; retain both sides' message/deal history.
+            user.IsDeleted = true;
+            user.DeletedAt = DateTime.UtcNow;
+            user.IsBlocked = true;
+            user.Role = "User";
+            user.UserName = "deleted-" + user.UserId.ToString("N");
+            user.EmailAddress = null;
+            user.NormalizedEmail = null;
+            user.GoogleId = null;
+            user.PasswordHash = null;
+            user.PhoneNumber = null;
+            user.ProfileImage = null;
+            user.ProfileColor = null;
+            user.EmailVerificationToken = null;
+            user.EmailVerificationTokenExpiresAt = null;
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiresAt = null;
+            var apartments = await _context.Apartments.Where(a => a.UserId == userId).ToListAsync(cancellationToken);
+            foreach (var apartment in apartments) { apartment.IsDeleted = true; apartment.DeletedAt = user.DeletedAt; }
+            var queued = await _context.SavedSearchEmails.Where(x => x.SavedSearch.UserId == userId &&
+                (x.Status == "Pending" || x.Status == "Blocked")).ToListAsync(cancellationToken);
+            foreach (var item in queued) item.Status = "Cancelled";
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("User {UserId} account deleted.", userId);
@@ -444,7 +460,7 @@ namespace serverApi.Services.Implementations
         {
             var user = await _context.Users
                 .AsNoTracking()
-                .FirstOrDefaultAsync(x => x.UserName == identifier || x.EmailAddress == identifier, cancellationToken);
+                .FirstOrDefaultAsync(x => x.UserName == identifier || x.NormalizedEmail == NormalizeEmail(identifier), cancellationToken);
 
             return user == null ? null : ToDto(user);
         }
