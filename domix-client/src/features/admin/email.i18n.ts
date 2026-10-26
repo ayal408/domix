@@ -2,7 +2,7 @@ import i18n from '@/i18n'
 
 const en = {
   outbox: 'Saved search deliveries', unknownHint: 'An unknown delivery outcome is held for review and is not sent again automatically.',
-  outboxStates: { Pending: 'Queued', Sending: 'Sending', Sent: 'Sent', Blocked: 'Waiting for Gmail connection', Unknown: 'Delivery outcome unknown' },
+  outboxStates: { Cancelled: 'Cancelled', Pending: 'Queued', Sending: 'Sending', Sent: 'Sent', Blocked: 'Waiting for Gmail connection', Unknown: 'Delivery outcome unknown' },
   lastChecked: 'Last checked',
   connectionStates: { configured: 'Configured — not yet verified', verified: 'Last delivery succeeded', reconnect_required: 'Reconnect Gmail', temporarily_unavailable: 'Temporarily unavailable', disconnected: 'Disconnected' },
   nav: 'System email', title: 'System email sender',
@@ -30,7 +30,7 @@ const en = {
 }
 const he = {
   outbox: 'משלוחי חיפושים שמורים', unknownHint: 'משלוח שתוצאתו אינה ידועה ממתין לבדיקה ולא נשלח שוב אוטומטית.',
-  outboxStates: { Pending: 'בתור', Sending: 'בשליחה', Sent: 'נשלח', Blocked: 'ממתין לחיבור Gmail', Unknown: 'תוצאת השליחה אינה ידועה' },
+  outboxStates: { Cancelled: 'בוטל', Pending: 'בתור', Sending: 'בשליחה', Sent: 'נשלח', Blocked: 'ממתין לחיבור Gmail', Unknown: 'תוצאת השליחה אינה ידועה' },
   lastChecked: 'בדיקה אחרונה',
   connectionStates: { configured: 'הוגדר — טרם אומת', verified: 'השליחה האחרונה הצליחה', reconnect_required: 'נדרש חיבור Gmail מחדש', temporarily_unavailable: 'לא זמין כרגע', disconnected: 'מנותק' },
   nav: 'מיילים מהמערכת', title: 'חשבון השולח של המערכת',

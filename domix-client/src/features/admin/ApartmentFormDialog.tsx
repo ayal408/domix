@@ -189,6 +189,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                       label={t(listingType === 'Exchange' ? 'exchange.supplement' : listingType === 'Rent' ? 'exchange.monthlyPrice' : 'apartments.fields.price')}
                       type="number"
                       min={0}
+                      step="0.01"
                       required
                       error={errors.price?.message}
                       {...register('price')}

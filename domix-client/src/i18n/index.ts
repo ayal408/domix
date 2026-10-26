@@ -435,6 +435,8 @@ const en = {
     empty: 'You have no listings yet. Create your first one.',
   },
   rating: {
+    legacy: 'Historical rating — original votes are unavailable',
+    legacySummary: 'Historical rating: {{score}} from {{count}} votes (rounded)',
     label: 'Rating',
     none: 'Not yet rated',
     ariaValue: '{{value}} out of {{max}} stars',
@@ -908,6 +910,8 @@ const he: typeof en = {
     empty: 'עדיין אין לכם מודעות. צרו את הראשונה.',
   },
   rating: {
+    legacy: 'דירוג היסטורי — ההצבעות המקוריות אינן זמינות',
+    legacySummary: 'דירוג היסטורי: {{score}} מתוך {{count}} הצבעות (מעוגל)',
     label: 'דירוג',
     none: 'עדיין לא דורג',
     ariaValue: '{{value}} מתוך {{max}} כוכבים',
@@ -1381,6 +1385,8 @@ const es: typeof en = {
     empty: 'Aún no tienes anuncios. Crea el primero.',
   },
   rating: {
+    legacy: 'Calificación histórica; votos originales no disponibles',
+    legacySummary: 'Calificación histórica: {{score}} de {{count}} votos (redondeada)',
     label: 'Valoración',
     none: 'Sin valorar',
     ariaValue: '{{value}} de {{max}} estrellas',
@@ -1854,6 +1860,8 @@ const fr: typeof en = {
     empty: "Vous n'avez pas encore d'annonce. Créez la première.",
   },
   rating: {
+    legacy: 'Note historique ; votes originaux indisponibles',
+    legacySummary: 'Note historique : {{score}} pour {{count}} votes (arrondie)',
     label: 'Note',
     none: 'Pas encore noté',
     ariaValue: '{{value}} sur {{max}} étoiles',

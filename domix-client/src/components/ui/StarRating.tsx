@@ -25,6 +25,7 @@ export function StarRating({ value, count, size = 'md', className }: StarRatingP
           <StarIcon key={i} filled={i < rounded} className={SIZE_CLASSES[size]} />
         ))}
       </span>
+      <span className="text-xs text-muted" aria-hidden="true">{value.toFixed(2).replace(/\.00$/, '')}</span>
       {typeof count === 'number' && <span className="text-xs text-muted">({count})</span>}
     </span>
   )

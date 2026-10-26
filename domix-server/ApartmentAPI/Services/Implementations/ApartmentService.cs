@@ -75,7 +75,7 @@ namespace serverApi.Services.Implementations
             {
                 "price_asc" => query.OrderBy(a => a.price),
                 "price_desc" => query.OrderByDescending(a => a.price),
-                "rating" => query.OrderByDescending(a => a.Rating).ThenByDescending(a => a.RatingCount),
+                "rating" => query.OrderByDescending(a => a.RecordedRatingCount > 0 ? (decimal)a.RatingSum / a.RecordedRatingCount : a.Rating).ThenByDescending(a => a.RecordedRatingCount > 0 ? a.RecordedRatingCount : a.RatingCount),
                 _ => query.OrderByDescending(a => a.dateInsert),
             };
 
@@ -143,9 +143,10 @@ namespace serverApi.Services.Implementations
                 ApartmentId = Guid.NewGuid(),
                 UserId = userId,
                 city = dto.city.Trim(),
+                NormalizedCity = dto.city.Trim().ToLowerInvariant(),
                 address = dto.address.Trim(),
                 area = dto.area?.Trim() ?? string.Empty,
-                price = (int)dto.price,
+                price = dto.price,
                 description = dto.description?.Trim() ?? string.Empty,
                 SquareMeters = dto.SquareMeters,
                 SumOfRooms = dto.SumOfRooms,
@@ -195,9 +196,10 @@ namespace serverApi.Services.Implementations
                 || !string.Equals(apartment.address, address, StringComparison.OrdinalIgnoreCase);
 
             apartment.city = city;
+            apartment.NormalizedCity = city.ToLowerInvariant();
             apartment.address = address;
             apartment.area = dto.area?.Trim() ?? string.Empty;
-            apartment.price = (int)dto.price;
+            apartment.price = dto.price;
             apartment.description = dto.description?.Trim() ?? string.Empty;
             apartment.SquareMeters = dto.SquareMeters;
             apartment.SumOfRooms = dto.SumOfRooms;
@@ -241,7 +243,8 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
-            _context.Apartments.Remove(apartment);
+            apartment.IsDeleted = true;
+            apartment.DeletedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);
 
             _logger.LogInformation("Successfully deleted apartment {ApartmentId} by user {UserId}", apartmentId, userId);
@@ -251,24 +254,36 @@ namespace serverApi.Services.Implementations
 
         public async Task<ApartmentDTO?> RateApartmentAsync(Guid apartmentId, Guid userId, int score, CancellationToken cancellationToken = default)
         {
-            var apartment = await _context.Apartments
-                .FirstOrDefaultAsync(a => a.ApartmentId == apartmentId, cancellationToken);
-
-            if (apartment == null)
-                return null;
-
-            if (apartment.UserId == userId)
+            if (score < 1 || score > 5) throw new ArgumentOutOfRangeException(nameof(score));
+            ApartmentDTO? result = null;
+            await _context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
             {
-                _logger.LogWarning("User {UserId} attempted to rate their own apartment {ApartmentId}", userId, apartmentId);
-                throw new UnauthorizedAccessException("You cannot rate your own apartment.");
-            }
-
-            apartment.AddRating(score);
-            await _context.SaveChangesAsync(cancellationToken);
-
-            _logger.LogInformation("Apartment {ApartmentId} rated {Score} by user {UserId}", apartmentId, score, userId);
-
-            return ToDTO(apartment);
+                _context.ChangeTracker.Clear();
+                await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+                // A no-op UPDATE acquires a row write lock on PostgreSQL (also supported by relational tests).
+                var locked = await _context.Apartments.Where(a => a.ApartmentId == apartmentId)
+                    .ExecuteUpdateAsync(s => s.SetProperty(a => a.RatingSum, a => a.RatingSum), cancellationToken);
+                if (locked == 0) return;
+                var apartment = await _context.Apartments.FirstAsync(a => a.ApartmentId == apartmentId, cancellationToken);
+                if (apartment.UserId == userId) throw new UnauthorizedAccessException("You cannot rate your own apartment.");
+                var rating = await _context.ApartmentRatings.SingleOrDefaultAsync(r => r.ApartmentId == apartmentId && r.UserId == userId, cancellationToken);
+                if (rating is null)
+                {
+                    _context.ApartmentRatings.Add(new ApartmentRating { ApartmentId = apartmentId, UserId = userId, Score = score });
+                    apartment.RatingSum += score;
+                    apartment.RecordedRatingCount++;
+                }
+                else
+                {
+                    apartment.RatingSum += score - rating.Score;
+                    rating.Score = score;
+                    rating.UpdatedAt = DateTime.UtcNow;
+                }
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                result = ToDTO(apartment);
+            });
+            return result;
         }
 
         public async Task<ApartmentDTO?> SetApartmentStatusAsync(Guid apartmentId, ApartmentStatus status, Guid userId, bool isPrivileged, CancellationToken cancellationToken = default)
@@ -320,8 +335,11 @@ namespace serverApi.Services.Implementations
             dateInsert = a.dateInsert,
             Latitude = a.Latitude,
             Longitude = a.Longitude,
-            Rating = a.Rating,
-            RatingCount = a.RatingCount,
+            Rating = a.CurrentRating,
+            RatingCount = a.RecordedRatingCount > 0 ? a.RecordedRatingCount : a.RatingCount,
+            LegacyRating = a.Rating,
+            LegacyRatingCount = a.RatingCount,
+            RatingIsLegacy = a.RecordedRatingCount == 0 && a.RatingCount > 0,
             ApartmentImages = a.ApartmentImages?
                 .Select(i => new ApartmentImageDTO
                 {

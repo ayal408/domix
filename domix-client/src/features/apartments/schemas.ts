@@ -29,7 +29,8 @@ export const apartmentFormSchema = z.object({
   price: z.coerce
     .number({ error: 'validation.price' })
     .nonnegative('validation.price')
-    .max(1_000_000_000, 'validation.price'),
+    .max(1_000_000_000, 'validation.price')
+    .refine(value => Math.abs(value * 100 - Math.round(value * 100)) < 0.00001, 'validation.price'),
   description: emptyToUndefined(z.string().trim().max(2000, 'validation.long')),
   squareMeters: emptyToUndefined(
     z.coerce.number().int('validation.integer').positive('validation.positive').max(100_000),

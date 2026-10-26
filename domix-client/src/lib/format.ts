@@ -4,7 +4,7 @@
  * per-language formatting code.
  */
 
-/** Listing prices are stored as whole ILS on the server (`Apartment.price` is an int). */
+/** Listing prices support shekels and agorot without rounding accepted values away. */
 export const DEFAULT_CURRENCY = 'ILS'
 
 /** Maps our i18n language codes onto BCP-47 locales for `Intl`. */
@@ -29,7 +29,8 @@ export function formatCurrency(
   return new Intl.NumberFormat(toIntlLocale(language), {
     style: 'currency',
     currency,
-    maximumFractionDigits: 0,
+    minimumFractionDigits: Number.isInteger(value) ? 0 : 2,
+    maximumFractionDigits: 2,
   }).format(value)
 }
 

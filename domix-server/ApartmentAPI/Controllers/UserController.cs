@@ -72,9 +72,13 @@ namespace serverApi.Controllers
                 var result = await _userService.CreateUserAsync(user, cancellationToken);
                 return Ok(result);
             }
+            catch (ArgumentException)
+            {
+                return BadRequest(new { code = "INVALID_REQUEST" });
+            }
             catch (DbUpdateException)
             {
-                return Conflict("Duplicate user (email/username/googleId)");
+                return Conflict(new { code = "EMAIL_EXISTS" });
             }
             catch (Exception ex)
             {

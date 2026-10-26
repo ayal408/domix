@@ -58,8 +58,13 @@ export async function verifyPassword(userName, password) {
 }
 
 export async function createUser(payload) {
-  const { data } = await client.post(`/api/User`, payload);
-  return data;
+  try {
+    const { data } = await client.post(`/api/User`, payload);
+    return data;
+  } catch (err) {
+    if (err.response?.status === 409) throw new Error("EMAIL_EXISTS");
+    throw err;
+  }
 }
 
 export async function linkGoogle(userId, googleId) {

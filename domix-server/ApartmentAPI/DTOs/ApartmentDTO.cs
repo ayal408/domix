@@ -10,6 +10,7 @@ namespace serverApi.Models.DTOs
         public Guid UserId { get; set; }
         public ApartmentStatus Status { get; set; }
         public bool IsAnonymous { get; set; }
+        [Range(typeof(decimal), "0", "999999999999.99")]
         public decimal price { get; set; }
         public DateTime date { get; set; }
         public string city { get; set; } = string.Empty;
@@ -27,8 +28,11 @@ namespace serverApi.Models.DTOs
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         /// <summary>Running average, 0-5. 0 with <see cref="RatingCount"/> 0 means unrated.</summary>
-        public int Rating { get; set; }
+        public decimal Rating { get; set; }
         public int RatingCount { get; set; }
+        public int LegacyRating { get; set; }
+        public int LegacyRatingCount { get; set; }
+        public bool RatingIsLegacy { get; set; }
         public List<ApartmentImageDTO>? ApartmentImages { get; set; }
     }
 
@@ -44,6 +48,7 @@ namespace serverApi.Models.DTOs
         public string city { get; set; } = string.Empty;
         public string address { get; set; } = string.Empty;
         public string? area { get; set; }
+        [Range(typeof(decimal), "0", "999999999999.99")]
         public decimal price { get; set; }
         public string? description { get; set; }
         public int? SquareMeters { get; set; }
@@ -55,6 +60,14 @@ namespace serverApi.Models.DTOs
         public string? PropertyType { get; set; }
         /// <summary>When true, the owner's name/avatar/phone are hidden from other users on this listing.</summary>
         public bool IsAnonymous { get; set; }
+        public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            foreach (var error in base.Validate(validationContext)) yield return error;
+            if (price != decimal.Round(price, 2)) yield return new("המחיר יכול לכלול עד שתי ספרות אחרי הנקודה", new[] { nameof(price) });
+            if (SumOfRooms <= 0 || SquareMeters <= 0 || SumOfBeds < 0)
+                yield return new("מידות הדירה אינן תקינות");
+        }
+
     }
 
     public class UpdateApartmentDTO : ListingTerms
@@ -62,6 +75,7 @@ namespace serverApi.Models.DTOs
         public string city { get; set; } = string.Empty;
         public string address { get; set; } = string.Empty;
         public string? area { get; set; }
+        [Range(typeof(decimal), "0", "999999999999.99")]
         public decimal price { get; set; }
         public string? description { get; set; }
         public int? SquareMeters { get; set; }
@@ -73,6 +87,14 @@ namespace serverApi.Models.DTOs
         public string? PropertyType { get; set; }
         /// <summary>When set, changes whether the owner's identity is hidden. Omit to leave unchanged.</summary>
         public bool? IsAnonymous { get; set; }
+        public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            foreach (var error in base.Validate(validationContext)) yield return error;
+            if (price != decimal.Round(price, 2)) yield return new("המחיר יכול לכלול עד שתי ספרות אחרי הנקודה", new[] { nameof(price) });
+            if (SumOfRooms <= 0 || SquareMeters <= 0 || SumOfBeds < 0)
+                yield return new("מידות הדירה אינן תקינות");
+        }
+
     }
 
     /// <summary>Body for <c>PATCH /api/Apartment/{id}/status</c>.</summary>

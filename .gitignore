@@ -41,3 +41,6 @@ ehthumbs.db
 Desktop.ini
 .tmp.driveupload
 .tmp.drivedownload
+
+# Generated migration scripts for disposable database tests
+/integration-tests/schema*.sql

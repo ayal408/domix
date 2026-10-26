@@ -49,10 +49,16 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<DateOnly?>("AvailableTo")
                         .HasColumnType("date");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("DesiredCity")
                         .HasColumnType("text");
 
                     b.Property<bool>("IsAnonymous")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
                     b.Property<double?>("Latitude")
@@ -65,6 +71,12 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<double?>("Longitude")
                         .HasColumnType("double precision");
 
+                    b.Property<string>("NormalizedCity")
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("lower(trim(city))", true);
+
                     b.Property<bool?>("Parking")
                         .HasColumnType("boolean");
 
@@ -75,6 +87,12 @@ namespace domix_server.ApartmentAPI.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("RatingCount")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("RatingSum")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RecordedRatingCount")
                         .HasColumnType("integer");
 
                     b.Property<int?>("SquareMeters")
@@ -123,8 +141,9 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<int?>("floor")
                         .HasColumnType("integer");
 
-                    b.Property<int>("price")
-                        .HasColumnType("integer");
+                    b.Property<decimal>("price")
+                        .HasPrecision(14, 2)
+                        .HasColumnType("numeric(14,2)");
 
                     b.HasKey("ApartmentId");
 
@@ -139,7 +158,28 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasIndex("Latitude", "Longitude")
                         .HasDatabaseName("IX_Apartments_Location");
 
-                    b.ToTable("Apartments");
+                    b.HasIndex("dateInsert", "ApartmentId")
+                        .IsDescending(true, false)
+                        .HasFilter("\"Status\" = 0 AND NOT \"IsDeleted\"");
+
+                    b.HasIndex("NormalizedCity", "ListingType", "AvailableFrom", "AvailableTo");
+
+                    b.ToTable("Apartments", t =>
+                        {
+                            t.HasCheckConstraint("CK_Apartments_Address", "\"IsDeleted\" OR (trim(city) <> '' AND trim(address) <> '' AND trim(area) <> '')");
+
+                            t.HasCheckConstraint("CK_Apartments_Dimensions", "\"IsDeleted\" OR ((\"SumOfRooms\" IS NULL OR \"SumOfRooms\" > 0) AND (\"SquareMeters\" IS NULL OR \"SquareMeters\" > 0) AND (\"SumOfBeds\" IS NULL OR \"SumOfBeds\" >= 0))");
+
+                            t.HasCheckConstraint("CK_Apartments_ExchangeDates", "\"IsDeleted\" OR (\"ListingType\" <> 'Exchange' OR (\"AvailableFrom\" IS NOT NULL AND \"AvailableTo\" IS NOT NULL AND \"AvailableTo\" > \"AvailableFrom\" AND \"DesiredCity\" IS NOT NULL AND trim(\"DesiredCity\") <> ''))");
+
+                            t.HasCheckConstraint("CK_Apartments_ListingType", "\"IsDeleted\" OR (\"ListingType\" IN ('Unspecified','Exchange','Rent','Sale'))");
+
+                            t.HasCheckConstraint("CK_Apartments_Price", "\"IsDeleted\" OR (price >= 0 AND (\"ListingType\" = 'Exchange' OR price > 0))");
+
+                            t.HasCheckConstraint("CK_Apartments_RecordedRating", "\"RecordedRatingCount\" >= 0 AND \"RatingSum\" >= \"RecordedRatingCount\" AND \"RatingSum\" <= 5 * CAST(\"RecordedRatingCount\" AS bigint)");
+
+                            t.HasCheckConstraint("CK_Apartments_Status", "\"IsDeleted\" OR (\"Status\" IN (0,1,2))");
+                        });
                 });
 
             modelBuilder.Entity("serverApi.Models.ApartmentImage", b =>
@@ -163,6 +203,33 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasIndex("ApartmentId");
 
                     b.ToTable("ApartmentImages");
+                });
+
+            modelBuilder.Entity("serverApi.Models.ApartmentRating", b =>
+                {
+                    b.Property<Guid>("ApartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("ApartmentId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ApartmentRatings", t =>
+                        {
+                            t.HasCheckConstraint("CK_ApartmentRatings_Score", "\"Score\" BETWEEN 1 AND 5");
+                        });
                 });
 
             modelBuilder.Entity("serverApi.Models.Appointment", b =>
@@ -219,6 +286,10 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasKey("ClosingDealId");
 
                     b.HasIndex("ApartmentId");
+
+                    b.HasIndex("idUserBuyer");
+
+                    b.HasIndex("idUserManager");
 
                     b.ToTable("ClosingDeals");
                 });
@@ -287,6 +358,9 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<Guid?>("ApartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ApartmentSnapshot")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("ArchivedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -318,6 +392,9 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<Guid?>("OfferedApartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("OfferedApartmentSnapshot")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
@@ -329,11 +406,20 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.HasKey("MessageId");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("ApartmentId");
+
+                    b.HasIndex("OfferedApartmentId");
 
                     b.HasIndex("SenderId");
 
-                    b.ToTable("Messages");
+                    b.HasIndex("OwnerId", "IsArchived", "CreatedAt", "MessageId")
+                        .IsDescending(false, false, true, true)
+                        .HasFilter("NOT \"IsDeleted\"");
+
+                    b.ToTable("Messages", t =>
+                        {
+                            t.HasCheckConstraint("CK_Messages_Exchange", "(\"OfferedApartmentId\" IS NULL AND \"ExchangeStart\" IS NULL AND \"ExchangeEnd\" IS NULL) OR (\"OfferedApartmentId\" IS NOT NULL AND \"ApartmentId\" IS NOT NULL AND \"ExchangeStart\" IS NOT NULL AND \"ExchangeEnd\" IS NOT NULL AND \"ExchangeEnd\" > \"ExchangeStart\" AND \"SenderId\" <> \"OwnerId\")");
+                        });
                 });
 
             modelBuilder.Entity("serverApi.Models.Notification", b =>
@@ -457,7 +543,10 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("SavedSearches");
+                    b.ToTable("SavedSearches", t =>
+                        {
+                            t.HasCheckConstraint("CK_SavedSearches_Ranges", "(\"MinPrice\" IS NULL OR \"MinPrice\" >= 0) AND (\"MaxPrice\" IS NULL OR \"MaxPrice\" >= 0) AND (\"MinPrice\" IS NULL OR \"MaxPrice\" IS NULL OR \"MinPrice\" <= \"MaxPrice\") AND (\"MinRooms\" IS NULL OR \"MinRooms\" >= 0) AND (\"MaxRooms\" IS NULL OR \"MaxRooms\" >= 0) AND (\"MinRooms\" IS NULL OR \"MaxRooms\" IS NULL OR \"MinRooms\" <= \"MaxRooms\")");
+                        });
                 });
 
             modelBuilder.Entity("serverApi.Models.SavedSearchEmail", b =>
@@ -510,7 +599,10 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.HasIndex("Status", "CreatedAt");
 
-                    b.ToTable("SavedSearchEmails");
+                    b.ToTable("SavedSearchEmails", t =>
+                        {
+                            t.HasCheckConstraint("CK_SavedSearchEmails_Status", "\"Status\" IN ('Pending','Sending','Sent','Blocked','Unknown','Cancelled')");
+                        });
                 });
 
             modelBuilder.Entity("serverApi.Models.SearchRequest", b =>
@@ -657,6 +749,9 @@ namespace domix_server.ApartmentAPI.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("EmailAddress")
                         .HasColumnType("text");
 
@@ -672,6 +767,9 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<bool>("IsBlocked")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsEmailVerified")
                         .HasColumnType("boolean");
 
@@ -681,6 +779,11 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<string>("LanguagePreference")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("NormalizedEmail")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("NULLIF(lower(trim(\"EmailAddress\")), '')", true);
 
                     b.Property<DateTime?>("NotificationsSeenAt")
                         .HasColumnType("timestamp with time zone");
@@ -728,10 +831,16 @@ namespace domix_server.ApartmentAPI.Migrations
                         .IsUnique()
                         .HasFilter("\"GoogleId\" IS NOT NULL");
 
+                    b.HasIndex("NormalizedEmail")
+                        .IsUnique();
+
                     b.HasIndex("UserName")
                         .IsUnique();
 
-                    b.ToTable("Users");
+                    b.ToTable("Users", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_Role", "\"Role\" IN ('User','Manager','Admin')");
+                        });
                 });
 
             modelBuilder.Entity("ApartmentTag", b =>
@@ -754,7 +863,7 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasOne("serverApi.Models.User", "User")
                         .WithMany("Apartments")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("User");
@@ -771,12 +880,31 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Navigation("Apartment");
                 });
 
+            modelBuilder.Entity("serverApi.Models.ApartmentRating", b =>
+                {
+                    b.HasOne("serverApi.Models.Apartment", "Apartment")
+                        .WithMany()
+                        .HasForeignKey("ApartmentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("serverApi.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Apartment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("serverApi.Models.Appointment", b =>
                 {
                     b.HasOne("serverApi.Models.Apartment", "Apartment")
                         .WithMany("Appointments")
                         .HasForeignKey("ApartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("serverApi.Models.User", "User")
@@ -795,7 +923,19 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.HasOne("serverApi.Models.Apartment", "apartment")
                         .WithMany("ClosingDeal")
                         .HasForeignKey("ApartmentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("serverApi.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("idUserBuyer")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("serverApi.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("idUserManager")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("apartment");
@@ -822,16 +962,26 @@ namespace domix_server.ApartmentAPI.Migrations
 
             modelBuilder.Entity("serverApi.Models.Message", b =>
                 {
+                    b.HasOne("serverApi.Models.Apartment", null)
+                        .WithMany()
+                        .HasForeignKey("ApartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("serverApi.Models.Apartment", null)
+                        .WithMany()
+                        .HasForeignKey("OfferedApartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("serverApi.Models.User", "Owner")
                         .WithMany()
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("serverApi.Models.User", "Sender")
                         .WithMany()
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
