@@ -11,7 +11,7 @@ export async function login(req, res) {
       accessToken: result.accessToken
     });
   } catch (err) {
-    res.status(400).json({ code: err.message });
+    sendAuthError(res, err);
   }
 }
 
@@ -25,7 +25,7 @@ export async function register(req, res) {
       accessToken: result.accessToken
     });
   } catch (err) {
-    res.status(400).json({ code: err.message });
+    sendAuthError(res, err);
   }
 }
 
@@ -39,8 +39,8 @@ export async function google(req, res) {
       accessToken: result.accessToken
     });
   } catch (err) {
-    console.error("[DEBUG google login]", err);
-    res.status(400).json({ code: err.message });
+    // Do not log provider tokens or raw HTTP request configuration.
+    sendAuthError(res, err);
   }
 }
 
@@ -61,7 +61,7 @@ export async function verifyEmail(req, res) {
     await authService.verifyEmail(req.body.token);
     res.json({ verified: true });
   } catch (err) {
-    res.status(400).json({ code: err.message });
+    sendAuthError(res, err);
   }
 }
 
@@ -70,7 +70,7 @@ export async function resendVerification(req, res) {
     await authService.resendVerificationEmail(req.user.userId);
     res.json({ sent: true });
   } catch (err) {
-    res.status(400).json({ code: err.message });
+    sendAuthError(res, err);
   }
 }
 
@@ -88,6 +88,15 @@ export async function resetPassword(req, res) {
     await authService.resetPassword(req.body.token, req.body.newPassword);
     res.json({ reset: true });
   } catch (err) {
-    res.status(400).json({ code: err.message });
+    sendAuthError(res, err);
   }
+}
+function sendAuthError(res, err) {
+  if (err?.isAxiosError || err?.message === "GOOGLE_AUTH_NOT_CONFIGURED") {
+    res.set("Retry-After", "3");
+    return res.status(503).json({ code: "AUTH_TEMPORARILY_UNAVAILABLE" });
+  }
+  const allowed = new Set(["EMAIL_EXISTS", "ACCOUNT_BLOCKED", "USER_NOT_FOUND", "NO_PASSWORD_ACCOUNT",
+    "INVALID_PASSWORD", "INVALID_GOOGLE_TOKEN", "INVALID_OR_EXPIRED_TOKEN", "ALREADY_VERIFIED_OR_NOT_FOUND"]);
+  return res.status(400).json({ code: allowed.has(err?.message) ? err.message : "INVALID_REQUEST" });
 }

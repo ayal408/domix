@@ -62,6 +62,7 @@ export default function AdminEmailPage() {
   const [params, setParams] = useSearchParams()
   const [recipient, setRecipient] = useState('')
   const settings = useQuery({ queryKey: settingsKey, queryFn: emailApi.getEmailSettings })
+  const outbox = useQuery({ queryKey: ['admin', 'email', 'outbox'], queryFn: emailApi.getEmailOutbox })
   const history = useQuery({ queryKey: historyKey, queryFn: emailApi.getEmailHistory })
   const connect = useMutation({ mutationFn: emailApi.connectGmail })
   const disconnect = useMutation({ mutationFn: emailApi.disconnectGmail })
@@ -98,7 +99,7 @@ export default function AdminEmailPage() {
       await test.mutateAsync(recipient)
       pushToast({ variant: 'success', title: t('sent') })
     } catch (error) { showError(error) }
-    finally { await queryClient.invalidateQueries({ queryKey: historyKey }) }
+    finally { await Promise.all([queryClient.invalidateQueries({ queryKey: historyKey }), queryClient.invalidateQueries({ queryKey: settingsKey })]) }
   }
 
   return <div className="flex flex-col gap-6">
@@ -106,7 +107,8 @@ export default function AdminEmailPage() {
     {settings.isLoading ? <Skeleton className="h-64 w-full" /> : settings.isError ?
       <Card className="p-6"><p role="alert">{t('error')}</p><Button onClick={() => void settings.refetch()}>{t('retry')}</Button></Card> : settings.data && <>
       <Card className="flex flex-col gap-4 p-6">
-        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">{t('account')}</h2><span className="text-sm text-muted">{t(settings.data.connected ? 'connected' : 'disconnected')}</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">{t('account')}</h2><span className="text-sm text-muted">{t(settings.data.connected ? `connectionStates.${settings.data.connectionStatus ?? 'configured'}` : 'disconnected')}</span></div>
+        {settings.data.lastCheckedAt && <p className="text-sm text-muted">{t('lastChecked')}: {formatDate(settings.data.lastCheckedAt, i18n.language)}</p>}
         {settings.data.senderEmail && <p dir="ltr" className="text-start text-sm">{settings.data.senderEmail}</p>}
         <div className="flex flex-wrap gap-2"><Button disabled={!settings.data.oauthAvailable || disconnect.isPending} loading={connect.isPending} onClick={() => void handleConnect()}>{t(settings.data.connected ? 'switchAccount' : 'connect')}</Button>
           {settings.data.connected && <Button variant="danger" disabled={connect.isPending} loading={disconnect.isPending} onClick={() => void handleDisconnect()}>{t('disconnect')}</Button>}</div>
@@ -118,6 +120,13 @@ export default function AdminEmailPage() {
         <div><Button type="submit" loading={test.isPending} disabled={!settings.data.connected}>{t('sendTest')}</Button></div>
       </form></Card>
     </>}
+    <Card className="overflow-hidden p-6"><h2 className="mb-4 font-semibold">{t('outbox')}</h2>
+      <p className="mb-3 text-sm text-muted">{t('unknownHint')}</p>
+      {outbox.isError ? <p role="alert">{t('error')}</p> : !outbox.data?.length ? <p className="text-sm text-muted">{t('emptyHistory')}</p> :
+        <ul className="flex flex-col gap-3">{outbox.data.map(item => <li key={item.id} className="border-b border-border pb-2 text-sm">
+          <span dir="ltr">{item.recipient}</span> · {item.subject} · {t(`outboxStates.${item.status}`)}
+        </li>)}</ul>}
+    </Card>
     <Card className="overflow-hidden p-6"><h2 className="mb-4 font-semibold">{t('history')}</h2>
       {history.isLoading ? <Skeleton className="h-24 w-full" /> : history.isError ? <p role="alert">{t('error')}</p> : !history.data?.length ? <p className="text-sm text-muted">{t('emptyHistory')}</p> :
         <div className="overflow-x-auto"><table className="w-full text-start text-sm"><thead><tr className="border-b border-border text-muted"><th className="p-2 text-start">{t('date')}</th><th className="p-2 text-start">{t('to')}</th><th className="p-2 text-start">{t('subject')}</th><th className="p-2 text-start">{t('status')}</th></tr></thead>

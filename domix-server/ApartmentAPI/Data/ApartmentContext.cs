@@ -24,6 +24,7 @@ namespace serverApi.Data
         public DbSet<Notification> Notifications { get; set; }
 
         public DbSet<SystemEmailSettings> SystemEmailSettings { get; set; }
+        public DbSet<SavedSearchEmail> SavedSearchEmails { get; set; }
         public DbSet<EmailDelivery> EmailDeliveries { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -31,6 +32,12 @@ namespace serverApi.Data
             base.OnModelCreating(modelBuilder);
             modelBuilder.Entity<SystemEmailSettings>().Property(x => x.Id).ValueGeneratedNever();
             modelBuilder.Entity<EmailDelivery>().HasIndex(x => x.CreatedAt);
+
+            modelBuilder.Entity<SavedSearchEmail>().HasIndex(x => new { x.SavedSearchId, x.FromAt }).IsUnique();
+            modelBuilder.Entity<SavedSearchEmail>().HasIndex(x => new { x.Status, x.CreatedAt });
+            modelBuilder.Entity<SavedSearchEmail>().HasOne(x => x.SavedSearch).WithMany()
+                .HasForeignKey(x => x.SavedSearchId).OnDelete(DeleteBehavior.Cascade);
+            modelBuilder.Entity<RefreshToken>().HasIndex(x => x.Token).IsUnique();
 
             // HasFilter emits raw Postgres SQL, which the EF Core InMemory provider (used by
             // domix-server.Tests to unit-test services that touch ApartmentContext) can't

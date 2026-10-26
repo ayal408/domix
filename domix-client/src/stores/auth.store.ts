@@ -8,10 +8,11 @@ import {
   setAccessToken,
 } from '@/api/tokenStore'
 import { refreshAccessToken, setSessionExpiredHandler } from '@/api/http'
+import { toApiError } from '@/api/errors'
 import { emitSessionExpired } from '@/lib/sessionEvents'
 import { POLICY_ROLES, type AuthSessionResponse, type PolicyName, type Role, type UserResponse } from '@/types/api'
 
-export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated'
+export type AuthStatus = 'initializing' | 'authenticated' | 'unauthenticated' | 'unavailable'
 
 interface AuthState {
   status: AuthStatus
@@ -61,28 +62,30 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
 
   bootstrap: async () => {
-    const token = await refreshAccessToken()
-
-    if (!token) {
-      set({ status: 'unauthenticated', user: null })
-      return
-    }
-
-    const userId = getUserIdFromToken(token)
-    if (!userId) {
-      clearAccessToken()
-      set({ status: 'unauthenticated', user: null })
-      return
-    }
-
+    set({ status: 'initializing' })
     try {
+      const token = await refreshAccessToken()
+      if (!token) {
+        set({ status: 'unauthenticated', user: null })
+        return
+      }
+      const userId = getUserIdFromToken(token)
+      if (!userId) {
+        clearAccessToken()
+        set({ status: 'unauthenticated', user: null })
+        return
+      }
       const user = await usersApi.getUserById(userId)
       set({ status: 'authenticated', user })
-    } catch {
-      // The token is valid but the profile is unreachable. Treat the session as
-      // unusable rather than guessing at a role.
-      clearAccessToken()
-      set({ status: 'unauthenticated', user: null })
+    } catch (error) {
+      const status = toApiError(error).status
+      if (status === 401 || status === 403 || status === 404) {
+        clearAccessToken()
+        set({ status: 'unauthenticated', user: null })
+      } else {
+        // Preserve the refresh cookie and let the user retry restoration.
+        set({ status: 'unavailable', user: null })
+      }
     }
   },
 

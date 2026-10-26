@@ -148,6 +148,14 @@ namespace serverApi.Controllers
             return Ok();
         }
 
+        [HttpPost("refresh-tokens/consume")]
+        public async Task<IActionResult> ConsumeRefreshToken([FromBody] RevokeRefreshTokenDto dto, CancellationToken cancellationToken)
+        {
+            if (dto.UserId == Guid.Empty || string.IsNullOrWhiteSpace(dto.Jti) || dto.Jti.Length > 128)
+                return BadRequest(new { code = "INVALID_REQUEST" });
+            return Ok(new { consumed = await _refreshTokenService.ConsumeAsync(dto.UserId, dto.Jti, dto.Expires, cancellationToken) });
+        }
+
         // ================= CHECK REFRESH TOKEN REVOKED =================
         /// <summary>Called on every /refresh so a revoked-but-not-yet-expired refresh token is rejected.</summary>
         [HttpGet("refresh-tokens/{jti}/revoked")]

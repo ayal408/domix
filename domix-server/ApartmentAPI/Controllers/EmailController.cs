@@ -25,6 +25,7 @@ public class EmailController(
         {
             senderEmail = value.Email, value.SenderName, value.ReplyTo, value.Signature,
             value.TestSubject, value.TestBody, value.Enabled, value.UpdatedAt,
+            connectionStatus = value.Enabled ? value.ConnectionStatus : "disconnected", value.LastCheckedAt,
             connected = await settings.IsConnectedAsync(ct), oauthAvailable = settings.OAuthAvailable
         });
     }
@@ -70,6 +71,8 @@ public class EmailController(
                 {
                     var account = await connection.CompleteAsync(pending, code, ct);
                     await settings.ConnectAsync(account.Email, account.RefreshToken, ct);
+                    await db.SavedSearchEmails.Where(x => x.Status == "Blocked")
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Pending").SetProperty(x => x.FailureCode, (string?)null), ct);
                     result = "connected";
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
@@ -102,9 +105,14 @@ public class EmailController(
         catch (Exception ex)
         {
             logger.LogWarning("Email test failed ({FailureType}).", ex.GetType().Name);
-            return StatusCode(502, new { code = ex is InvalidOperationException ? "EMAIL_NOT_CONFIGURED" : "EMAIL_SEND_FAILED" });
+            return StatusCode(502, new { code = ex is GmailReconnectRequiredException ? "EMAIL_RECONNECT_REQUIRED" : ex is InvalidOperationException ? "EMAIL_NOT_CONFIGURED" : "EMAIL_SEND_FAILED" });
         }
     }
+
+    [HttpGet("outbox")]
+    public async Task<IActionResult> Outbox(CancellationToken ct) => Ok(await db.SavedSearchEmails.AsNoTracking()
+        .OrderByDescending(x => x.CreatedAt).Take(50)
+        .Select(x => new { x.Id, x.Recipient, x.Subject, x.Status, x.FailureCode, x.CreatedAt }).ToListAsync(ct));
 
     [HttpGet("history")]
     public async Task<IActionResult> History(CancellationToken ct) => Ok(await db.EmailDeliveries.AsNoTracking()

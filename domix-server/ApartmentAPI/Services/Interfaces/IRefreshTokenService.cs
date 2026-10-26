@@ -8,6 +8,7 @@ namespace serverApi.Services.Interfaces
     /// </summary>
     public interface IRefreshTokenService
     {
+        Task<bool> ConsumeAsync(Guid userId, string jti, DateTime expires, CancellationToken cancellationToken = default);
         Task RevokeAsync(Guid userId, string jti, DateTime expires, CancellationToken cancellationToken = default);
         Task<bool> IsRevokedAsync(string jti, CancellationToken cancellationToken = default);
 

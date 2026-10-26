@@ -5,7 +5,7 @@ namespace serverApi.Services.Interfaces
 {
     public interface IApartmentService
     {
-        Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default);
+        Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default, int offset = 0, int pageSize = 100);
 
         /// <summary>Returns null when no apartment with the given id exists. Used by the anonymous social-share preview endpoint.</summary>
         Task<ApartmentDTO?> GetApartmentByIdAsync(Guid apartmentId, CancellationToken cancellationToken = default);
@@ -21,7 +21,7 @@ namespace serverApi.Services.Interfaces
             bool? parking,
             bool? elevator,
             string? sortBy,
-            CancellationToken cancellationToken = default, string? listingType = null);
+            CancellationToken cancellationToken = default, string? listingType = null, int offset = 0, int pageSize = 100, Guid? ownerId = null);
         Task<ApartmentDTO> CreateApartmentAsync(CreateApartmentDTO dto, Guid userId, CancellationToken cancellationToken = default);
 
         /// <summary>

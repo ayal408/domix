@@ -1,6 +1,10 @@
 import i18n from '@/i18n'
 
 const en = {
+  outbox: 'Saved search deliveries', unknownHint: 'An unknown delivery outcome is held for review and is not sent again automatically.',
+  outboxStates: { Pending: 'Queued', Sending: 'Sending', Sent: 'Sent', Blocked: 'Waiting for Gmail connection', Unknown: 'Delivery outcome unknown' },
+  lastChecked: 'Last checked',
+  connectionStates: { configured: 'Configured — not yet verified', verified: 'Last delivery succeeded', reconnect_required: 'Reconnect Gmail', temporarily_unavailable: 'Temporarily unavailable', disconnected: 'Disconnected' },
   nav: 'System email', title: 'System email sender',
   subtitle: 'This Gmail account sends all verification, password reset and notification emails from DOMIX.',
   account: 'Sending account', connected: 'Connected', disconnected: 'Not connected',
@@ -18,12 +22,17 @@ const en = {
   consentFailed: 'Gmail connection was canceled or failed. Your previous sender settings were kept.',
   disconnectedSuccess: 'System sender disconnected.', error: 'The operation failed. Please try again.', retry: 'Retry',
   errors: {
+    EMAIL_RECONNECT_REQUIRED: 'Reconnect Gmail to renew permission.',
     EMAIL_NOT_CONFIGURED: 'Connect a Gmail account before sending email.',
     EMAIL_SEND_FAILED: 'Google rejected the send request or could not be reached. Check the connection and try again.',
     EMAIL_INVALID_SETTINGS: 'Check the sender name and reply-to address.',
   },
 }
 const he = {
+  outbox: 'משלוחי חיפושים שמורים', unknownHint: 'משלוח שתוצאתו אינה ידועה ממתין לבדיקה ולא נשלח שוב אוטומטית.',
+  outboxStates: { Pending: 'בתור', Sending: 'בשליחה', Sent: 'נשלח', Blocked: 'ממתין לחיבור Gmail', Unknown: 'תוצאת השליחה אינה ידועה' },
+  lastChecked: 'בדיקה אחרונה',
+  connectionStates: { configured: 'הוגדר — טרם אומת', verified: 'השליחה האחרונה הצליחה', reconnect_required: 'נדרש חיבור Gmail מחדש', temporarily_unavailable: 'לא זמין כרגע', disconnected: 'מנותק' },
   nav: 'מיילים מהמערכת', title: 'חשבון השולח של המערכת',
   subtitle: 'חשבון Gmail זה ישלח את כל מיילי האימות, איפוס הסיסמה וההתראות של DOMIX.',
   account: 'חשבון לשליחה', connected: 'מחובר', disconnected: 'לא מחובר',
@@ -41,6 +50,7 @@ const he = {
   consentFailed: 'חיבור Gmail בוטל או נכשל. הגדרות השולח הקודמות נשמרו.',
   disconnectedSuccess: 'חשבון השולח נותק.', error: 'הפעולה נכשלה. נסי שוב.', retry: 'ניסיון נוסף',
   errors: {
+    EMAIL_RECONNECT_REQUIRED: 'נדרש לחבר מחדש את Gmail כדי לחדש את ההרשאה.',
     EMAIL_NOT_CONFIGURED: 'יש לחבר חשבון Gmail לפני שליחת מיילים.',
     EMAIL_SEND_FAILED: 'Google דחה את השליחה או שלא ניתן להתחבר אליו. בדקי את החיבור ונסי שוב.',
     EMAIL_INVALID_SETTINGS: 'בדקי את שם השולח ואת כתובת המענה.',

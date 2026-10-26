@@ -8,6 +8,8 @@ export interface EmailSettings {
   signature: string
   testSubject: string
   testBody: string
+  connectionStatus?: 'configured' | 'verified' | 'reconnect_required' | 'temporarily_unavailable' | 'disconnected'
+  lastCheckedAt?: string | null
   connected: boolean
   oauthAvailable: boolean
   enabled: boolean
@@ -34,3 +36,7 @@ export const sendTestEmail = async (recipient: string): Promise<void> => {
 }
 export const getEmailHistory = async (): Promise<EmailDelivery[]> =>
   (await dataClient.get<EmailDelivery[]>(apiEndpoints.email.history())).data
+
+export interface OutboxDelivery { id: string; recipient: string; subject: string; status: string; failureCode: string | null; createdAt: string }
+export const getEmailOutbox = async (): Promise<OutboxDelivery[]> =>
+  (await dataClient.get<OutboxDelivery[]>('/email/outbox')).data

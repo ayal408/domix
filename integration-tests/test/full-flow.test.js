@@ -313,3 +313,24 @@ test("exchange preview works before publishing, stays private, and analytics run
   assert.ok(metrics.exchangeSupplyByCity.some(row => row.city === city && row.homes === 1));
   assert.equal(typeof metrics.exchangeInquiriesWithReplyLast7Days, "number");
 });
+
+
+test("parallel refresh requests consume a token exactly once in Postgres", async () => {
+  const registered = await authFetch("/register", {
+    method: "POST", headers: { "X-Forwarded-For": "192.0.2.99" }, body: JSON.stringify({ userName: `parallel${runId}`, email: `parallel-${runId}@example.com`, password: "password123" }),
+  });
+  assert.equal(registered.status, 200);
+  const cookie = registered.headers.getSetCookie().find(value => value.startsWith("refreshToken=")).split(";")[0];
+  const results = await Promise.all(Array.from({ length: 8 }, () => authFetch("/refresh", { method: "POST", headers: { Cookie: cookie } })));
+  assert.equal(results.filter(result => result.status === 200).length, 1);
+  assert.equal(results.filter(result => result.status === 401).length, 7);
+});
+
+test("chat without provider configuration returns a structured availability error", async () => {
+  const result = await fetch(`${services.domixServerUrl}/api/Chat/stream`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ history: [{ role: "user", text: "Hello" }] }),
+  });
+  assert.equal(result.status, 503);
+  assert.equal((await result.json()).code, "CHAT_UNAVAILABLE");
+});

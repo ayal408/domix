@@ -113,6 +113,7 @@ export function errorTranslationKey(error: unknown): string {
 
   if (apiError.isCanceled) return 'errors.canceled'
   if (apiError.isNetworkError) return 'errors.network'
+  if (apiError.code === 'AUTH_TEMPORARILY_UNAVAILABLE') return 'errors.server'
   if (apiError.code) return `errors.codes.${apiError.code}`
 
   switch (apiError.status) {

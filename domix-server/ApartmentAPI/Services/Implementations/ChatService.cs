@@ -51,12 +51,13 @@ namespace serverApi.Services.Implementations
                             "area": { "type": "string", "description": "Neighborhood or area within the city" },
                             "minPrice": { "type": "integer", "description": "Minimum price" },
                             "maxPrice": { "type": "integer", "description": "Maximum price" },
-                            "minRooms": { "type": "integer", "description": "Minimum number of rooms" },
-                            "maxRooms": { "type": "integer", "description": "Maximum number of rooms" },
+                            "minRooms": { "type": "number", "description": "Minimum number of rooms" },
+                            "maxRooms": { "type": "number", "description": "Maximum number of rooms" },
                             "propertyType": {
                               "type": "string",
                               "enum": ["Apartment", "House", "Studio", "Penthouse", "Garden", "Duplex", "Other"]
                             },
+                            "listingType": { "type": "string", "enum": ["Exchange", "Rent", "Sale", "Unspecified"] },
                             "parking": { "type": "boolean" },
                             "elevator": { "type": "boolean" }
                           }
@@ -66,17 +67,14 @@ namespace serverApi.Services.Implementations
             },
         };
 
-        private readonly Client _client;
+        private readonly Client? _client;
         private readonly IApartmentService _apartmentService;
         private readonly ILogger<ChatService> _logger;
 
         public ChatService(IConfiguration configuration, IApartmentService apartmentService, ILogger<ChatService> logger)
         {
             var apiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY");
-            if (string.IsNullOrWhiteSpace(apiKey))
-                throw new InvalidOperationException("Configuration Error: GEMINI_API_KEY is not set.");
-
-            _client = new Client(apiKey: apiKey);
+            _client = string.IsNullOrWhiteSpace(apiKey) ? null : new Client(apiKey: apiKey);
             _apartmentService = apartmentService;
             _logger = logger;
         }
@@ -184,6 +182,7 @@ namespace serverApi.Services.Implementations
             bool useTools,
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
         {
+            if (_client is null) throw new ChatUnavailableException();
             var config = new GenerateContentConfig
             {
                 SystemInstruction = new Content
@@ -258,6 +257,13 @@ namespace serverApi.Services.Implementations
                 var v => Convert.ToInt32(v),
             };
 
+            decimal? GetDecimal(string key) => Get(key) switch
+            {
+                null => null,
+                JsonElement je => je.GetDecimal(),
+                var v => Convert.ToDecimal(v, System.Globalization.CultureInfo.InvariantCulture),
+            };
+
             bool? GetBool(string key) => Get(key) switch
             {
                 null => null,
@@ -270,13 +276,14 @@ namespace serverApi.Services.Implementations
                 area: GetString("area"),
                 minPrice: GetInt("minPrice"),
                 maxPrice: GetInt("maxPrice"),
-                minRooms: GetInt("minRooms"),
-                maxRooms: GetInt("maxRooms"),
+                minRooms: GetDecimal("minRooms"),
+                maxRooms: GetDecimal("maxRooms"),
                 propertyType: GetString("propertyType"),
                 parking: GetBool("parking"),
                 elevator: GetBool("elevator"),
                 sortBy: null,
-                cancellationToken: cancellationToken);
+                cancellationToken: cancellationToken,
+                listingType: GetString("listingType"), pageSize: MaxChatSearchResults);
 
             return results.Take(MaxChatSearchResults).ToList();
         }
@@ -302,4 +309,9 @@ namespace serverApi.Services.Implementations
             };
         }
     }
+}
+
+namespace serverApi.Services.Implementations
+{
+    public sealed class ChatUnavailableException : Exception;
 }

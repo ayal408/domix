@@ -60,6 +60,7 @@ function IndexRoute() {
 
 export default function App() {
   const { t } = useTranslation()
+  const authStatus = useAuthStore((state) => state.status)
   const bootstrap = useAuthStore((state) => state.bootstrap)
   const pushToast = useToastStore((state) => state.push)
   const navigate = useNavigate()
@@ -91,6 +92,11 @@ export default function App() {
       }
     })
   }, [navigate, pushToast, t])
+
+  if (authStatus === 'unavailable') return <div role="alert" className="mx-auto flex max-w-md flex-col gap-4 p-8 text-center">
+    <p>{t('errors.network')}</p>
+    <button className="rounded bg-primary px-4 py-2 text-white" onClick={() => void bootstrap()}>{t('common.retry')}</button>
+  </div>
 
   return (
     <Suspense fallback={<PageFallback />}>

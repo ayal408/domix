@@ -154,7 +154,9 @@ namespace serverApi.Extensions
             services.AddScoped<EmailConfigurationService>();
             services.AddScoped<IEmailService, EmailService>();
 
-            services.AddHttpClient<IGeocodingService, NominatimGeocodingService>();
+            services.AddHttpClient("GoogleOAuth", client => client.Timeout = TimeSpan.FromSeconds(8));
+            services.AddHttpClient("GmailConsent", client => client.Timeout = TimeSpan.FromSeconds(10));
+            services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(8));
             services.AddHttpClient<IIsraeliAddressService, IsraeliAddressService>();
             services.AddScoped<IApartmentService, ApartmentService>();
             services.AddScoped<IApartmentImageService, ApartmentImageService>();
@@ -168,6 +170,7 @@ namespace serverApi.Extensions
             services.AddScoped<IAnalyticsService, AnalyticsService>();
             services.AddScoped<INotificationService, NotificationService>();
             services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+            services.AddScoped<SavedSearchEmailDispatcher>();
             services.AddHostedService<SavedSearchAlertBackgroundService>();
             services.AddHostedService<RefreshTokenCleanupBackgroundService>();
             return services;

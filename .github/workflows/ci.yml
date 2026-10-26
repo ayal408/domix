@@ -78,6 +78,9 @@ jobs:
       - name: Check entry-point syntax
         run: node --check app.js
 
+      - name: Authentication regression tests
+        run: npm test
+
   backend:
     name: .NET backend
     runs-on: ubuntu-latest

@@ -1,7 +1,8 @@
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 
-const SECRET_KEY = process.env.JWT_SECRET || "SUPER_SECRET_KEY_12345678910111213";
+const SECRET_KEY = process.env.JWT_SECRET;
+if (!SECRET_KEY || SECRET_KEY.length < 32) throw new Error("JWT_SECRET must contain at least 32 characters.");
 const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES || "30s";
 const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES || "30d";
 const JWT_AUDIENCE = process.env.JWT_AUDIENCE || "serverApi";

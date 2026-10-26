@@ -94,7 +94,7 @@ let refreshPromise: Promise<string | null> | null = null
 export function refreshAccessToken(): Promise<string | null> {
   if (refreshPromise) return refreshPromise
 
-  refreshPromise = refreshClient
+  const performRefresh = () => refreshClient
     .post<RefreshResponse>(authEndpoints.refresh())
     .then((response) => {
       const token = response.data?.accessToken ?? null
@@ -102,12 +102,23 @@ export function refreshAccessToken(): Promise<string | null> {
       setAccessToken(token)
       return token
     })
-    .catch(() => {
-      clearAccessToken()
-      onSessionExpired?.()
-      return null
+    .catch((error: unknown) => {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        clearAccessToken()
+        onSessionExpired?.()
+        return null
+      }
+      // Keep the session on offline/timeout/5xx. Reject so requests do not proceed anonymously.
+      return Promise.reject(toApiError(error))
     })
-    .finally(() => {
+
+  // Serialize cookie rotation across tabs, as well as concurrent callers within this tab.
+  refreshPromise = (async () => {
+    if (typeof navigator !== 'undefined' && navigator.locks) {
+      return await navigator.locks.request('domix-session-refresh', performRefresh)
+    }
+    return await performRefresh()
+  })().finally(() => {
       refreshPromise = null
     })
 

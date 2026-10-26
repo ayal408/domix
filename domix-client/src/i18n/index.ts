@@ -25,6 +25,7 @@ const en = {
     back: 'Back',
     optional: 'optional',
     retry: 'Retry',
+    loadMore: 'Load more',
     yes: 'Yes',
     no: 'No',
   },
@@ -482,6 +483,7 @@ const en = {
 
 const he: typeof en = {
   common: {
+    loadMore: 'טעינת תוצאות נוספות',
     appName: 'דומיקס',
     save: 'שמירה',
     cancel: 'ביטול',
@@ -954,6 +956,7 @@ const he: typeof en = {
 
 const es: typeof en = {
   common: {
+    loadMore: 'Cargar más',
     appName: 'DOMIX',
     save: 'Guardar',
     cancel: 'Cancelar',
@@ -1426,6 +1429,7 @@ const es: typeof en = {
 
 const fr: typeof en = {
   common: {
+    loadMore: 'Afficher plus',
     appName: 'DOMIX',
     save: 'Enregistrer',
     cancel: 'Annuler',

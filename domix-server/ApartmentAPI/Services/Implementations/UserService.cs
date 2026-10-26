@@ -273,8 +273,12 @@ namespace serverApi.Services.Implementations
             var user = await _context.Users.FindAsync(new object[] { dto.UserId }, cancellationToken);
             if (user == null) return null;
 
+            if (user.IsBlocked) throw new UnauthorizedAccessException("ACCOUNT_BLOCKED");
+            if (!string.IsNullOrEmpty(user.GoogleId) && user.GoogleId != dto.GoogleId)
+                throw new InvalidOperationException("GOOGLE_ACCOUNT_ALREADY_LINKED");
             user.GoogleId = dto.GoogleId;
-            user.RegistrationMethod = "Google";
+            user.IsEmailVerified = true;
+            user.RegistrationMethod = string.IsNullOrEmpty(user.PasswordHash) ? "Google" : "Password+Google";
 
             await _context.SaveChangesAsync(cancellationToken);
             return user;

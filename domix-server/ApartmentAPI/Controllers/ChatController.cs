@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 using serverApi.Models.DTOs;
 using serverApi.Services.Interfaces;
+using serverApi.Services.Implementations;
 
 namespace serverApi.Controllers
 {
@@ -37,7 +38,7 @@ namespace serverApi.Controllers
                 return;
             }
 
-            if (dto.History.Count > MaxTurns || dto.History.Any(t => t.Text.Length > MaxTurnLength))
+            if (dto.History.Count > MaxTurns || dto.History.Any(t => t is null || string.IsNullOrWhiteSpace(t.Text) || t.Text.Length > MaxTurnLength || (t.Role != "user" && t.Role != "model")))
             {
                 Response.StatusCode = StatusCodes.Status400BadRequest;
                 await Response.WriteAsync("Invalid request: conversation is too long.", cancellationToken);
@@ -69,12 +70,23 @@ namespace serverApi.Controllers
             {
                 // Client disconnected or request was canceled — nothing to do.
             }
+            catch (ChatUnavailableException)
+            {
+                Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+                await Response.WriteAsJsonAsync(new { code = "CHAT_UNAVAILABLE" }, cancellationToken);
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error occurred while streaming chat reply.");
                 if (!Response.HasStarted)
                 {
-                    Response.StatusCode = StatusCodes.Status500InternalServerError;
+                    Response.StatusCode = StatusCodes.Status502BadGateway;
+                    await Response.WriteAsJsonAsync(new { code = "CHAT_UNAVAILABLE" }, cancellationToken);
+                }
+                else
+                {
+                    await Response.WriteAsync("event: error\ndata: CHAT_UNAVAILABLE\n\n", cancellationToken);
+                    await Response.Body.FlushAsync(cancellationToken);
                 }
             }
         }

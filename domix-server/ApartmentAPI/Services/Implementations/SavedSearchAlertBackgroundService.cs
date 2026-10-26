@@ -70,7 +70,8 @@ namespace serverApi.Services.Implementations
         {
             using var scope = _scopeFactory.CreateScope();
             var savedSearchService = scope.ServiceProvider.GetRequiredService<ISavedSearchService>();
-            var emailService = scope.ServiceProvider.GetRequiredService<IEmailService>();
+            var dispatcher = scope.ServiceProvider.GetRequiredService<SavedSearchEmailDispatcher>();
+            await dispatcher.DispatchAsync(cancellationToken);
             var context = scope.ServiceProvider.GetRequiredService<ApartmentContext>();
 
             var savedSearches = await savedSearchService.GetAllAsync(cancellationToken);
@@ -85,32 +86,52 @@ namespace serverApi.Services.Implementations
 
                 try
                 {
-                    var matches = await savedSearchService.FindNewMatchesAsync(savedSearch, cancellationToken);
-                    if (matches.Count == 0)
-                        continue;
-
-                    var user = await context.Users
-                        .AsNoTracking()
-                        .FirstOrDefaultAsync(u => u.UserId == savedSearch.UserId, cancellationToken);
-
-                    if (string.IsNullOrWhiteSpace(user?.EmailAddress))
+                    await context.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                     {
-                        // No address to notify -- leave LastNotifiedAt alone so these matches are
-                        // still picked up (and an email attempted) on a later sweep, e.g. once the
-                        // user adds an email address, rather than being silently skipped forever.
-                        continue;
-                    }
+                        context.ChangeTracker.Clear();
+                        // Row lock serializes enqueue across replicas. The digest and watermark commit together.
+                        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+                        var current = await context.SavedSearches.FromSqlInterpolated(
+                            $@"SELECT * FROM ""SavedSearches"" WHERE ""SavedSearchId"" = {savedSearch.SavedSearchId} FOR UPDATE")
+                            .SingleOrDefaultAsync(cancellationToken);
+                        if (current is null) return;
+                        var matches = (await savedSearchService.FindNewMatchesAsync(current, cancellationToken))
+                            .Where(x => x.dateInsert <= now).ToList();
+                        if (matches.Count == 0)
+                            return;
 
-                    var html = BuildDigestHtml(savedSearch.Name, matches, _configuration, user.LanguagePreference);
-                    await emailService.SendEmailAsync(user.EmailAddress, EmailText.MatchesTitle(savedSearch.Name, matches.Count, user.LanguagePreference), html, cancellationToken);
+                        var user = await context.Users
+                            .AsNoTracking()
+                            .FirstOrDefaultAsync(u => u.UserId == savedSearch.UserId, cancellationToken);
 
-                    await savedSearchService.MarkNotifiedAsync(savedSearch.SavedSearchId, now, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(user?.EmailAddress))
+                        {
+                            // No address to notify -- leave LastNotifiedAt alone so these matches are
+                            // still picked up (and an email attempted) on a later sweep, e.g. once the
+                            // user adds an email address, rather than being silently skipped forever.
+                            return;
+                        }
+
+                        var html = BuildDigestHtml(savedSearch.Name, matches, _configuration, user.LanguagePreference);
+                        context.SavedSearchEmails.Add(new Models.SavedSearchEmail
+                        {
+                            SavedSearchId = current.SavedSearchId, FromAt = current.LastNotifiedAt, ThroughAt = now,
+                            Recipient = user.EmailAddress,
+                            Subject = EmailText.MatchesTitle(savedSearch.Name, matches.Count, user.LanguagePreference), HtmlBody = html
+                    });
+                    current.LastNotifiedAt = now;
+                    await context.SaveChangesAsync(cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    });
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Failed to process saved search {SavedSearchId}", savedSearch.SavedSearchId);
+                    context.ChangeTracker.Clear();
                 }
             }
+            await dispatcher.DispatchAsync(cancellationToken);
         }
 
         private static string BuildDigestHtml(string searchName, IReadOnlyCollection<Models.DTOs.ApartmentDTO> matches, IConfiguration configuration, string? language)

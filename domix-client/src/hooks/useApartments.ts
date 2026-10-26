@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import * as apartmentsApi from '@/api/apartments.api'
 import { queryKeys } from '@/api/queryKeys'
 import type {
@@ -11,7 +11,7 @@ import type {
   UpdateApartmentRequest,
 } from '@/types/api'
 
-/** Full, unfiltered catalog. The backend has no pagination, so this is the base dataset for both the public list and the admin table. */
+/** Complete catalog for management/map consumers, fetched in bounded pages. */
 export function useApartments(enabled = true) {
   return useQuery({
     enabled,
@@ -99,3 +99,12 @@ export function useSetApartmentStatus() {
 }
 
 export type { Apartment }
+
+export function useApartmentPages(query: ApartmentSearchQuery, ownerId?: string) {
+  return useInfiniteQuery({
+    queryKey: [...queryKeys.apartments.search(query), 'pages', ownerId],
+    initialPageParam: 0,
+    queryFn: ({ signal, pageParam }) => apartmentsApi.searchApartments(query, signal, { offset: pageParam, pageSize: 24, ownerId }),
+    getNextPageParam: (lastPage, pages) => lastPage.length === 24 ? pages.length * 24 : undefined,
+  })
+}
