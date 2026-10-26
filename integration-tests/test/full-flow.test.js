@@ -364,3 +364,23 @@ test("registration with a case-variant email cannot create a second identity", a
   const res = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.125' }, body: JSON.stringify({ userName: `case${runId}`, email: `FLOW-${runId}@EXAMPLE.COM`, password: 'password123' }) });
   assert.equal(res.status, 400); assert.equal((await res.json()).code, 'EMAIL_EXISTS');
 });
+
+test("account deletion revokes API access while preserving the recipient's history", async () => {
+  const registered = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.140' }, body: JSON.stringify({ userName: `delete${runId}`, email: `delete${runId}@example.com`, password: 'password123' }) });
+  assert.equal(registered.status, 200);
+  const session = await registered.json();
+  const homeId = '88777777-7777-7777-7777-777777777777';
+  const messageId = '99777777-7777-7777-7777-777777777777';
+  await testQuery(POSTGRES_URL, `INSERT INTO "Apartments" ("ApartmentId","UserId","Status","IsAnonymous",price,city,date,area,address,description,"ViewsCount","dateInsert","Rating","RatingCount","ListingType","IsDeleted","RatingSum","RecordedRatingCount") VALUES ($1,$2,0,false,5000,'Test',now(),'Center','Street','',0,now(),0,0,'Rent',false,0,0)`, [homeId, session.user.userId]);
+  await testQuery(POSTGRES_URL, `INSERT INTO "Messages" ("MessageId","SenderId","OwnerId","ApartmentId","Content","CreatedAt","IsRead","IsDeleted","IsArchived") VALUES ($1,$2,$3,$4,'Retained history',now(),false,false,false)`, [messageId, session.user.userId, adminUserId, homeId]);
+  const deleted = await fetch(`${services.domixServerUrl}/api/User/${session.user.userId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${session.accessToken}` } });
+  assert.equal(deleted.status, 204);
+  const access = await fetch(`${services.domixServerUrl}/api/Apartment/all`, { headers: { Authorization: `Bearer ${session.accessToken}` } });
+  assert.equal(access.status, 401);
+  const history = (await testQuery(POSTGRES_URL, 'SELECT "Content","SenderId" FROM "Messages" WHERE "MessageId"=$1', [messageId])).rows;
+  assert.equal(history.length, 1); assert.equal(history[0].Content, 'Retained history');
+  const listing = await fetch(`${services.domixServerUrl}/api/Apartment/${homeId}`, { headers: { Authorization: `Bearer ${adminAccessToken}` } });
+  assert.equal(listing.status, 404);
+  const account = (await testQuery(POSTGRES_URL, 'SELECT "IsDeleted","EmailAddress","PasswordHash" FROM "Users" WHERE "UserId"=$1', [session.user.userId])).rows[0];
+  assert.equal(account.IsDeleted, true); assert.equal(account.EmailAddress, null); assert.equal(account.PasswordHash, null);
+});
