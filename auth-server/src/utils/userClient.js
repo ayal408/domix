@@ -1,12 +1,14 @@
 import axios from "axios";
 
-const DATA_SERVICE_URL = process.env.DATA_SERVICE_URL || "https://apartment-brokerage-wkfs.onrender.com";
+const DATA_SERVICE_URL = process.env.DATA_SERVICE_URL;
+if (!DATA_SERVICE_URL) throw new Error("DATA_SERVICE_URL must be configured.");
 
 // domix-server gates every one of these endpoints behind INTERNAL_SERVICE_KEY
 // (see ApartmentAPI/Security/InternalOnlyAttribute.cs) — this is the only
 // client in the codebase that's supposed to call them.
 const client = axios.create({
   baseURL: DATA_SERVICE_URL,
+  timeout: 15_000,
   headers: { "X-Internal-Api-Key": process.env.INTERNAL_SERVICE_KEY || "" }
 });
 
@@ -131,4 +133,10 @@ export async function revokeRefreshToken(userId, jti, expires) {
 export async function isRefreshTokenRevoked(jti) {
   const { data } = await client.get(`/api/auth/refresh-tokens/${jti}/revoked`);
   return data.revoked === true;
+}
+
+/** Atomically consumes a refresh token. Never retry this write automatically. */
+export async function consumeRefreshToken(userId, jti, expires) {
+  const { data } = await client.post(`/api/auth/refresh-tokens/consume`, { userId, jti, expires });
+  return data.consumed === true;
 }

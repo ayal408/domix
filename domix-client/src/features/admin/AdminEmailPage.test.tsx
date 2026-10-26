@@ -22,6 +22,7 @@ beforeEach(async () => {
   await i18n.changeLanguage('en')
   vi.mocked(emailApi.getEmailSettings).mockResolvedValue(settings)
   vi.mocked(emailApi.getEmailHistory).mockResolvedValue([])
+  vi.mocked(emailApi.getEmailOutbox).mockResolvedValue([])
 })
 describe('System sender administration', () => {
   it('saves display settings without sending credentials or an editable account address', async () => {

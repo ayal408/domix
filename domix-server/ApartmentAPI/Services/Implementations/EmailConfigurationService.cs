@@ -15,7 +15,7 @@ public sealed class EmailConfigurationService(
     public async Task<GmailSettings> GetCredentialsAsync(CancellationToken ct = default)
     {
         var config = await GetAsync(ct);
-        if (!config.Enabled) throw new InvalidOperationException("EMAIL_DISCONNECTED");
+        if (!config.Enabled) throw new EmailNotConfiguredException("EMAIL_DISCONNECTED");
         var settings = new GmailSettings
         {
             Email = config.Email,
@@ -26,7 +26,7 @@ public sealed class EmailConfigurationService(
         };
         if (string.IsNullOrWhiteSpace(settings.Email) || string.IsNullOrWhiteSpace(settings.RefreshToken)
             || string.IsNullOrWhiteSpace(settings.ClientId) || string.IsNullOrWhiteSpace(settings.ClientSecret))
-            throw new InvalidOperationException("EMAIL_NOT_CONFIGURED");
+            throw new EmailNotConfiguredException("EMAIL_NOT_CONFIGURED");
         return settings;
     }
 
@@ -57,14 +57,41 @@ public sealed class EmailConfigurationService(
         settings.Email = email;
         settings.ProtectedRefreshToken = protector.Protect(refreshToken);
         settings.Enabled = true;
+        settings.ConnectionStatus = "configured";
+        settings.LastCheckedAt = null;
         await SaveAsync(settings, ct);
+    }
+
+    // A late send result must not overwrite the state of a newly connected account.
+    public async Task RecordHealthAsync(DateTime version, string status, CancellationToken ct)
+    {
+        var value = await db.SystemEmailSettings.SingleOrDefaultAsync(x => x.Id == 1, ct);
+        if (value is null)
+        {
+            value = await GetAsync(ct);
+            if (value.UpdatedAt != version) return;
+            value.ConnectionStatus = status;
+            value.LastCheckedAt = DateTime.UtcNow;
+            await SaveAsync(value, ct);
+            return;
+        }
+        var updated = await db.SystemEmailSettings.Where(x => x.Id == 1 && x.UpdatedAt == version)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ConnectionStatus, status)
+                .SetProperty(x => x.LastCheckedAt, DateTime.UtcNow), ct);
+        if (updated == 1 && status == "verified")
+            await db.SavedSearchEmails.Where(x => x.Status == "Blocked")
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Pending").SetProperty(x => x.FailureCode, (string?)null), ct);
     }
 
     public async Task DisconnectAsync(CancellationToken ct = default)
     {
         var settings = await GetAsync(ct);
         settings.Enabled = false;
+        settings.ConnectionStatus = "disconnected";
+        settings.LastCheckedAt = null;
         settings.ProtectedRefreshToken = null;
         await SaveAsync(settings, ct);
     }
 }
+
+public sealed class EmailNotConfiguredException(string code) : InvalidOperationException(code);

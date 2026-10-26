@@ -51,6 +51,17 @@ beforeEach(() => {
 })
 
 describe('useAuthStore.bootstrap', () => {
+  it('keeps a temporary refresh failure recoverable and restores after retry', async () => {
+    vi.mocked(refreshAccessToken).mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce('good-token')
+    vi.mocked(getUserIdFromToken).mockReturnValue('user-1')
+    vi.mocked(usersApi.getUserById).mockResolvedValue(fullProfile)
+    await useAuthStore.getState().bootstrap()
+    expect(useAuthStore.getState().status).toBe('unavailable')
+    expect(clearAccessToken).not.toHaveBeenCalled()
+    await useAuthStore.getState().bootstrap()
+    expect(useAuthStore.getState().status).toBe('authenticated')
+  })
+
   it('drops to unauthenticated when there is no refresh cookie', async () => {
     vi.mocked(refreshAccessToken).mockResolvedValue(null)
 
@@ -81,15 +92,15 @@ describe('useAuthStore.bootstrap', () => {
     expect(useAuthStore.getState().user).toEqual(fullProfile)
   })
 
-  it('treats an unreachable profile service as an unusable session rather than guessing a role', async () => {
+  it('allows retry when the profile service is temporarily unreachable', async () => {
     vi.mocked(refreshAccessToken).mockResolvedValue('good-token')
     vi.mocked(getUserIdFromToken).mockReturnValue('user-1')
     vi.mocked(usersApi.getUserById).mockRejectedValue(new Error('network down'))
 
     await useAuthStore.getState().bootstrap()
 
-    expect(clearAccessToken).toHaveBeenCalled()
-    expect(useAuthStore.getState().status).toBe('unauthenticated')
+    expect(clearAccessToken).not.toHaveBeenCalled()
+    expect(useAuthStore.getState().status).toBe('unavailable')
   })
 })
 

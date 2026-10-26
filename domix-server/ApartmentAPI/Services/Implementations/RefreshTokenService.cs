@@ -16,26 +16,19 @@ namespace serverApi.Services.Implementations
 
         public async Task RevokeAsync(Guid userId, string jti, DateTime expires, CancellationToken cancellationToken = default)
         {
-            if (string.IsNullOrWhiteSpace(jti))
-                return;
+            await ConsumeAsync(userId, jti, expires, cancellationToken);
+        }
 
-            // Idempotent: logout can be called more than once for the same token (double-click,
-            // retried request) without erroring or creating duplicate rows.
-            var alreadyRevoked = await _context.RefreshTokens
-                .AnyAsync(t => t.Token == jti, cancellationToken);
-            if (alreadyRevoked)
-                return;
-
-            _context.RefreshTokens.Add(new RefreshToken
-            {
-                Token = jti,
-                UserId = userId,
-                Expires = expires,
-                IsRevoked = true,
-                RevokedAt = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
+        public async Task<bool> ConsumeAsync(Guid userId, string jti, DateTime expires, CancellationToken cancellationToken = default)
+        {
+            if (userId == Guid.Empty || string.IsNullOrWhiteSpace(jti)) return false;
+            var now = DateTime.UtcNow;
+            // ON CONFLICT is atomic across processes; check-then-insert is not.
+            var inserted = await _context.Database.ExecuteSqlInterpolatedAsync($@"
+                INSERT INTO ""RefreshTokens"" (""Token"", ""UserId"", ""Created"", ""Expires"", ""IsRevoked"", ""RevokedAt"", ""ReplacedByToken"")
+                VALUES ({jti}, {userId}, {now}, {expires}, TRUE, {now}, '')
+                ON CONFLICT (""Token"") DO NOTHING", cancellationToken);
+            return inserted == 1;
         }
 
         public async Task<bool> IsRevokedAsync(string jti, CancellationToken cancellationToken = default)

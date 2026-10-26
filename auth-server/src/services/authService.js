@@ -19,7 +19,7 @@ import {
   requestPasswordReset,
   resetPassword as resetPasswordApi,
   revokeRefreshToken,
-  isRefreshTokenRevoked
+  consumeRefreshToken
 } from "../utils/userClient.js";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -86,6 +86,8 @@ const passwordHash = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SAL
 }
 
 export async function googleLogin(idToken) {
+  if (!process.env.GOOGLE_CLIENT_ID) throw new Error("GOOGLE_AUTH_NOT_CONFIGURED");
+  if (typeof idToken !== "string" || !idToken) throw new Error("INVALID_GOOGLE_TOKEN");
   const ticket = await client.verifyIdToken({
     idToken,
     audience: process.env.GOOGLE_CLIENT_ID
@@ -93,7 +95,7 @@ export async function googleLogin(idToken) {
 
   const payload = ticket.getPayload();
 
-  if (!payload?.email || !payload?.sub) {
+  if (!payload?.email || !payload?.sub || payload.email_verified !== true) {
     throw new Error("INVALID_GOOGLE_TOKEN");
   }
 
@@ -101,6 +103,9 @@ export async function googleLogin(idToken) {
     email: payload.email,
     googleId: payload.sub
   });
+
+  if (user?.isBlocked) throw new Error("ACCOUNT_BLOCKED");
+  if (user?.googleId && user.googleId !== payload.sub) throw new Error("INVALID_GOOGLE_TOKEN");
 
   if (user && !user.googleId) {
     user = await linkGoogle(user.userId, payload.sub);
@@ -137,45 +142,31 @@ export async function refresh(req, res) {
     return res.sendStatus(401);
   }
 
+  let payload;
   try {
-    const payload = verifyRefreshToken(refreshToken);
+    payload = verifyRefreshToken(refreshToken);
+    // Access tokens must never be usable as refresh tokens.
+    if (!payload.jti || !payload.userId || !payload.exp) throw new Error("INVALID_REFRESH_TOKEN");
+  } catch {
+    return res.status(401).json({ code: "INVALID_REFRESH_TOKEN" });
+  }
 
-    // A signature/expiry check alone can't catch a token the user already logged out of --
-    // that's exactly what this revocation check is for (see revokeRefreshToken in logout()).
-    if (payload.jti && (await isRefreshTokenRevoked(payload.jti))) {
-      return res.sendStatus(401);
-    }
-
+  try {
     const user = await getUserById(payload.userId);
+    if (!user || user.isBlocked) return res.status(401).json({ code: "INVALID_REFRESH_TOKEN" });
 
-    if (!user || user.isBlocked) {
-      return res.sendStatus(401);
-    }
+    // A unique database insert is the consume operation: parallel requests cannot both win.
+    // Fail closed if the data service cannot confirm consumption.
+    const consumed = await consumeRefreshToken(payload.userId, payload.jti, new Date(payload.exp * 1000));
+    if (!consumed) return res.status(401).json({ code: "INVALID_REFRESH_TOKEN" });
 
     const accessToken = createAccessToken(user);
-
-    // Rotation: the old refresh token is revoked the moment it's used, and a brand new one takes
-    // its place in the cookie. This bounds how long a stolen-but-unused refresh token stays
-    // usable to a single access-token lifetime instead of its full 30-day life, and (bonus) means
-    // a copy of an already-rotated token failing this same revocation check is a strong signal of
-    // theft, not just an expected user action.
-    const newRefreshToken = createRefreshToken(user);
-    if (payload.jti) {
-      try {
-        await revokeRefreshToken(payload.userId, payload.jti, new Date(payload.exp * 1000));
-      } catch {
-        // Best-effort, same as logout(): a user must still be able to refresh their session even
-        // if domix-server is briefly unreachable. Worst case, the old token stays usable until it
-        // expires on its own rather than being cut off the instant it's rotated.
-      }
-    }
-    setRefreshTokenCookie(res, newRefreshToken);
-
-    res.json({
-      accessToken
-    });
+    setRefreshTokenCookie(res, createRefreshToken(user));
+    return res.json({ accessToken });
   } catch {
-    res.sendStatus(401);
+    // An unavailable dependency is not evidence of an invalid session.
+    res.set("Retry-After", "3");
+    return res.status(503).json({ code: "AUTH_TEMPORARILY_UNAVAILABLE" });
   }
 }
 

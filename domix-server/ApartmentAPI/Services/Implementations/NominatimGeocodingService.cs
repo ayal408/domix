@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net.Http.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Logging;
@@ -34,13 +35,14 @@ namespace serverApi.Services.Implementations
                     var first = results[0];
                     if (!string.IsNullOrEmpty(first.DisplayName) && first.DisplayName.Contains(city, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (double.TryParse(first.Lat, out var lat) && double.TryParse(first.Lon, out var lon))
+                        if (double.TryParse(first.Lat, NumberStyles.Float, CultureInfo.InvariantCulture, out var lat) && double.TryParse(first.Lon, NumberStyles.Float, CultureInfo.InvariantCulture, out var lon))
                         {
                             return (lat, lon);
                         }
                     }
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { throw; }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to fetch geocoding coordinates for City: {City}, Address: {Address}", city, address);

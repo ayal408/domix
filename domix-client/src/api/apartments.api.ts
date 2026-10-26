@@ -13,8 +13,9 @@ import type {
 /** .NET ApartmentController. The whole controller is `[Authorize]`. */
 
 export async function getAllApartments(signal?: AbortSignal): Promise<Apartment[]> {
-  const { data } = await dataClient.get<Apartment[]>(apiEndpoints.apartments.all(), { signal })
-  return data
+  return readAllPages((offset) => dataClient.get<Apartment[]>(apiEndpoints.apartments.all(), {
+    signal, params: { offset, pageSize: 100 },
+  }).then((response) => response.data))
 }
 
 /** Distinct cities that currently have at least one listing, alphabetically. */
@@ -31,6 +32,7 @@ export async function getCities(signal?: AbortSignal): Promise<string[]> {
 export async function searchApartments(
   query: ApartmentSearchQuery,
   signal?: AbortSignal,
+  page?: { offset: number; pageSize: number; ownerId?: string },
 ): Promise<Apartment[]> {
   const params: Record<string, string | number | boolean> = {}
 
@@ -46,11 +48,13 @@ export async function searchApartments(
   if (typeof query.elevator === 'boolean') params.elevator = query.elevator
   if (query.sortBy) params.sortBy = query.sortBy
 
-  const { data } = await dataClient.get<Apartment[]>(apiEndpoints.apartments.search(), {
-    params,
-    signal,
-  })
-  return data
+  if (page) {
+    const { data } = await dataClient.get<Apartment[]>(apiEndpoints.apartments.search(), { params: { ...params, ...page }, signal })
+    return data
+  }
+  return readAllPages((offset) => dataClient.get<Apartment[]>(apiEndpoints.apartments.search(), {
+    params: { ...params, offset, pageSize: 100 }, signal,
+  }).then((response) => response.data))
 }
 
 /**
@@ -113,4 +117,14 @@ export async function setApartmentStatus(
 export async function getApartment(apartmentId: Guid, signal?: AbortSignal): Promise<Apartment> {
   const { data } = await dataClient.get<Apartment>(`/Apartment/${encodeURIComponent(apartmentId)}`, { signal })
   return data
+}
+
+/** Compatibility adapter for management/map consumers that still need the complete list. */
+async function readAllPages(fetchPage: (offset: number) => Promise<Apartment[]>): Promise<Apartment[]> {
+  const result: Apartment[] = []
+  for (let offset = 0; ; offset += 100) {
+    const page = await fetchPage(offset)
+    result.push(...page)
+    if (page.length < 100) return result
+  }
 }

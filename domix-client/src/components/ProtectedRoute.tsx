@@ -24,7 +24,7 @@ export default function ProtectedRoute({ children, policy, roles }: Props): Reac
   const hasRole = useAuthStore((state) => state.hasRole)
   const location = useLocation()
 
-  if (status === 'initializing') return null
+  if (status === 'initializing' || status === 'unavailable') return null
 
   if (status === 'unauthenticated') {
     return <Navigate to="/login" replace state={{ from: location }} />

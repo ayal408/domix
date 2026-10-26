@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
-import { useApartments, useApartmentSearch } from '@/hooks/useApartments'
+import { useApartmentPages } from '@/hooks/useApartments'
 import { ApartmentSearchForm } from '@/features/apartments/ApartmentSearchForm'
 import { ApartmentCard } from '@/features/apartments/ApartmentCard'
 import { SaveSearchButton } from '@/features/apartments/SaveSearchButton'
@@ -85,19 +85,10 @@ export default function ApartmentsCatalogPage() {
   const activeQuery = initial.query
   const ownerId = searchParams.get('owner')
 
-  const allApartments = useApartments()
-  const searchResults = useApartmentSearch(activeQuery ?? {}, activeQuery != null)
-
+  const results = useApartmentPages(activeQuery ?? {}, ownerId ?? undefined)
+  const { data, isLoading, isError, refetch } = results
   const isSearching = activeQuery != null
-  const { data, isLoading, isError, refetch } = isSearching ? searchResults : allApartments
-
-  const listings = useMemo(() => {
-    // `useApartments()` is the unfiltered dataset shared with the admin/my-apartments tables, so
-    // Rented/Sold listings must be dropped here for the public browse view. Server-side search
-    // (`isSearching`) already excludes them.
-    const base = (data ?? []).filter((apartment) => (isSearching || apartment.status === 'Available') && (!searchParams.get('listingType') || apartment.listingType === searchParams.get('listingType')))
-    return ownerId ? base.filter((apartment) => apartment.userId === ownerId) : base
-  }, [data, ownerId, isSearching, searchParams])
+  const listings = useMemo(() => data?.pages.flat() ?? [], [data])
 
   function handleSearchSubmit(values: ApartmentSearchFormValues) {
     const query = { ...toSearchQuery(values), listingType: searchParams.get('listingType') || undefined }
@@ -158,6 +149,8 @@ export default function ApartmentsCatalogPage() {
           ))}
         </div>
       )}
+      {results.hasNextPage && <div className="flex justify-center"><Button
+        loading={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>{t('common.loadMore')}</Button></div>}
     </div>
   )
 }

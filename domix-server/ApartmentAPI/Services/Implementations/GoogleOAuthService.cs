@@ -31,12 +31,17 @@ namespace serverApi.Services.Implementations
 
             try
             {
-                var content = new FormUrlEncodedContent(data);
-                var response = await client.PostAsync("https://oauth2.googleapis.com/token", content, cancellationToken);
-
-                response.EnsureSuccessStatusCode();
+                using var content = new FormUrlEncodedContent(data);
+                using var response = await client.PostAsync("https://oauth2.googleapis.com/token", content, cancellationToken);
 
                 var json = await response.Content.ReadAsStringAsync(cancellationToken);
+                if (!response.IsSuccessStatusCode)
+                {
+                    using var failure = JsonDocument.Parse(json);
+                    if (failure.RootElement.TryGetProperty("error", out var error) && error.GetString() == "invalid_grant")
+                        throw new GmailReconnectRequiredException();
+                    throw new HttpRequestException("Google token service is unavailable.", null, response.StatusCode);
+                }
                 using var doc = JsonDocument.Parse(json);
 
                 if (doc.RootElement.TryGetProperty("access_token", out var accessTokenElement))
@@ -52,9 +57,16 @@ namespace serverApi.Services.Implementations
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Failed to retrieve Google OAuth access token.");
+                _logger.LogWarning("Google token request failed ({FailureType}).", ex.GetType().Name);
                 throw;
             }
         }
+    }
+}
+namespace serverApi.Services.Implementations
+{
+    public sealed class GmailReconnectRequiredException : Exception
+    {
+        public GmailReconnectRequiredException() : base("EMAIL_RECONNECT_REQUIRED") { }
     }
 }

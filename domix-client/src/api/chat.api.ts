@@ -47,6 +47,7 @@ export async function* streamChatReply(
 
     for (const event of events) {
       const lines = event.split('\n')
+      if (lines[0]?.startsWith('event: error')) throw new Error('CHAT_UNAVAILABLE')
       const isApartments = lines[0]?.startsWith('event: apartments')
       const dataLines = isApartments ? lines.slice(1) : lines
 

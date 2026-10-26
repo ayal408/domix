@@ -21,6 +21,7 @@ interface Props {
 export function GoogleSignInButton({ onIdToken, disabled }: Props) {
   const { t, i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
+  const [attempt, setAttempt] = useState(0)
   const [failed, setFailed] = useState(false)
   const resolvedTheme = useThemeStore((state) => state.resolved)
   const onIdTokenRef = useRef(onIdToken)
@@ -32,6 +33,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
     if (!container) return
 
     let cancelled = false
+    setFailed(false)
 
     loadGoogleIdentityScript()
       .then(() => {
@@ -60,14 +62,14 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
     return () => {
       cancelled = true
     }
-  }, [disabled, resolvedTheme, i18n.language])
+  }, [disabled, resolvedTheme, i18n.language, attempt])
 
   if (!isGoogleAuthEnabled) return null
 
   return (
     <div className="flex flex-col items-center gap-2">
       <div ref={containerRef} className="flex justify-center" />
-      {failed && <p className="text-sm text-muted">{t('auth.googleUnavailable')}</p>}
+      {failed && <><p role="alert" className="text-sm text-muted">{t('auth.googleUnavailable')}</p><button type="button" className="text-sm text-primary underline" onClick={() => setAttempt((value) => value + 1)}>{t('common.retry')}</button></>}
     </div>
   )
 }

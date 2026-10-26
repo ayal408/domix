@@ -34,12 +34,14 @@ public class EmailService(
     {
         if (!IsMailbox(to)) throw new ArgumentException("Invalid recipient email.", nameof(to));
         if (string.IsNullOrWhiteSpace(subject) || subject.Any(char.IsControl)) throw new ArgumentException("Invalid subject.", nameof(subject));
+        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        deadline.CancelAfter(TimeSpan.FromSeconds(10));
         var delivery = new EmailDelivery { Recipient = to, Subject = subject };
+        var settings = await configuration.GetAsync(cancellationToken);
         try
         {
             var credentials = await configuration.GetCredentialsAsync(cancellationToken);
-            var settings = await configuration.GetAsync(cancellationToken);
-            var token = await oauth.GetAccessTokenAsync(credentials, cancellationToken);
+            var token = await oauth.GetAccessTokenAsync(credentials, deadline.Token);
             using var service = new GmailService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = GoogleCredential.FromAccessToken(token), ApplicationName = "DOMIX"
@@ -54,12 +56,19 @@ public class EmailService(
             {
                 Raw = Convert.ToBase64String(Encoding.UTF8.GetBytes(raw)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
             };
-            await service.Users.Messages.Send(message, "me").ExecuteAsync(cancellationToken);
+            await service.Users.Messages.Send(message, "me").ExecuteAsync(deadline.Token);
             delivery.Succeeded = true;
+            try { await configuration.RecordHealthAsync(settings.UpdatedAt, "verified", cancellationToken); }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            { logger.LogWarning("Could not save mail connection health ({FailureType}).", ex.GetType().Name); }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            delivery.FailureCode = "EMAIL_SEND_FAILED";
+            delivery.FailureCode = ex is GmailReconnectRequiredException ? "EMAIL_RECONNECT_REQUIRED" : "EMAIL_SEND_FAILED";
+            try { await configuration.RecordHealthAsync(settings.UpdatedAt,
+                ex is GmailReconnectRequiredException ? "reconnect_required" : "temporarily_unavailable", cancellationToken); }
+            catch (Exception healthError) when (healthError is not OperationCanceledException)
+            { logger.LogWarning("Could not save mail connection health ({FailureType}).", healthError.GetType().Name); }
             throw;
         }
         finally

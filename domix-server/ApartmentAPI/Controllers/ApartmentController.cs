@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using serverApi.Models.DTOs;
@@ -23,9 +24,9 @@ namespace serverApi.Controllers
 
         // GET: api/Apartment/all
         [HttpGet("all")]
-        public async Task<IActionResult> GetAllApartments(CancellationToken cancellationToken)
+        public async Task<IActionResult> GetAllApartments(CancellationToken cancellationToken, [FromQuery, Range(0, int.MaxValue)] int offset = 0, [FromQuery, Range(1, 100)] int pageSize = 100)
         {
-            var result = await _apartmentService.GetAllApartmentsAsync(cancellationToken);
+            var result = await _apartmentService.GetAllApartmentsAsync(cancellationToken, offset, pageSize);
             return Ok(result);
         }
 
@@ -58,10 +59,15 @@ namespace serverApi.Controllers
             [FromQuery] bool? elevator,
             [FromQuery] string? sortBy,
             [FromQuery] string? listingType,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            [FromQuery, Range(0, int.MaxValue)] int offset = 0,
+            [FromQuery, Range(1, 100)] int pageSize = 100,
+            [FromQuery] Guid? ownerId = null)
         {
+            if (minPrice < 0 || maxPrice < 0 || minRooms < 0 || maxRooms < 0 || minPrice > maxPrice || minRooms > maxRooms)
+                return BadRequest(new { code = "INVALID_SEARCH_RANGE" });
             var result = await _apartmentService.SearchApartmentsAsync(
-                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, sortBy, cancellationToken, listingType);
+                city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, sortBy, cancellationToken, listingType, offset, pageSize, ownerId);
             return Ok(result);
         }
 

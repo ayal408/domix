@@ -12,6 +12,8 @@ public class SystemEmailSettings
     public string TestBody { get; set; } = "זוהי הודעת בדיקה ממערכת DOMIX.";
     public string? ProtectedRefreshToken { get; set; }
     public bool Enabled { get; set; } = true;
+    public string ConnectionStatus { get; set; } = "configured";
+    public DateTime? LastCheckedAt { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 

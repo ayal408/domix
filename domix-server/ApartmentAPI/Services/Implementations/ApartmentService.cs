@@ -20,11 +20,13 @@ namespace serverApi.Services.Implementations
             _logger = logger;
         }
 
-        public async Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ApartmentDTO>> GetAllApartmentsAsync(CancellationToken cancellationToken = default, int offset = 0, int pageSize = 100)
         {
             var apartments = await _context.Apartments
                 .Include(a => a.ApartmentImages)
                 .AsNoTracking()
+                .OrderByDescending(a => a.dateInsert).ThenBy(a => a.ApartmentId)
+                .Skip(Math.Max(0, offset)).Take(Math.Clamp(pageSize, 1, 100))
                 .ToListAsync(cancellationToken);
 
             return apartments.Select(ToDTO);
@@ -61,13 +63,15 @@ namespace serverApi.Services.Implementations
             bool? parking,
             bool? elevator,
             string? sortBy,
-            CancellationToken cancellationToken = default, string? listingType = null)
+            CancellationToken cancellationToken = default, string? listingType = null, int offset = 0, int pageSize = 100, Guid? ownerId = null)
         {
             var query = ApplySearchFilters(
                 _context.Apartments.Include(a => a.ApartmentImages).AsNoTracking().AsQueryable(),
                 city, area, minPrice, maxPrice, minRooms, maxRooms, propertyType, parking, elevator, listingType);
 
-            query = sortBy switch
+            if (ownerId.HasValue) query = query.Where(a => a.UserId == ownerId.Value);
+
+            var ordered = sortBy switch
             {
                 "price_asc" => query.OrderBy(a => a.price),
                 "price_desc" => query.OrderByDescending(a => a.price),
@@ -75,7 +79,8 @@ namespace serverApi.Services.Implementations
                 _ => query.OrderByDescending(a => a.dateInsert),
             };
 
-            var result = await query.ToListAsync(cancellationToken);
+            var result = await ordered.ThenBy(a => a.ApartmentId)
+                .Skip(Math.Max(0, offset)).Take(Math.Clamp(pageSize, 1, 100)).ToListAsync(cancellationToken);
             return result.Select(ToDTO);
         }
 

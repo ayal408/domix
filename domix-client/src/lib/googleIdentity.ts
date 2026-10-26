@@ -22,22 +22,25 @@ export function loadGoogleIdentityScript(): Promise<void> {
 
   scriptPromise = new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${SCRIPT_SRC}"]`)
-
-    if (existing) {
-      existing.addEventListener('load', () => resolve())
-      existing.addEventListener('error', () => reject(new Error('GOOGLE_SCRIPT_LOAD_FAILED')))
-      return
+    const script = existing ?? document.createElement('script')
+    const finish = (error?: Error) => {
+      clearTimeout(timer)
+      script.removeEventListener('load', loaded)
+      script.removeEventListener('error', failed)
+      if (error) { script.remove(); reject(error) } else resolve()
     }
-
-    const script = document.createElement('script')
-    script.src = SCRIPT_SRC
-    script.async = true
-    script.defer = true
-    script.onload = () => resolve()
-    script.onerror = () => reject(new Error('GOOGLE_SCRIPT_LOAD_FAILED'))
-    document.head.appendChild(script)
+    const loaded = () => finish(window.google?.accounts?.id ? undefined : new Error('GOOGLE_SCRIPT_LOAD_FAILED'))
+    const failed = () => finish(new Error('GOOGLE_SCRIPT_LOAD_FAILED'))
+    const timer = setTimeout(() => finish(new Error('GOOGLE_SCRIPT_TIMEOUT')), 12_000)
+    script.addEventListener('load', loaded)
+    script.addEventListener('error', failed)
+    if (!existing) {
+      script.src = SCRIPT_SRC
+      script.async = true
+      script.defer = true
+      document.head.appendChild(script)
+    }
   }).catch((err: unknown) => {
-    // Let a later retry (e.g. next mount) try again instead of caching a failure.
     scriptPromise = null
     throw err
   })
