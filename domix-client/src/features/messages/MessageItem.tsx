@@ -1,3 +1,4 @@
+import './private-messages.i18n'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { base64ToImageSrc, initialsOf } from '@/lib/sanitize'
@@ -9,6 +10,7 @@ import type { Message } from '@/types/api'
 
 interface Props {
   message: Message
+  onReply?: (message: Message) => void
   onMarkRead: (messageId: string) => void
   onArchive?: (messageId: string) => void
   onDelete: (messageId: string) => void
@@ -19,6 +21,7 @@ interface Props {
 
 export function MessageItem({
   message,
+  onReply,
   onMarkRead,
   onArchive,
   onDelete,
@@ -27,8 +30,8 @@ export function MessageItem({
   deletePending,
 }: Props) {
   const { t, i18n } = useTranslation()
-  const avatar = base64ToImageSrc(message.senderImageBase64)
-  const senderLabel = message.senderName?.trim() || t('messages.unknownSender')
+  const avatar = message.senderIsAnonymous ? null : base64ToImageSrc(message.senderImageBase64)
+  const senderLabel = message.senderIsAnonymous ? t('privateMessages:anonymous') : message.senderName?.trim() || t('messages.unknownSender')
 
   return (
     <Card className={`flex gap-3 p-4 ${message.isRead ? '' : 'border-primary/40 bg-primary/5'}`}>
@@ -36,7 +39,7 @@ export function MessageItem({
         {avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" /> : initialsOf(senderLabel)}
       </div>
 
-      <div className="flex flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm font-semibold text-foreground">{senderLabel}</span>
@@ -52,9 +55,10 @@ export function MessageItem({
           <Link className="text-sm text-primary underline" to={`/apartments/${message.offeredApartmentId}`}>{t('exchange.viewOffer')}</Link>
           <p className="text-sm">{t('exchange.proposalDates')}: {message.exchangeStart} — {message.exchangeEnd}</p>
         </>}
-        <p className="whitespace-pre-line text-sm text-foreground">{message.content}</p>
+        <p className="whitespace-pre-line break-words text-sm text-foreground">{message.content}</p>
 
         <div className="mt-1 flex flex-wrap gap-2">
+          {onReply && <Button variant="secondary" size="sm" onClick={() => onReply(message)}>{t('privateMessages:reply')}</Button>}
           {!message.isRead && (
             <Button variant="secondary" size="sm" loading={markReadPending} onClick={() => onMarkRead(message.messageId)}>
               {t('messages.markRead')}

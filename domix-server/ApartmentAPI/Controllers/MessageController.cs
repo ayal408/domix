@@ -62,6 +62,16 @@ namespace serverApi.Controllers
             }
         }
 
+        [HttpPost("{id:guid}/reply")]
+        public async Task<IActionResult> Reply(Guid id, [FromBody] ReplyMessageDto dto, CancellationToken ct)
+        {
+            var senderId = GetCurrentUserId();
+            if (senderId is null) return Unauthorized();
+            try { return Ok(await _messageService.ReplyAsync(id, senderId.Value, dto.Content, ct)); }
+            catch (KeyNotFoundException) { return NotFound(); }
+            catch (ArgumentException) { return BadRequest("Invalid reply"); }
+        }
+
         // ================= GET INBOX =================
         [HttpGet("owner/{ownerId}")]
         public async Task<IActionResult> GetOwnerMessages(Guid ownerId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, CancellationToken cancellationToken = default)

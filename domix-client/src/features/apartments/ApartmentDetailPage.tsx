@@ -161,6 +161,7 @@ export default function ApartmentDetailPage() {
         <Stat label={t('apartments.fields.parking')} value={apartment.parking == null ? t('exchange.unknown') : apartment.parking ? t('common.yes') : t('common.no')} />
       </dl>
 
+      {currentUser && currentUser.userId !== apartment.userId && <a href="#contact-owner" className="inline-flex w-fit items-center justify-center rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring">{t('privateMessages:contact')}</a>}
       <OwnerProfileCard
         ownerId={apartment.userId}
         currentApartmentId={apartment.apartmentId}
@@ -194,7 +195,7 @@ export default function ApartmentDetailPage() {
               }}
             />
           </Card>
-          <ContactOwnerForm apartmentId={apartment.apartmentId} listingAddress={apartment.address} ownerId={apartment.userId} senderId={currentUser.userId}
+          <ContactOwnerForm isAnonymous={apartment.isAnonymous} apartmentId={apartment.apartmentId} listingAddress={apartment.address} ownerId={apartment.userId} senderId={currentUser.userId}
             offeredApartmentId={apartment.listingType === 'Exchange' ? params.get('offeredApartmentId') ?? undefined : undefined}
             exchangeStart={params.get('start') ?? undefined} exchangeEnd={params.get('end') ?? undefined} />
         </>

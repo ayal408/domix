@@ -31,11 +31,35 @@ namespace serverApi.Services.Implementations
             _hub = hub;
         }
 
-        public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
+        public Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default) =>
+            SendCoreAsync(dto, senderId, null, cancellationToken);
+
+        public async Task<MessageResponseDto> ReplyAsync(Guid messageId, Guid senderId, string content, CancellationToken cancellationToken = default)
         {
+            // Only the authenticated recipient may reply. Never accept a recipient or anonymity flag from the client.
+            var original = await _context.Messages.AsNoTracking().FirstOrDefaultAsync(
+                m => m.MessageId == messageId && m.OwnerId == senderId && !m.IsDeleted, cancellationToken);
+            if (original == null) throw new KeyNotFoundException("Message not found");
+            if (original.SenderId == senderId) throw new ArgumentException("Cannot reply to yourself");
+            return await SendCoreAsync(new CreateMessageDto { OwnerId = original.SenderId, Content = content }, senderId, original, cancellationToken);
+        }
+
+        private async Task<MessageResponseDto> SendCoreAsync(CreateMessageDto dto, Guid senderId, Message? replyTo, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Content) || dto.Content.Trim().Length > 2000)
+                throw new ArgumentException("Message must contain between 1 and 2000 characters");
+            var sender = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == senderId && !u.IsBlocked, cancellationToken);
+            // Listing contact may omit the recipient; resolve it below before validating availability.
             string? apartmentSnapshot = null, offeredSnapshot = null;
-            var anonymousRecipient = false;
-            if (dto.ApartmentId.HasValue)
+            var anonymousRecipient = replyTo?.SenderIsAnonymous ?? false;
+            var anonymousSender = replyTo?.RecipientIsAnonymous ?? false;
+            if (replyTo != null)
+            {
+                dto.ApartmentId = replyTo.ApartmentId;
+                apartmentSnapshot = replyTo.ApartmentSnapshot;
+                // Replies preserve listing context without creating a new exchange proposal.
+            }
+            else if (dto.ApartmentId.HasValue)
             {
                 var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
                     a => a.ApartmentId == dto.ApartmentId, cancellationToken);
@@ -61,6 +85,8 @@ namespace serverApi.Services.Implementations
                 throw new ArgumentException("הצעת החלפה חייבת להיות משויכת לנכס");
             if (!dto.OfferedApartmentId.HasValue && (dto.ExchangeStart.HasValue || dto.ExchangeEnd.HasValue))
                 throw new ArgumentException("יש לבחור דירה מוצעת להחלפה");
+            var owner = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.UserId == dto.OwnerId && !u.IsBlocked, cancellationToken);
+            if (sender == null || owner == null) throw new KeyNotFoundException("Account is unavailable");
             var message = new Message
             {
                 MessageId = Guid.NewGuid(),
@@ -72,7 +98,9 @@ namespace serverApi.Services.Implementations
                 ExchangeEnd = dto.ExchangeEnd,
                 ApartmentSnapshot = apartmentSnapshot,
                 OfferedApartmentSnapshot = offeredSnapshot,
-                Content = dto.Content,
+                SenderIsAnonymous = anonymousSender,
+                RecipientIsAnonymous = anonymousRecipient,
+                Content = dto.Content.Trim(),
                 CreatedAt = DateTime.UtcNow,
                 IsRead = false,
                 IsDeleted = false,
@@ -81,19 +109,6 @@ namespace serverApi.Services.Implementations
 
             _context.Messages.Add(message);
             await _context.SaveChangesAsync(cancellationToken);
-
-            var sender = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserId == senderId, cancellationToken);
-
-            var owner = await _context.Users
-                .AsNoTracking()
-                .FirstOrDefaultAsync(u => u.UserId == dto.OwnerId, cancellationToken);
-
-            if (sender == null)
-            {
-                throw new KeyNotFoundException("Sender not found");
-            }
 
             // Publish only after persistence, only to the recipient's authenticated group.
             if (_hub is not null && owner is not null && senderId != owner.UserId)
@@ -119,9 +134,10 @@ namespace serverApi.Services.Implementations
             return new MessageResponseDto
             {
                 MessageId = message.MessageId,
-                SenderId = message.SenderId,
+                SenderId = anonymousSender ? Guid.Empty : message.SenderId,
                 OwnerId = anonymousRecipient ? Guid.Empty : message.OwnerId,
-                SenderName = sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
+                SenderIsAnonymous = anonymousSender,
+                SenderName = anonymousSender ? null : sender.UserName,
                 ApartmentId = message.ApartmentId,
                 OfferedApartmentId = message.OfferedApartmentId,
                 ExchangeStart = message.ExchangeStart,
@@ -131,9 +147,7 @@ namespace serverApi.Services.Implementations
                 Content = message.Content,
                 CreatedAt = message.CreatedAt,
                 IsRead = message.IsRead,
-                SenderImageBase64 = sender?.ProfileImage != null
-                    ? Convert.ToBase64String(sender.ProfileImage)
-                    : null
+                SenderImageBase64 = anonymousSender ? null : await PrivacyImages.AvatarAsync(sender.ProfileImage, cancellationToken)
             };
         }
 
@@ -225,9 +239,10 @@ namespace serverApi.Services.Implementations
                 return new MessageResponseDto
                 {
                     MessageId = m.MessageId,
-                    SenderId = m.SenderId,
-                    OwnerId = m.OwnerId,
-                    SenderName = sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
+                    SenderId = m.SenderIsAnonymous ? Guid.Empty : m.SenderId,
+                    OwnerId = m.RecipientIsAnonymous ? Guid.Empty : m.OwnerId,
+                    SenderIsAnonymous = m.SenderIsAnonymous,
+                    SenderName = m.SenderIsAnonymous ? null : sender?.IsDeleted == true ? "חשבון שנמחק" : sender?.UserName,
                     ApartmentId = m.ApartmentId,
                     OfferedApartmentId = m.OfferedApartmentId,
                     ExchangeStart = m.ExchangeStart,
@@ -237,7 +252,8 @@ namespace serverApi.Services.Implementations
                     Content = m.Content,
                     CreatedAt = m.CreatedAt,
                     IsRead = m.IsRead,
-                    SenderImageBase64 = sender is null ? null : avatars.GetValueOrDefault(sender.UserId)
+                    IsArchived = m.IsArchived,
+                    SenderImageBase64 = m.SenderIsAnonymous || sender is null ? null : avatars.GetValueOrDefault(sender.UserId)
                 };
             }).ToList();
         }

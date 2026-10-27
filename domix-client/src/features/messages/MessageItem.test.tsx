@@ -72,3 +72,11 @@ describe('MessageItem', () => {
     expect(onDelete).toHaveBeenCalledWith('m1')
   })
 })
+
+it('masks an anonymous sender and replies via the message without requiring a sender identity', async () => {
+  const reply = vi.fn()
+  render(<MessageItem message={{ ...baseMessage, senderIsAnonymous: true }} onMarkRead={vi.fn()} onDelete={vi.fn()} onReply={reply} />)
+  expect(screen.getByText('Anonymous advertiser')).toBeInTheDocument(); expect(screen.queryByText('Alex')).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Reply' }))
+  expect(reply).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'm1' }))
+})

@@ -412,8 +412,25 @@ test("privacy boundaries protect anonymous listings, contacts, exports and suppo
   assert.equal(preview.status, 200); const html = await preview.text(); assert.equal(html.includes('Secret street 81'), false); assert.equal(html.includes('og:image'), false);
   const inquiry = await request('/Message', session.accessToken, 'POST', { apartmentId: own.apartmentId, content: 'Private inquiry' });
   assert.equal(inquiry.status, 200);
-  const stored = await testQuery(POSTGRES_URL, 'SELECT "OwnerId" FROM "Messages" WHERE "MessageId"=$1', [(await inquiry.json()).messageId]);
+  const inquiryBody = await inquiry.json();
+  const stored = await testQuery(POSTGRES_URL, 'SELECT "OwnerId" FROM "Messages" WHERE "MessageId"=$1', [inquiryBody.messageId]);
   assert.equal(stored.rows[0].OwnerId, adminUserId);
+  assert.equal(inquiryBody.ownerId, '00000000-0000-0000-0000-000000000000');
+  assert.equal((await request(`/Message/${inquiryBody.messageId}/reply`, session.accessToken, 'POST', { content: 'Not the recipient' })).status, 404);
+  const response = await request(`/Message/${inquiryBody.messageId}/reply`, adminAccessToken, 'POST', { content: 'Arrange a visit. Contact phone: 0501234567', ownerId: adminUserId, senderIsAnonymous: false });
+  assert.equal(response.status, 200); const reply = await response.json();
+  assert.equal(reply.senderIsAnonymous, true); assert.equal(reply.senderId, '00000000-0000-0000-0000-000000000000');
+  assert.equal(reply.senderName, null); assert.equal(reply.senderImageBase64, null); assert.equal(reply.apartmentId, own.apartmentId);
+  assert.equal(reply.content.includes('0501234567'), true);
+  const inbox = await (await request(`/Message/owner/${session.user.userId}`, session.accessToken)).json();
+  const received = inbox.find(m => m.messageId === reply.messageId);
+  assert.equal(received.senderIsAnonymous, true); assert.equal(received.senderName, null); assert.equal(received.senderId, '00000000-0000-0000-0000-000000000000');
+  assert.equal((await request(`/Message/${reply.messageId}/reply`, session.accessToken, 'POST', { content: 'Tomorrow?' })).status, 200);
+  assert.equal((await request(`/Message/${reply.messageId}/reply`, session.accessToken, 'POST', { content: ' ' })).status, 400);
+  await request(`/Message/archive/${reply.messageId}`, session.accessToken, 'PUT');
+  const archived = await (await request(`/Message/owner/${session.user.userId}/archived`, session.accessToken)).json();
+  assert.equal(archived.find(m => m.messageId === reply.messageId).senderName, null);
+
   const ticket = await request('/Support', session.accessToken, 'POST', { message: 'Private support', contactEmail: 'copy@example.com', transcript: [{ role: 'user', text: 'Do not attach this' }] });
   assert.equal(ticket.status, 200); const support = await ticket.json(); assert.equal(support.transcript, null);
   const exported = await request('/privacy/export', session.accessToken); assert.equal(exported.status, 200);
