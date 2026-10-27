@@ -32,7 +32,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex min-h-16 max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3 sm:flex-nowrap sm:gap-4 sm:px-6">
         <div className="flex items-center gap-6">
           <NavLink
             to="/"
@@ -76,7 +76,7 @@ export function Header() {
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex max-w-full flex-wrap items-center gap-1.5">
           <LanguageSwitcher />
           <ThemeSwitcher />
 

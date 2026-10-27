@@ -33,6 +33,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
     if (!container) return
 
     let cancelled = false
+    let resizeObserver: ResizeObserver | undefined
     setFailed(false)
 
     loadGoogleIdentityScript()
@@ -44,16 +45,26 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
           callback: (response) => onIdTokenRef.current(response.credential),
         })
 
-        container.innerHTML = ''
-        window.google.accounts.id.renderButton(container, {
+        let lastWidth = 0
+        const render = () => {
+          if (cancelled || !window.google) return
+          const width = Math.min(400, Math.floor(container.clientWidth))
+          if (!width || width === lastWidth) return
+          lastWidth = width
+          container.innerHTML = ''
+          window.google.accounts.id.renderButton(container, {
           type: 'standard',
           theme: resolvedTheme === 'dark' ? 'filled_black' : 'outline',
           size: 'large',
           text: 'continue_with',
-          shape: 'rectangular',
-          width: 300,
+          shape: 'pill',
+          width,
           locale: i18n.language,
-        })
+          })
+        }
+        render()
+        resizeObserver = new ResizeObserver(render)
+        resizeObserver.observe(container)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -61,6 +72,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
 
     return () => {
       cancelled = true
+      resizeObserver?.disconnect()
     }
   }, [disabled, resolvedTheme, i18n.language, attempt])
 
@@ -68,7 +80,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div ref={containerRef} className="flex justify-center" />
+      <div ref={containerRef} className="flex w-full justify-center" style={{ colorScheme: 'light' }} />
       {failed && <><p role="alert" className="text-sm text-muted">{t('auth.googleUnavailable')}</p><button type="button" className="text-sm text-primary underline" onClick={() => setAttempt((value) => value + 1)}>{t('common.retry')}</button></>}
     </div>
   )
