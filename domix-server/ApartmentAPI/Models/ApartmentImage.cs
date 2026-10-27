@@ -4,6 +4,7 @@ namespace serverApi.Models
 {
     public class ApartmentImage
     {
+        public Guid? ClientUploadId { get; set; }
         [Key]
         public Guid ImageId { get; set; }
         public Guid ApartmentId { get; set; }

@@ -202,6 +202,8 @@ namespace domix_server.ApartmentAPI.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<Guid?>("ClientUploadId").HasColumnType("uuid");
+                    b.HasIndex("ApartmentId", "ClientUploadId").IsUnique().HasFilter("\"ClientUploadId\" IS NOT NULL");
                     b.HasKey("ImageId");
 
                     b.HasIndex("ApartmentId");

@@ -5,6 +5,8 @@ public partial class ReturnJourneys:Migration
 {
     protected override void Up(MigrationBuilder m)
     {
+        m.AddColumn<Guid>("ClientUploadId","ApartmentImages",type:"uuid",nullable:true);
+        m.CreateIndex("IX_ApartmentImages_ApartmentId_ClientUploadId","ApartmentImages",new[]{"ApartmentId","ClientUploadId"},unique:true,filter:"\"ClientUploadId\" IS NOT NULL");
         m.AddColumn<Guid>("ClientDraftId","Apartments",type:"uuid",nullable:true);
         m.CreateIndex("IX_Apartments_UserId_ClientDraftId","Apartments",new[]{"UserId","ClientDraftId"},unique:true,filter:"\"ClientDraftId\" IS NOT NULL");
         m.AddColumn<string>("AlertChannel","SavedSearches",type:"character varying(20)",maxLength:20,nullable:false,defaultValue:"Both");

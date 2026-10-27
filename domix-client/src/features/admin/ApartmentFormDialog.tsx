@@ -1,3 +1,8 @@
+import { useApartmentDraft } from '@/features/apartments/useApartmentDraft'
+import { ApartmentDraftPanel } from '@/features/apartments/ApartmentDraftPanel'
+import { uploadImage } from '@/api/images.api'
+import { getApartment as getApartmentById } from '@/api/apartments.api'
+import { useQueryClient } from '@tanstack/react-query'
 import { HebrewDateField } from '@/components/ui/HebrewDateField'
 import { Fragment, useEffect, useState } from 'react'
 import { Dialog, DialogPanel, DialogTitle, Transition, TransitionChild } from '@headlessui/react'
@@ -35,6 +40,8 @@ interface Props {
 /** Create when `apartment` is null, full edit (owner/Admin/Manager only — enforced server-side) otherwise. */
 export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Props) {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
+  const [photoBusy,setPhotoBusy] = useState(false)
   const isEdit = apartment != null
   const createMutation = useCreateApartment()
   const updateMutation = useUpdateApartment()
@@ -52,6 +59,8 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
     resolver: zodResolver(apartmentFormSchema),
     defaultValues: APARTMENT_FORM_DEFAULTS,
   })
+
+  const draft = useApartmentDraft(open && !isEdit,watch,reset)
 
   const [cityQuery, setCityQuery] = useState('')
   const [addressQuery, setAddressQuery] = useState('')
@@ -71,6 +80,20 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
     }
   }, [open, apartment, reset])
 
+  async function completePhotos(created: Apartment) {
+    setPhotoBusy(true)
+    try {
+      for(const photo of [...(draft.get()?.photos??[])]) { await uploadImage({apartmentId:created.apartmentId,image:photo.file,clientUploadId:photo.id}); await draft.markPhotoSent(photo) }
+      await draft.clear()
+      await queryClient.invalidateQueries({queryKey:['apartments']})
+      if(onCreated)onCreated(created);else onClose()
+    } finally { setPhotoBusy(false) }
+  }
+  async function resumePhotos() {
+    const id=draft.get()?.publishedId;if(!id)return
+    try { await completePhotos(await getApartmentById(id)) }
+    catch(error) { pushToast({variant:'error',title:t(errorTranslationKey(error),toApiError(error).message)}) }
+  }
   async function onSubmit(values: ApartmentFormValues) {
     try {
       if (isEdit) {
@@ -78,22 +101,22 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
         pushToast({ variant: 'success', title: t('admin.apartments.updateSuccess') })
         onClose()
       } else {
-        const created = await createMutation.mutateAsync(toCreateApartmentRequest(values))
+        if(draft.error==='draftConflict'||draft.get()?.publishedId)return
+        await draft.flush()
+        const created = await createMutation.mutateAsync({...toCreateApartmentRequest(values),clientDraftId:draft.get()?.clientDraftId})
+        if(!await draft.setPublished(created.apartmentId))return
         pushToast({ variant: 'success', title: t('admin.apartments.createSuccess') })
-        if (onCreated) {
-          onCreated(created)
-        } else {
-          onClose()
-        }
+        await completePhotos(created)
       }
     } catch (error) {
       const apiError = toApiError(error)
-      pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
+      pushToast({ variant: 'error', title: apiError.code==='DRAFT_WITHDRAWN'?t('returnTools:draftPublishedClosed'):t(errorTranslationKey(error), apiError.message) })
     }
   }
 
-  function closeSafely() {
-    if (isSubmitting) return
+  async function closeSafely() {
+    if (isSubmitting || photoBusy) return
+    if(!isEdit) { const saved=await draft.flush();if(!saved&&isDirty&&!window.confirm(t('returnTools:draftDiscard')))return;onClose();return }
     if (!isDirty || window.confirm(t('exchange.discard'))) onClose()
   }
 
@@ -128,7 +151,9 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                   {isEdit ? t('admin.apartments.editApartment') : t('admin.apartments.newApartment')}
                 </DialogTitle>
 
+                {!isEdit&&<ApartmentDraftPanel state={draft} busy={photoBusy||isSubmitting} onResume={()=>void resumePhotos()} onClose={()=>void closeSafely()} />}
                 <form onSubmit={handleSubmit(onSubmit)} className="mt-4 flex flex-col gap-4">
+                  <fieldset className="contents" disabled={!isEdit && (draft.loading || !!draft.draft?.publishedId || draft.error==='draftConflict')}>
           <p className="text-xs text-muted">{t('privacy:listingNotice')}</p>
                   <SelectField label={t('exchange.listingType')} {...register('listingType')}>
                     {['Exchange', 'Rent', 'Sale', 'Unspecified'].map(type => <option key={type} value={type}>{t(`exchange.types.${type}`)}</option>)}
@@ -259,6 +284,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                       {t('common.save')}
                     </Button>
                   </div>
+                  </fieldset>
                 </form>
               </DialogPanel>
             </TransitionChild>

@@ -83,6 +83,11 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
+            if(dto.ClientUploadId.HasValue)
+            {
+                var prior=await _context.ApartmentImages.AsNoTracking().FirstOrDefaultAsync(i=>i.ApartmentId==dto.ApartmentId && i.ClientUploadId==dto.ClientUploadId,cancellationToken);
+                if(prior!=null)return new ApartmentImageDTO{ImageId=prior.ImageId,ApartmentId=prior.ApartmentId,ImageUrl=prior.ImageUrl,CreatedAt=prior.CreatedAt};
+            }
             await using var input = dto.Image.OpenReadStream();
             var sanitized = await PrivacyImages.SanitizeAsync(input, cancellationToken);
             var fileName = $"{Guid.NewGuid()}.jpg";
@@ -97,6 +102,7 @@ namespace serverApi.Services.Implementations
 
             var img = new ApartmentImage
             {
+                ClientUploadId = dto.ClientUploadId,
                 ImageId = Guid.NewGuid(),
                 ApartmentId = dto.ApartmentId,
                 ImageUrl = $"/images/{fileName}",
@@ -104,7 +110,15 @@ namespace serverApi.Services.Implementations
             };
 
             _context.ApartmentImages.Add(img);
-            await _context.SaveChangesAsync(cancellationToken);
+            try{await _context.SaveChangesAsync(cancellationToken);}
+            catch(DbUpdateException) when(dto.ClientUploadId.HasValue)
+            {
+                _context.Entry(img).State=EntityState.Detached;
+                try{File.Delete(fullPath);}catch(IOException){}catch(UnauthorizedAccessException){}
+                var prior=await _context.ApartmentImages.AsNoTracking().FirstOrDefaultAsync(i=>i.ApartmentId==dto.ApartmentId && i.ClientUploadId==dto.ClientUploadId,cancellationToken);
+                if(prior==null)throw;
+                return new ApartmentImageDTO{ImageId=prior.ImageId,ApartmentId=prior.ApartmentId,ImageUrl=prior.ImageUrl,CreatedAt=prior.CreatedAt};
+            }
 
             _logger.LogInformation("Successfully uploaded image {ImageId} for apartment {ApartmentId}", img.ImageId, dto.ApartmentId);
 

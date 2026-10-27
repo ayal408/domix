@@ -1,3 +1,5 @@
+import { ReturnNotifications } from '@/features/community/ReturnNotifications'
+import { useReturnNotifications } from '@/features/community/useReturnNotifications'
 import { RenewalReminders } from '@/features/community/RenewalReminders'
 import { useRenewals } from '@/features/community/useRenewals'
 import { CloseButton, Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
@@ -15,9 +17,10 @@ export function NotificationBell() {
   const markSeen = useMarkNotificationsSeen()
   const dismiss = useDismissNotifications()
 
+  const returns = useReturnNotifications()
   const renewals = useRenewals()
   const unreadCount = data?.unreadCount ?? 0
-  const badgeCount = unreadCount + (renewals.data?.length ?? 0)
+  const badgeCount = unreadCount + (renewals.data?.length ?? 0) + returns.count
 
   function handleButtonClick() {
     // Fires on both open and close — harmless either way, and marking-seen is idempotent server-side.
@@ -53,6 +56,7 @@ export function NotificationBell() {
           </CloseButton>
         </div>
         <RenewalReminders compact />
+        <ReturnNotifications />
         {!!data?.notifications.length && <button type="button" disabled={dismiss.isPending} onClick={() => {
           const through = data.notifications.reduce((latest, item) => item.createdAt > latest ? item.createdAt : latest, data.notifications[0]!.createdAt)
           dismiss.mutate(through, { onSuccess: () => close() })

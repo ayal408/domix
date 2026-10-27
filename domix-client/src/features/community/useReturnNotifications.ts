@@ -1,0 +1,2 @@
+import{useReturnQuery,type MatchAlert}from'./returnApi'
+export function useReturnNotifications(){const alerts=useReturnQuery<MatchAlert[]>(['alerts'],'/return-tools/alerts'),visits=useReturnQuery<{id:string;conversationId:string;startsAt:string}[]>(['visit-reminders'],'/return-tools/visit-reminders');return{alerts,visits,count:(alerts.data?.filter(a=>!a.seenAt).length??0)+(visits.data?.length??0)}}

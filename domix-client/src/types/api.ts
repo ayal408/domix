@@ -263,6 +263,7 @@ export interface Apartment {
  * guard, so it is required here too.
  */
 export interface CreateApartmentRequest {
+  clientDraftId?: string
   listingType?: 'Unspecified' | 'Exchange' | 'Rent' | 'Sale'
   availableFrom?: string | null
   availableTo?: string | null
@@ -344,6 +345,7 @@ export interface ApartmentSearchQuery {
 
 /** `UploadImageDto` — multipart body for `POST /api/ApartmentImage/upload`. */
 export interface UploadImageRequest {
+  clientUploadId?: string
   apartmentId: Guid
   image: File
 }
@@ -372,6 +374,7 @@ export interface Favorite {
 
 /** `SavedSearchDTO`. */
 export interface SavedSearch {
+  alertChannel?: 'Site'|'Email'|'Both'|'Off'
   listingType?: string | null
   savedSearchId: Guid
   name: string

@@ -24,6 +24,7 @@ export default function MyApartmentsPage() {
   return (
     <div className="flex flex-col gap-4">
     {canReturn && <Link className="text-primary underline" to={returnTo}>{t('discovery.returnSearch')}</Link>}
+    <Link className="w-fit text-primary underline" to="/my-leads">{t('returnTools:leads')}</Link>
     <RenewalReminders />
     <ApartmentManagementList
       apartments={own}

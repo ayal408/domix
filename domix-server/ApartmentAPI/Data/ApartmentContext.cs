@@ -53,10 +53,13 @@ namespace serverApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ApartmentImage>().HasIndex(x=>new{x.ApartmentId,x.ClientUploadId}).IsUnique().HasFilter("\"ClientUploadId\" IS NOT NULL");
+            modelBuilder.Entity<ApartmentImage>().HasIndex(x=>x.ApartmentId);
             modelBuilder.Entity<ConversationLead>().HasKey(x=>x.ConversationId);
             modelBuilder.Entity<ConversationLead>().Property(x=>x.ConversationId).ValueGeneratedNever();
             modelBuilder.Entity<ConversationLead>().HasOne<User>().WithMany().HasForeignKey(x=>x.OwnerId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<ConversationLead>().ToTable(t=>t.HasCheckConstraint("CK_ConversationLeads_Status", "\"Status\" IN ('New','InProgress','NotRelevant')"));
+            modelBuilder.Entity<Apartment>().HasIndex(x=>x.UserId); // retain the existing FK index during this additive upgrade
             modelBuilder.Entity<Apartment>().HasIndex(x=>new{x.UserId,x.ClientDraftId}).IsUnique().HasFilter("\"ClientDraftId\" IS NOT NULL");
             modelBuilder.Entity<SavedSearch>().Property(x=>x.AlertChannel).HasDefaultValue("Both");
             modelBuilder.Entity<SavedSearch>().ToTable(t=>t.HasCheckConstraint("CK_SavedSearches_AlertChannel", "\"AlertChannel\" IN ('Site','Email','Both','Off')"));

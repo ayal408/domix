@@ -35,12 +35,13 @@ export async function createImage(
  * interceptor removes it for FormData so the browser can add the boundary.
  */
 export async function uploadImage(
-  { apartmentId, image }: UploadImageRequest,
+  { apartmentId, image, clientUploadId }: UploadImageRequest,
   onProgress?: (percent: number) => void,
 ): Promise<ApartmentImage> {
   const form = new FormData()
   form.append('apartmentId', apartmentId)
   form.append('image', image)
+  if(clientUploadId)form.append('clientUploadId',clientUploadId)
 
   const { data } = await dataClient.post<ApartmentImage>(
     apiEndpoints.apartmentImages.upload(),

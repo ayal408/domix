@@ -1,3 +1,5 @@
+vi.mock('@/features/community/useReturnNotifications',()=>({useReturnNotifications:()=>({count:0,alerts:{data:[]},visits:{data:[]}})}))
+vi.mock('@/features/community/ReturnNotifications',()=>({ReturnNotifications:()=>null}))
 vi.mock('@/features/community/useRenewals', () => ({ useRenewals: () => ({ data: [] }) }))
 vi.mock('@/features/community/RenewalReminders', () => ({ RenewalReminders: () => null }))
 import { beforeEach, expect, it, vi } from 'vitest'
