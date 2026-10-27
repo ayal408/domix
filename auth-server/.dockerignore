@@ -1,0 +1,15 @@
+node_modules
+bin
+obj
+dist
+.git
+.env
+.env.*
+.local
+.certs
+*.key
+*.pfx
+*.p12
+docker/certs
+logs
+wwwroot/images

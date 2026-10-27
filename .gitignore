@@ -47,3 +47,10 @@ Desktop.ini
 
 # Also ignore node_modules symlinks in local verification worktrees.
 **/node_modules
+
+# Local trust material and private keys never belong in commits.
+.local/
+.certs/
+*.key
+*.pfx
+*.p12

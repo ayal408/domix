@@ -1,0 +1,24 @@
+# Opt-in local CA trust, matching Amandex's EXTRA_CA_CERT convention.
+# docker compose -f docker-compose.yml -f docker-compose.extra-ca.yml up -d --build
+services:
+  auth-server:
+    build:
+      args:
+        EXTRA_CA_SHA256: ${EXTRA_CA_SHA256:-manual}
+      secrets:
+        - extra_ca
+  domix-server:
+    build:
+      args:
+        EXTRA_CA_SHA256: ${EXTRA_CA_SHA256:-manual}
+      secrets:
+        - extra_ca
+  nginx-gateway:
+    build:
+      args:
+        EXTRA_CA_SHA256: ${EXTRA_CA_SHA256:-manual}
+      secrets:
+        - extra_ca
+secrets:
+  extra_ca:
+    file: ${EXTRA_CA_CERT:?set EXTRA_CA_CERT to the local root CA PEM bundle}
