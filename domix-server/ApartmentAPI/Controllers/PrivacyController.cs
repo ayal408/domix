@@ -50,6 +50,23 @@ public class PrivacyController(ApartmentContext db, IConfiguration? config = nul
         return NoContent();
     }
 
+    public record MessagePreferences(bool ReceiveMessageEmails);
+    [HttpGet("message-preferences")]
+    public async Task<IActionResult> GetMessagePreferences(CancellationToken ct)
+    {
+        Response.Headers.CacheControl = "no-store";
+        return Ok(await db.Users.AsNoTracking().Where(u => u.UserId == Caller)
+            .Select(u => new MessagePreferences(u.ReceiveMessageEmails)).SingleAsync(ct));
+    }
+    [HttpPatch("message-preferences")]
+    public async Task<IActionResult> SaveMessagePreferences(MessagePreferences input, CancellationToken ct)
+    {
+        var user = await db.Users.SingleAsync(u => u.UserId == Caller, ct);
+        user.ReceiveMessageEmails = input.ReceiveMessageEmails;
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     // Self-only export: authentication credentials/tokens and unrelated users' profiles are never exported.
     [HttpGet("export")]
     public async Task<IActionResult> Export(CancellationToken ct)
@@ -57,7 +74,7 @@ public class PrivacyController(ApartmentContext db, IConfiguration? config = nul
         Response.Headers.CacheControl = "no-store";
         var id = Caller;
         var profile = await db.Users.AsNoTracking().Where(u => u.UserId == id).Select(u => new {
-            u.UserId, u.UserName, u.EmailAddress, u.PhoneNumber, u.SharePhone, u.JoiningDate, u.LanguagePreference }).SingleAsync(ct);
+            u.UserId, u.UserName, u.EmailAddress, u.PhoneNumber, u.SharePhone, u.ReceiveMessageEmails, u.JoiningDate, u.LanguagePreference }).SingleAsync(ct);
         var listings = await db.Apartments.IgnoreQueryFilters().AsNoTracking().Where(a => a.UserId == id)
             .Select(a => new { a.ApartmentId, a.city, a.area, a.address, a.description, a.price, a.ListingType,
                 a.AvailableFrom, a.AvailableTo, a.DesiredCity, a.IsAnonymous, a.IsDeleted, a.dateInsert }).ToListAsync(ct);

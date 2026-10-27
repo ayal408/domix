@@ -49,6 +49,7 @@ namespace serverApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<User>().Property(u => u.ReceiveMessageEmails).HasDefaultValue(true);
             modelBuilder.Entity<SystemEmailSettings>().Property(s => s.Provider).HasDefaultValue("gmail");
             modelBuilder.Entity<User>().HasQueryFilter(x => !x.IsDeleted);
             modelBuilder.Entity<Apartment>().HasQueryFilter(x => !x.IsDeleted);

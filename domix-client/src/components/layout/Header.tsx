@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
 import { ThemeSwitcher } from '@/components/layout/ThemeSwitcher'
+import { MessageIndicator } from './MessageIndicator'
 import { NotificationBell } from '@/components/layout/NotificationBell'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
@@ -53,7 +54,7 @@ export function Header() {
       <div className="flex max-w-full flex-wrap items-center gap-1">
         <LanguageSwitcher /><ThemeSwitcher />
         {status === 'authenticated' && user ? <>
-          <NotificationBell />
+          <MessageIndicator /><NotificationBell />
           <Menu as="div" className="relative">
             <MenuButton aria-label={navigation('account')} className="flex h-10 items-center gap-2 rounded-lg px-2 hover:bg-card-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-card-muted text-xs font-semibold text-muted">

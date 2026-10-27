@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.SignalR;
+using serverApi.Hubs;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using serverApi.Data;
@@ -14,17 +16,19 @@ namespace serverApi.Services.Implementations
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<MessageService> _logger;
+        private readonly IHubContext<PresenceHub>? _hub;
 
         public MessageService(
             ApartmentContext context,
             IEmailService emailService,
             IConfiguration configuration,
-            ILogger<MessageService> logger)
+            ILogger<MessageService> logger, IHubContext<PresenceHub>? hub = null)
         {
             _context = context;
             _emailService = emailService;
             _configuration = configuration;
             _logger = logger;
+            _hub = hub;
         }
 
         public async Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default)
@@ -91,7 +95,14 @@ namespace serverApi.Services.Implementations
                 throw new KeyNotFoundException("Sender not found");
             }
 
-            if (!string.IsNullOrEmpty(sender.EmailAddress) && !string.IsNullOrEmpty(owner?.EmailAddress))
+            // Publish only after persistence, only to the recipient's authenticated group.
+            if (_hub is not null && owner is not null && senderId != owner.UserId)
+            {
+                try { await _hub.Clients.Group(PresenceHub.MessageGroup(owner.UserId)).SendAsync("MessageReceived", new { message.MessageId }, cancellationToken); }
+                catch (Exception ex) { _logger.LogWarning("Message delivery event failed ({FailureType}).", ex.GetType().Name); }
+            }
+
+            if (!string.IsNullOrEmpty(sender.EmailAddress) && !string.IsNullOrEmpty(owner?.EmailAddress) && owner.ReceiveMessageEmails && senderId != owner.UserId)
             {
                 try
                 {
@@ -125,6 +136,9 @@ namespace serverApi.Services.Implementations
                     : null
             };
         }
+
+        public Task<int> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            _context.Messages.CountAsync(m => m.OwnerId == userId && !m.IsRead && !m.IsDeleted && !m.IsArchived, cancellationToken);
 
         public async Task<IEnumerable<MessageResponseDto>> GetOwnerMessagesAsync(Guid ownerId, int page, int pageSize, CancellationToken cancellationToken = default)
         {
