@@ -212,3 +212,7 @@ Public registration never grants administrator privileges. See [database integri
 ## פרטיות
 
 מפת מידע, תצורה, כללי חשיפה ותהליך בקשות משתמשים: [ממשל נתונים ופרטיות](docs/privacy-governance.md).
+
+## הפעלה בנטפרי
+
+מתוך תיקיית הפרויקט ב־Windows: `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-local.ps1`. ראו [הפעלה מקומית עם נטפרי](docs/netfree-local.md) להכנת קובצי הסביבה, ייצוא תעודות אוטומטי ואבחון SSL.

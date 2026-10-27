@@ -1,27 +1,28 @@
-# Use the .NET 10 SDK image for building
+# syntax=docker/dockerfile:1.7
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+ARG EXTRA_CA_SHA256=none
 WORKDIR /src
+# The SDK's own HTTPS requests (NuGet) also need explicit extra trust behind NetFree.
+RUN --mount=type=secret,id=extra_ca,required=false \
+    test -n "$EXTRA_CA_SHA256" && if [ -s /run/secrets/extra_ca ]; then \
+      ! grep -q 'PRIVATE KEY' /run/secrets/extra_ca \
+      && grep -q 'BEGIN CERTIFICATE' /run/secrets/extra_ca \
+      && awk '/BEGIN CERTIFICATE/{n++} n{print > ("/usr/local/share/ca-certificates/domix-extra-" n ".crt")}' /run/secrets/extra_ca \
+      && update-ca-certificates; fi
 COPY ["domix-server.csproj", "./"]
 RUN dotnet restore
 COPY . .
-RUN dotnet publish -c Release -o /app/publish
+RUN dotnet publish -c Release -o /app/publish --no-restore
 
-# Use the .NET 10 runtime image for the final container
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
+ARG EXTRA_CA_SHA256=none
 WORKDIR /app
 COPY --from=build /app/publish .
-
-# Opt-in only: some local networks (e.g. the NetFree content filter, common on Israeli ISPs/routers)
-# intercept outbound HTTPS with their own CA, which the Windows host trusts but this container does
-# not — outbound calls (Gemini, Nominatim, data.gov.il, Gmail OAuth...) fail TLS validation as a
-# result. Pass --build-arg TRUST_LOCAL_DEV_CA=true (docker-compose.yml does this by default for local
-# dev) to trust it in the image; a real deployment must never set this.
-ARG TRUST_LOCAL_DEV_CA=false
-COPY docker/certs/*.crt /usr/local/share/ca-certificates/netfree-dev/
-RUN if [ "$TRUST_LOCAL_DEV_CA" = "true" ]; then \
-        update-ca-certificates; \
-    else \
-        rm -f /usr/local/share/ca-certificates/netfree-dev/*.crt; \
-    fi
-
+# No extra CA is trusted unless the opt-in build secret was explicitly provided.
+RUN --mount=type=secret,id=extra_ca,required=false \
+    test -n "$EXTRA_CA_SHA256" && if [ -s /run/secrets/extra_ca ]; then \
+      ! grep -q 'PRIVATE KEY' /run/secrets/extra_ca \
+      && grep -q 'BEGIN CERTIFICATE' /run/secrets/extra_ca \
+      && awk '/BEGIN CERTIFICATE/{n++} n{print > ("/usr/local/share/ca-certificates/domix-extra-" n ".crt")}' /run/secrets/extra_ca \
+      && update-ca-certificates; fi
 ENTRYPOINT ["dotnet", "domix-server.dll"]

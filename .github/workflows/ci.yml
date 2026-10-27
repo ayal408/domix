@@ -108,6 +108,14 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Windows local CA validation
+        if: runner.os == 'Windows'
+        working-directory: .
+        run: |
+          pwsh -NoProfile -File scripts/tests/test-extra-ca.ps1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          pwsh -NoProfile -File scripts/tests/test-local-ports.ps1
+
       - name: Restore dependencies
         run: dotnet restore domix-server.csproj
 
@@ -185,3 +193,17 @@ jobs:
         run: npm test
         env:
           INTEGRATION_TEST_POSTGRES_URL: "Host=localhost;Port=5432;Database=domix_integration_test;Username=postgres;Password=postgres"
+
+  local-ca:
+    name: Local CA trust (Docker HTTPS)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Check TLS trust and rejection with temporary certificates
+        run: python3 scripts/tests/test-extra-ca.py

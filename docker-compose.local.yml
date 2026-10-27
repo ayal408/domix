@@ -1,0 +1,5 @@
+# Added by scripts/start-local.ps1 only: email/OAuth links follow the selected local gateway URL.
+services:
+  domix-server:
+    environment:
+      CLIENT_APP_URL: ${DOMIX_LOCAL_CLIENT_URL:?run scripts/start-local.ps1 or set DOMIX_LOCAL_CLIENT_URL}
