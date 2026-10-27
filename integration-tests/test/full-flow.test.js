@@ -459,3 +459,58 @@ test('verification resend reports unavailable delivery instead of claiming sent'
   assert.equal(resend.status, 503); const result = await resend.json();
   assert.equal(result.code, 'EMAIL_SEND_FAILED'); assert.notEqual(result.sent, true);
 });
+
+test('message email choice is self-scoped and unread count belongs only to the recipient', async () => {
+  const sessions = [];
+  for (let i = 0; i < 2; i++) {
+    const response = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': `192.0.2.${230+i}` },
+      body: JSON.stringify({ userName: `msgpref${i}${runId}`, email: `msgpref-${i}-${runId}@example.com`, password: 'password123' }) });
+    assert.equal(response.status, 200); sessions.push(await response.json());
+  }
+  const request = (path, session, method = 'GET', body) => fetch(`${services.domixServerUrl}/api${path}`, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.accessToken}` }, body: body ? JSON.stringify(body) : undefined
+  });
+  assert.equal((await (await request('/privacy/message-preferences', sessions[0])).json()).receiveMessageEmails, true);
+  assert.equal((await request('/privacy/message-preferences', sessions[0], 'PATCH', { receiveMessageEmails: false, userId: sessions[1].user.userId })).status, 204);
+  assert.equal((await (await request('/privacy/message-preferences', sessions[0])).json()).receiveMessageEmails, false);
+  assert.equal((await (await request('/privacy/message-preferences', sessions[1])).json()).receiveMessageEmails, true);
+  async function realtime(session) {
+    const negotiation = await fetch(`${services.domixServerUrl}/api/hubs/presence/negotiate?negotiateVersion=1`, { method: 'POST', headers: { Authorization: `Bearer ${session.accessToken}` } });
+    assert.equal(negotiation.status, 200); const info = await negotiation.json();
+    const socket = new WebSocket(`${services.domixServerUrl.replace('http:', 'ws:')}/api/hubs/presence?id=${encodeURIComponent(info.connectionToken)}&access_token=${encodeURIComponent(session.accessToken)}`);
+    const events = [];
+    await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => { socket.close(); reject(new Error('Realtime handshake did not complete')); }, 5000);
+      socket.addEventListener('error', () => { clearTimeout(timer); reject(new Error('Realtime connection failed')); });
+      socket.addEventListener('open', () => socket.send(JSON.stringify({ protocol: 'json', version: 1 }) + '\x1e'));
+      socket.addEventListener('message', event => {
+        for (const part of String(event.data).split('\x1e').filter(Boolean)) {
+          const frame = JSON.parse(part);
+          if (!frame.type) socket.send(JSON.stringify({ type: 1, invocationId: 'ready', target: 'GetActiveUserCount', arguments: [] }) + '\x1e');
+          if (frame.type === 3 && frame.invocationId === 'ready') { clearTimeout(timer); resolve(); }
+          if (frame.type === 1) events.push(frame);
+        }
+      });
+    });
+    return { socket, events };
+  }
+  const recipientLive = await realtime(sessions[0]), senderLive = await realtime(sessions[1]);
+  let sent;
+  try {
+    sent = await request('/Message', sessions[1], 'POST', { ownerId: sessions[0].user.userId, content: 'A private message with email opted out' });
+    assert.equal(sent.status, 200);
+    const deadline = Date.now() + 3000;
+    while (!recipientLive.events.some(e => e.target === 'MessageReceived') && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 20));
+    const event = recipientLive.events.find(e => e.target === 'MessageReceived');
+    assert.ok(event); assert.equal(typeof event.arguments[0].messageId, 'string');
+    assert.deepEqual(Object.keys(event.arguments[0]), ['messageId']);
+    assert.equal(senderLive.events.some(e => e.target === 'MessageReceived'), false);
+  } finally { recipientLive.socket.close(); senderLive.socket.close(); }
+
+  assert.equal(sent.status, 200);
+  assert.equal((await (await request('/Message/unread-count', sessions[0])).json()).count, 1);
+  assert.equal((await (await request('/Message/unread-count', sessions[1])).json()).count, 0);
+  const delivery = await testQuery(POSTGRES_URL, 'SELECT COUNT(*)::int AS count FROM "EmailDeliveries" WHERE "Recipient"=$1', [`msgpref-0-${runId}@example.com`]);
+  // The initial verification attempt is recorded; sending the private message adds no email attempt.
+  assert.equal(delivery.rows[0].count, 1);
+});

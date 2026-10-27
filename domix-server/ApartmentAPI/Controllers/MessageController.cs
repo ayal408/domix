@@ -20,6 +20,14 @@ namespace serverApi.Controllers
             _logger = logger;
         }
 
+        [HttpGet("unread-count")]
+        public async Task<IActionResult> UnreadCount(CancellationToken ct)
+        {
+            var userId = GetCurrentUserId();
+            if (userId is null) return Unauthorized();
+            return Ok(new { count = await _messageService.GetUnreadCountAsync(userId.Value, ct) });
+        }
+
         // ================= SEND MESSAGE =================
         [HttpPost]
         public async Task<IActionResult> SendMessage([FromBody] CreateMessageDto dto, CancellationToken cancellationToken)

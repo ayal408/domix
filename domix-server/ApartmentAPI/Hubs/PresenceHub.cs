@@ -13,6 +13,8 @@ namespace serverApi.Hubs
     [Authorize]
     public class PresenceHub : Hub
     {
+        public static string MessageGroup(Guid userId) => "messages:" + userId.ToString("D");
+
         private const string AdminGroup = "presence-admins";
 
         // Connections-per-user, not just distinct user count: a user with two open tabs holds two
@@ -25,6 +27,7 @@ namespace serverApi.Hubs
             if (userId is Guid id)
             {
                 ConnectionCounts.AddOrUpdate(id, 1, (_, count) => count + 1);
+                await Groups.AddToGroupAsync(Context.ConnectionId, MessageGroup(id));
             }
 
             if (IsPrivileged())

@@ -815,6 +815,11 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<byte[]>("ProfileImage")
                         .HasColumnType("bytea");
 
+                    b.Property<bool>("ReceiveMessageEmails")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<string>("RegistrationMethod")
                         .IsRequired()
                         .HasColumnType("text");

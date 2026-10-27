@@ -4,6 +4,9 @@ import { env } from '@/config/env'
 import { getAccessToken, isAccessTokenExpired } from '@/api/tokenStore'
 import { refreshAccessToken } from '@/api/http'
 import { queryClient } from '@/api/queryClient'
+import i18n from '@/i18n'
+import { useToastStore } from '@/stores/toast.store'
+import '@/features/account/message-preferences.i18n'
 import { queryKeys } from '@/api/queryKeys'
 
 interface PresenceState {
@@ -49,6 +52,21 @@ export const usePresenceStore = create<PresenceState>((set) => ({
       })
       .withAutomaticReconnect()
       .build()
+
+    const current = connection
+    const received = new Set<string>()
+    connection.on('MessageReceived', (event: { messageId?: string }) => {
+      if (connection !== current || !event.messageId || received.has(event.messageId)) return
+      received.add(event.messageId)
+      if (received.size > 100) received.delete(received.values().next().value!)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages.all })
+      useToastStore.getState().push({ variant: 'info', title: i18n.t('messagePreferences:incoming'), description: i18n.t('messagePreferences:incomingHint') })
+    })
+    connection.onreconnected(() => {
+      if (connection !== current) return
+      void queryClient.invalidateQueries({ queryKey: queryKeys.messages.all })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    })
 
     connection.on('ActiveUserCountChanged', (count: number) => set({ activeUserCount: count }))
     // Every signed-in tab receives this (see NotificationHub broadcast — Clients.All), not just

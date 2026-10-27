@@ -1,3 +1,4 @@
+import { MessagePreferences } from './MessagePreferences'
 import { PrivacyControls } from './PrivacyControls'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -153,6 +154,7 @@ export default function AccountPage() {
         </div>
       </Card>
 
+      <MessagePreferences />
       <PrivacyControls />
       <Card className="flex flex-col gap-3 border-danger/40 p-6">
         <h2 className="text-base font-semibold text-danger">{t('account.dangerZone')}</h2>

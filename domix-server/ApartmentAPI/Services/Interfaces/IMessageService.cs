@@ -4,6 +4,7 @@ namespace serverApi.Services.Interfaces
 {
     public interface IMessageService
     {
+        Task<int> GetUnreadCountAsync(Guid userId, CancellationToken cancellationToken = default);
         Task<MessageResponseDto> SendMessageAsync(CreateMessageDto dto, Guid senderId, CancellationToken cancellationToken = default);
         Task<IEnumerable<MessageResponseDto>> GetOwnerMessagesAsync(Guid ownerId, int page, int pageSize, CancellationToken cancellationToken = default);
         Task<IEnumerable<MessageResponseDto>> GetArchivedMessagesAsync(Guid ownerId, CancellationToken cancellationToken = default);

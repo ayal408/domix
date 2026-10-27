@@ -36,6 +36,7 @@ namespace serverApi.Models
         public string LanguagePreference { get; set; } = "he";
 
         /// <summary>Notifications created after this time count as unread. Null means none have ever been seen.</summary>
+        public bool ReceiveMessageEmails { get; set; } = true;
         public DateTime? NotificationsDismissedAt { get; set; }
         public DateTime? NotificationsSeenAt { get; set; }
 
