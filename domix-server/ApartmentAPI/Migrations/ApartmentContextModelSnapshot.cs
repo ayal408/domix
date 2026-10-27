@@ -147,6 +147,8 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.Property<DateTime?>("LastConfirmedAt").HasColumnType("timestamp with time zone");
                     b.Property<DateTime?>("RenewalSnoozedUntil").HasColumnType("timestamp with time zone");
+                    b.Property<Guid?>("ClientDraftId").HasColumnType("uuid");
+                    b.HasIndex("UserId", "ClientDraftId").IsUnique().HasFilter("\"ClientDraftId\" IS NOT NULL");
                     b.HasKey("ApartmentId");
 
                     b.HasIndex("UserId");
@@ -549,12 +551,14 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AlertChannel").IsRequired().ValueGeneratedOnAdd().HasMaxLength(20).HasColumnType("character varying(20)").HasDefaultValue("Both");
                     b.HasKey("SavedSearchId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("SavedSearches", t =>
                         {
+                            t.HasCheckConstraint("CK_SavedSearches_AlertChannel", "\"AlertChannel\" IN ('Site','Email','Both','Off')");
                             t.HasCheckConstraint("CK_SavedSearches_Ranges", "(\"MinPrice\" IS NULL OR \"MinPrice\" >= 0) AND (\"MaxPrice\" IS NULL OR \"MaxPrice\" >= 0) AND (\"MinPrice\" IS NULL OR \"MaxPrice\" IS NULL OR \"MinPrice\" <= \"MaxPrice\") AND (\"MinRooms\" IS NULL OR \"MinRooms\" >= 0) AND (\"MaxRooms\" IS NULL OR \"MaxRooms\" >= 0) AND (\"MinRooms\" IS NULL OR \"MaxRooms\" IS NULL OR \"MinRooms\" <= \"MaxRooms\")");
                         });
                 });
@@ -602,6 +606,9 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<DateTime>("ThroughAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("MatchCount").HasColumnType("integer");
+                    b.Property<bool>("SiteVisible").ValueGeneratedOnAdd().HasColumnType("boolean").HasDefaultValue(true);
+                    b.Property<DateTime?>("SeenAt").HasColumnType("timestamp with time zone");
                     b.HasKey("Id");
 
                     b.HasIndex("SavedSearchId", "FromAt")
@@ -1134,6 +1141,8 @@ namespace domix_server.ApartmentAPI.Migrations
                 b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
                 b.Property<Guid>("Revision").IsConcurrencyToken().HasColumnType("uuid");
                 b.Property<DateTime>("UpdatedAt").HasColumnType("timestamp with time zone");
+                b.Property<Guid?>("ReminderDismissedARevision").HasColumnType("uuid");
+                b.Property<Guid?>("ReminderDismissedBRevision").HasColumnType("uuid");
                 b.HasKey("Id");
                 b.HasIndex("ParticipantA"); b.HasIndex("ParticipantB"); b.HasIndex("ConversationId", "UpdatedAt");
                 b.HasIndex("ConversationId").IsUnique().HasFilter("\"Status\" IN ('Pending','Accepted')");
@@ -1141,6 +1150,16 @@ namespace domix_server.ApartmentAPI.Migrations
             });
             modelBuilder.Entity("serverApi.Models.ConversationVisit").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("ParticipantA").OnDelete(DeleteBehavior.Restrict).IsRequired();
             modelBuilder.Entity("serverApi.Models.ConversationVisit").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("ParticipantB").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            modelBuilder.Entity("serverApi.Models.ConversationLead", b => {
+                b.Property<Guid>("ConversationId").HasColumnType("uuid");
+                b.Property<Guid>("OwnerId").HasColumnType("uuid");
+                b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                b.Property<Guid>("Revision").IsConcurrencyToken().HasColumnType("uuid");
+                b.Property<DateTime>("UpdatedAt").HasColumnType("timestamp with time zone");
+                b.HasKey("ConversationId"); b.HasIndex("OwnerId");
+                b.ToTable("ConversationLeads", t=>t.HasCheckConstraint("CK_ConversationLeads_Status", "\"Status\" IN ('New','InProgress','NotRelevant')"));
+            });
+            modelBuilder.Entity("serverApi.Models.ConversationLead").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("OwnerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
 #pragma warning restore 612, 618
         }
     }

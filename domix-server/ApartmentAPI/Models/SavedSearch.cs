@@ -11,6 +11,7 @@ namespace serverApi.Models
         [Required]
         public Guid UserId { get; set; }
 
+        [MaxLength(20)] public string AlertChannel { get; set; } = "Both";
         [Required]
         public string Name { get; set; } = string.Empty;
 

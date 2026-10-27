@@ -3,6 +3,7 @@ namespace serverApi.Models.DTOs
     public class SavedSearchDTO
     {
         public Guid SavedSearchId { get; set; }
+        public string AlertChannel { get; set; } = "Both";
         public string Name { get; set; } = string.Empty;
         public string? ListingType { get; set; }
         public string? City { get; set; }
@@ -19,6 +20,7 @@ namespace serverApi.Models.DTOs
 
     public class CreateSavedSearchDTO
     {
+        public string AlertChannel { get; set; } = "Both";
         public string Name { get; set; } = string.Empty;
         public string? ListingType { get; set; }
         public string? City { get; set; }

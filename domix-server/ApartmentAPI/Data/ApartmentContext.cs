@@ -9,6 +9,7 @@ namespace serverApi.Data
         {
         }
 
+        public DbSet<ConversationLead> ConversationLeads { get; set; }
         public DbSet<UserBlock> UserBlocks { get; set; }
         public DbSet<ListingReport> ListingReports { get; set; }
         public DbSet<ConversationVisit> ConversationVisits { get; set; }
@@ -52,6 +53,14 @@ namespace serverApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<ConversationLead>().HasKey(x=>x.ConversationId);
+            modelBuilder.Entity<ConversationLead>().Property(x=>x.ConversationId).ValueGeneratedNever();
+            modelBuilder.Entity<ConversationLead>().HasOne<User>().WithMany().HasForeignKey(x=>x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ConversationLead>().ToTable(t=>t.HasCheckConstraint("CK_ConversationLeads_Status", "\"Status\" IN ('New','InProgress','NotRelevant')"));
+            modelBuilder.Entity<Apartment>().HasIndex(x=>new{x.UserId,x.ClientDraftId}).IsUnique().HasFilter("\"ClientDraftId\" IS NOT NULL");
+            modelBuilder.Entity<SavedSearch>().Property(x=>x.AlertChannel).HasDefaultValue("Both");
+            modelBuilder.Entity<SavedSearch>().ToTable(t=>t.HasCheckConstraint("CK_SavedSearches_AlertChannel", "\"AlertChannel\" IN ('Site','Email','Both','Off')"));
+            modelBuilder.Entity<SavedSearchEmail>().Property(x=>x.SiteVisible).HasDefaultValue(true);
             modelBuilder.Entity<UserBlock>().HasKey(x => new { x.BlockerId, x.BlockedId });
             modelBuilder.Entity<UserBlock>().HasOne<User>().WithMany().HasForeignKey(x => x.BlockerId).OnDelete(DeleteBehavior.Restrict);
             modelBuilder.Entity<UserBlock>().HasOne<User>().WithMany().HasForeignKey(x => x.BlockedId).OnDelete(DeleteBehavior.Restrict);

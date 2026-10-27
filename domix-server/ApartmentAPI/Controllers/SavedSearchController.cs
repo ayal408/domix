@@ -36,7 +36,7 @@ namespace serverApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSavedSearchDTO dto, CancellationToken cancellationToken)
         {
-            if (dto == null || string.IsNullOrWhiteSpace(dto.Name))
+            if (dto == null || string.IsNullOrWhiteSpace(dto.Name) || !new[]{"Site","Email","Both","Off"}.Contains(dto.AlertChannel))
                 return BadRequest("A name is required for a saved search.");
 
             var userId = GetCurrentUserId();

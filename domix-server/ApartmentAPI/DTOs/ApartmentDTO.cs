@@ -45,6 +45,7 @@ namespace serverApi.Models.DTOs
 
     public class CreateApartmentDTO : ListingTerms
     {
+        public Guid? ClientDraftId { get; set; }
         public string city { get; set; } = string.Empty;
         public string address { get; set; } = string.Empty;
         public string? area { get; set; }

@@ -94,7 +94,7 @@ namespace serverApi.Services.Implementations
                         var current = await context.SavedSearches.FromSqlInterpolated(
                             $@"SELECT * FROM ""SavedSearches"" WHERE ""SavedSearchId"" = {savedSearch.SavedSearchId} FOR UPDATE")
                             .SingleOrDefaultAsync(cancellationToken);
-                        if (current is null) return;
+                        if (current is null || current.AlertChannel=="Off") return;
                         var matches = (await savedSearchService.FindNewMatchesAsync(current, cancellationToken))
                             .Where(x => x.dateInsert <= now).ToList();
                         if (matches.Count == 0)
@@ -104,7 +104,7 @@ namespace serverApi.Services.Implementations
                             .AsNoTracking()
                             .FirstOrDefaultAsync(u => u.UserId == savedSearch.UserId, cancellationToken);
 
-                        if (string.IsNullOrWhiteSpace(user?.EmailAddress))
+                        if (user is null || user.IsBlocked)
                         {
                             // No address to notify -- leave LastNotifiedAt alone so these matches are
                             // still picked up (and an email attempted) on a later sweep, e.g. once the
@@ -116,8 +116,11 @@ namespace serverApi.Services.Implementations
                         context.SavedSearchEmails.Add(new Models.SavedSearchEmail
                         {
                             SavedSearchId = current.SavedSearchId, FromAt = current.LastNotifiedAt, ThroughAt = now,
-                            Recipient = user.EmailAddress,
-                            Subject = EmailText.MatchesTitle(savedSearch.Name, matches.Count, user.LanguagePreference), HtmlBody = html
+                            MatchCount = matches.Count, SiteVisible = current.AlertChannel is "Site" or "Both",
+                            Status = (current.AlertChannel is "Email" or "Both") && !string.IsNullOrWhiteSpace(user.EmailAddress) ? "Pending" : "Cancelled",
+                            FailureCode = current.AlertChannel=="Site" ? "SITE_ONLY" : string.IsNullOrWhiteSpace(user.EmailAddress) ? "EMAIL_ADDRESS_UNAVAILABLE" : null,
+                            Recipient = current.AlertChannel is "Email" or "Both" ? user.EmailAddress ?? "" : "",
+                            Subject = EmailText.MatchesTitle(savedSearch.Name, matches.Count, user.LanguagePreference), HtmlBody = current.AlertChannel is "Email" or "Both" ? html : ""
                     });
                     current.LastNotifiedAt = now;
                     await context.SaveChangesAsync(cancellationToken);

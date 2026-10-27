@@ -153,10 +153,17 @@ namespace serverApi.Services.Implementations
 
         public async Task<ApartmentDTO> CreateApartmentAsync(CreateApartmentDTO dto, Guid userId, CancellationToken cancellationToken = default)
         {
+            if(dto.ClientDraftId.HasValue)
+            {
+                var prior=await _context.Apartments.IgnoreQueryFilters().AsNoTracking().Include(a=>a.ApartmentImages).FirstOrDefaultAsync(a=>a.UserId==userId && a.ClientDraftId==dto.ClientDraftId,cancellationToken);
+                if(prior?.IsDeleted==true)throw new InvalidOperationException("DRAFT_WITHDRAWN");
+                if(prior!=null)return Map(prior);
+            }
             var (lat, lng) = await _geocodingService.GetCoordinatesAsync(dto.city, dto.address, cancellationToken);
 
             var apartment = new Apartment
             {
+                ClientDraftId = dto.ClientDraftId,
                 ApartmentId = Guid.NewGuid(),
                 UserId = userId,
                 city = dto.city.Trim(),
@@ -185,7 +192,15 @@ namespace serverApi.Services.Implementations
             };
 
             _context.Apartments.Add(apartment);
-            await _context.SaveChangesAsync(cancellationToken);
+            try { await _context.SaveChangesAsync(cancellationToken); }
+            catch(DbUpdateException) when(dto.ClientDraftId.HasValue)
+            {
+                _context.Entry(apartment).State=EntityState.Detached;
+                var prior=await _context.Apartments.IgnoreQueryFilters().AsNoTracking().Include(a=>a.ApartmentImages).FirstOrDefaultAsync(a=>a.UserId==userId && a.ClientDraftId==dto.ClientDraftId,cancellationToken);
+                if(prior==null)throw;
+                if(prior.IsDeleted)throw new InvalidOperationException("DRAFT_WITHDRAWN");
+                return Map(prior);
+            }
 
             _logger.LogInformation("Successfully created apartment {ApartmentId} for user {UserId}", apartment.ApartmentId, userId);
 

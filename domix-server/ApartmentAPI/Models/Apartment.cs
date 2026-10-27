@@ -5,6 +5,7 @@ namespace serverApi.Models
 {
     public class Apartment
     {
+        public Guid? ClientDraftId { get; set; }
         public Guid ApartmentId { get; set; }
         public Guid UserId { get; set; }
         public ApartmentStatus Status { get; set; } = ApartmentStatus.Available;

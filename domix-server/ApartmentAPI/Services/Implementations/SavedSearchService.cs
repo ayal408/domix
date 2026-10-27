@@ -37,6 +37,7 @@ namespace serverApi.Services.Implementations
                 SavedSearchId = Guid.NewGuid(),
                 UserId = userId,
                 Name = dto.Name.Trim(),
+                AlertChannel = dto.AlertChannel,
                 ListingType = dto.ListingType,
                 City = dto.City?.Trim(),
                 Area = dto.Area?.Trim(),
@@ -108,6 +109,7 @@ namespace serverApi.Services.Implementations
         {
             SavedSearchId = s.SavedSearchId,
             Name = s.Name,
+            AlertChannel = s.AlertChannel,
             ListingType = s.ListingType,
             City = s.City,
             Area = s.Area,
