@@ -7,6 +7,7 @@ import {
   type ApartmentSearchFormInput,
   type ApartmentSearchFormValues,
 } from '@/features/apartments/schemas'
+import { RangeFilter } from '@/components/ui/RangeFilter'
 import { SelectField } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { useCities } from '@/hooks/useApartments'
@@ -64,12 +65,14 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
           {includeSelected(cities ?? [], watch('city')).map(city => <option key={city} value={city}>{city}</option>)}
         </SelectField>
       </div>
-      {(['minPrice', 'maxPrice', 'minRooms', 'maxRooms'] as const).map(name => (
-        <SelectField key={name} label={t(`apartments.filters.${name}`)} error={errors[name]?.message} {...register(name)}>
-          <option value="">{t('apartments.filters.any')}</option>
-          {(name.endsWith('Price') ? priceOptions : roomOptions).map(value => <option key={value} value={value}>{new Intl.NumberFormat().format(value)}</option>)}
-        </SelectField>
-      ))}
+      {(['Price', 'Rooms'] as const).map(kind => {
+        const min = `min${kind}` as const, max = `max${kind}` as const
+        return <RangeFilter key={kind} minLabel={t(`apartments.filters.${min}`)} maxLabel={t(`apartments.filters.${max}`)} anyLabel={t('apartments.filters.any')}
+          minValue={watch(min)} maxValue={watch(max)} options={kind === 'Price' ? priceOptions : roomOptions} step={kind === 'Price' ? 1 : 0.5}
+          minError={errors[min]?.message} maxError={errors[max]?.message}
+          onMinChange={value => setValue(min, value, { shouldDirty: true, shouldValidate: true })}
+          onMaxChange={value => setValue(max, value, { shouldDirty: true, shouldValidate: true })} />
+      })}
       <div className="col-span-2 sm:col-span-1">
         <SelectField label={t('apartments.filters.area')} disabled={areas.isFetching && !areas.data} {...register('area')}>
           <option value="">{t('apartments.filters.areaPlaceholder')}</option>
