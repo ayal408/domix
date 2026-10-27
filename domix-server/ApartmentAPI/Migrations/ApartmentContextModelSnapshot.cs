@@ -1114,6 +1114,7 @@ namespace domix_server.ApartmentAPI.Migrations
                 b.Property<Guid?>("MessageId").HasColumnType("uuid");
                 b.Property<Guid?>("ApartmentId").HasColumnType("uuid");
                 b.Property<string>("Reason").IsRequired().HasMaxLength(40).HasColumnType("character varying(40)");
+                b.Property<string>("Evidence").IsRequired().HasMaxLength(2000).HasColumnType("character varying(2000)");
                 b.Property<string>("Details").IsRequired().HasMaxLength(1000).HasColumnType("character varying(1000)");
                 b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
                 b.Property<DateTime?>("ReviewedAt").HasColumnType("timestamp with time zone");

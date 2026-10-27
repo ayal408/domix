@@ -54,6 +54,10 @@ test('upgrade preserves legacy ratings and orphan references without deleting re
   await c.query(sql('schema-upgrade.sql'));
   const privacy = (await c.query(`SELECT "SenderIsAnonymous","RecipientIsAnonymous","Content" FROM "Messages" WHERE "MessageId"='66666666-6666-6666-6666-666666666666'`)).rows[0];
   assert.equal(privacy.SenderIsAnonymous, false); assert.equal(privacy.RecipientIsAnonymous, true); assert.equal(privacy.Content, 'Anonymous legacy inquiry');
+  const conversation=(await c.query(`SELECT "ConversationId" FROM "Messages" WHERE "MessageId"='66666666-6666-6666-6666-666666666666'`)).rows[0].ConversationId;
+  const {createHash}=await import('node:crypto');const key=createHash('md5').update([owner,'33333333-3333-3333-3333-333333333333'].sort().join(':')+':'+home).digest('hex');
+  assert.equal(conversation.replaceAll('-',''),key);
+
   const a = (await c.query('SELECT * FROM "Apartments" WHERE "ApartmentId"=$1', [home])).rows[0];
   assert.equal(Number(a.price), -5);
   await c.query('UPDATE "Apartments" SET "IsDeleted"=TRUE WHERE "ApartmentId"=$1', [home]);

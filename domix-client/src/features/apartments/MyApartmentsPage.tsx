@@ -1,3 +1,4 @@
+import { RenewalReminders } from '@/features/community/RenewalReminders'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
@@ -23,6 +24,7 @@ export default function MyApartmentsPage() {
   return (
     <div className="flex flex-col gap-4">
     {canReturn && <Link className="text-primary underline" to={returnTo}>{t('discovery.returnSearch')}</Link>}
+    <RenewalReminders />
     <ApartmentManagementList
       apartments={own}
       isLoading={isLoading}

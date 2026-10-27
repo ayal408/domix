@@ -63,6 +63,7 @@ namespace serverApi.Services.Implementations
             {
                 var listing = await _context.Apartments.AsNoTracking().FirstOrDefaultAsync(
                     a => a.ApartmentId == dto.ApartmentId, cancellationToken);
+                if (listing != null && listing.Status != ApartmentStatus.Available && listing.Status != ApartmentStatus.Negotiating) throw new ArgumentException("Listing unavailable");
                 if (listing == null) throw new KeyNotFoundException("הנכס אינו זמין");
                 if (dto.OwnerId != Guid.Empty && dto.OwnerId != listing.UserId)
                     throw new ArgumentException("הנמען אינו בעל המודעה");

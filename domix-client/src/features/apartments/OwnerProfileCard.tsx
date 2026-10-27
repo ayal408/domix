@@ -31,7 +31,7 @@ export function OwnerProfileCard({ ownerId, currentApartmentId, isAnonymous, lis
 
   const otherActiveListings = (apartments ?? []).filter(
     (apartment) =>
-      apartment.userId === ownerId && apartment.status === 'Available' && apartment.apartmentId !== currentApartmentId,
+      apartment.userId === ownerId && (apartment.status === 'Available' || apartment.status === 'Negotiating') && apartment.apartmentId !== currentApartmentId,
   ).length
 
   if (isLoading) {

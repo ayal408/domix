@@ -1,3 +1,5 @@
+vi.mock('@/features/community/useRenewals', () => ({ useRenewals: () => ({ data: [] }) }))
+vi.mock('@/features/community/RenewalReminders', () => ({ RenewalReminders: () => null }))
 import { beforeEach, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

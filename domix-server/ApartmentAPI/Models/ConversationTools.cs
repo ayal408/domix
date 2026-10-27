@@ -13,6 +13,7 @@ public class ListingReport
     public Guid? MessageId { get; set; }
     public Guid? ApartmentId { get; set; }
     [MaxLength(40)] public string Reason { get; set; } = "Other";
+    [MaxLength(2000)] public string Evidence { get; set; } = "";
     [MaxLength(1000)] public string Details { get; set; } = "";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReviewedAt { get; set; }

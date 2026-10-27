@@ -24,7 +24,7 @@ export default function ExchangePage() {
   const userId = useAuthStore(s => s.user?.userId)
   const authenticated = status === 'authenticated'
   const listings = useApartments(authenticated)
-  const offers = useMemo(() => (listings.data ?? []).filter(a => a.userId === userId && a.listingType === 'Exchange' && a.status === 'Available'), [listings.data, userId])
+  const offers = useMemo(() => (listings.data ?? []).filter(a => a.userId === userId && a.listingType === 'Exchange' && (a.status === 'Available' || a.status === 'Negotiating')), [listings.data, userId])
   const destination = params.get('destination') ?? ''
   const start = params.get('start') ?? ''
   const end = params.get('end') ?? ''

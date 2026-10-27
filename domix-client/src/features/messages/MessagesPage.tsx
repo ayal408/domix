@@ -1,3 +1,4 @@
+import { ConversationWorkspace } from '@/features/community/ConversationWorkspace'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
@@ -29,7 +30,7 @@ const tabClasses = (active: boolean) =>
     active ? 'bg-primary/15 text-primary' : 'text-muted hover:bg-card-muted',
   )
 
-export default function MessagesPage() {
+function LegacyMessagesPage() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.user)
   const pushToast = useToastStore((state) => state.push)
@@ -176,4 +177,9 @@ export default function MessagesPage() {
       />
     </div>
   )
+}
+
+export default function MessagesPage() {
+  const {t}=useTranslation('workflows');const [legacy,L]=useState(false)
+  return <div className="flex flex-col gap-4"><div className="flex flex-wrap gap-2"><Button variant={legacy?'secondary':'primary'} onClick={()=>L(false)}>{t('threads')}</Button><Button variant={legacy?'primary':'secondary'} onClick={()=>L(true)}>{t('legacy')}</Button></div>{legacy?<LegacyMessagesPage/>:<ConversationWorkspace/>}</div>
 }

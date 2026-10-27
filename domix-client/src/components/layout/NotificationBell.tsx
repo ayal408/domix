@@ -1,3 +1,5 @@
+import { RenewalReminders } from '@/features/community/RenewalReminders'
+import { useRenewals } from '@/features/community/useRenewals'
 import { CloseButton, Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
 import { useTranslation } from 'react-i18next'
 import { useNotificationFeed, useMarkNotificationsSeen, useDismissNotifications } from '@/hooks/useNotifications'
@@ -13,7 +15,9 @@ export function NotificationBell() {
   const markSeen = useMarkNotificationsSeen()
   const dismiss = useDismissNotifications()
 
+  const renewals = useRenewals()
   const unreadCount = data?.unreadCount ?? 0
+  const badgeCount = unreadCount + (renewals.data?.length ?? 0)
 
   function handleButtonClick() {
     // Fires on both open and close — harmless either way, and marking-seen is idempotent server-side.
@@ -29,9 +33,9 @@ export function NotificationBell() {
         aria-label={t('notifications.title')}
       >
         <BellIcon className="h-5 w-5" />
-        {unreadCount > 0 && (
+        {badgeCount > 0 && (
           <span className="absolute end-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white">
-            {unreadCount > 9 ? '9+' : unreadCount}
+            {badgeCount > 9 ? '9+' : badgeCount}
           </span>
         )}
       </PopoverButton>
@@ -48,6 +52,7 @@ export function NotificationBell() {
             <span aria-hidden="true">×</span>
           </CloseButton>
         </div>
+        <RenewalReminders compact />
         {!!data?.notifications.length && <button type="button" disabled={dismiss.isPending} onClick={() => {
           const through = data.notifications.reduce((latest, item) => item.createdAt > latest ? item.createdAt : latest, data.notifications[0]!.createdAt)
           dismiss.mutate(through, { onSuccess: () => close() })

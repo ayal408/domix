@@ -5,7 +5,7 @@ public static class ExchangeMatching
 {
     public static DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeBySystemTimeZoneId(DateTime.UtcNow, "Asia/Jerusalem"));
     public static bool Covers(Apartment apartment, DateOnly start, DateOnly end) =>
-        apartment.ListingType == "Exchange" && apartment.Status == ApartmentStatus.Available &&
+        apartment.ListingType == "Exchange" && (apartment.Status == ApartmentStatus.Available || apartment.Status == ApartmentStatus.Negotiating) &&
         apartment.AvailableFrom.HasValue && apartment.AvailableTo.HasValue &&
         apartment.AvailableFrom.Value <= start && apartment.AvailableTo.Value >= end;
 

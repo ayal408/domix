@@ -215,7 +215,7 @@ export const PROPERTY_TYPES = ['Apartment', 'House', 'Studio', 'Penthouse', 'Gar
 export type PropertyType = (typeof PROPERTY_TYPES)[number]
 
 /** `ApartmentStatus` on the server. Rented/Sold listings drop out of search and the public catalog but are never deleted. */
-export const APARTMENT_STATUSES = ['Available', 'Rented', 'Sold'] as const
+export const APARTMENT_STATUSES = ['Available', 'Rented', 'Sold', 'Negotiating'] as const
 export type ApartmentStatusValue = (typeof APARTMENT_STATUSES)[number]
 
 /** `ApartmentDTO`. */
@@ -408,6 +408,8 @@ export interface CreateSavedSearchRequest {
 
 /** `MessageResponseDto`. */
 export interface Message {
+  conversationId?: string
+  isMine?: boolean
   senderIsAnonymous?: boolean
   apartmentId?: Guid | null
   offeredApartmentId?: Guid | null

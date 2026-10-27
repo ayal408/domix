@@ -50,7 +50,7 @@ export default function MapPage() {
   const { data, isLoading, isError } = useApartments()
   const [selectedId, setSelectedId] = useState<string | null>(null)
 
-  const listings = useMemo(() => (data ?? []).filter(a => a.status === 'Available').filter(hasCoordinates), [data])
+  const listings = useMemo(() => (data ?? []).filter(a => (a.status === 'Available' || a.status === 'Negotiating')).filter(hasCoordinates), [data])
   const selected = useMemo(() => listings.find((a) => a.apartmentId === selectedId) ?? null, [listings, selectedId])
 
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null)

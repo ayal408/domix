@@ -19,7 +19,10 @@ public class CommunityController(ApartmentContext db):ControllerBase
         var cutoff=DateTime.UtcNow.AddDays(-1);
         if(await db.ListingReports.CountAsync(r=>r.ReporterId==Caller && r.CreatedAt>cutoff,ct)>=20)return StatusCode(429);
         if(await db.ListingReports.AnyAsync(r=>r.ReporterId==Caller && r.MessageId==input.MessageId && r.ApartmentId==input.ApartmentId && r.ReviewedAt==null,ct))return NoContent();
-        db.ListingReports.Add(new ListingReport{ReporterId=Caller,MessageId=input.MessageId,ApartmentId=input.ApartmentId,Reason=input.Reason,Details=input.Details?.Trim()??""});await db.SaveChangesAsync(ct);return NoContent();
+        var evidence=input.MessageId.HasValue ? (await db.Messages.Where(m=>m.MessageId==input.MessageId).Select(m=>m.Content).SingleAsync(ct)) :
+            (await db.Apartments.Where(a=>a.ApartmentId==input.ApartmentId).Select(a=>a.city+", "+a.area).SingleAsync(ct));
+        if(evidence.Length>2000)evidence=evidence[..2000];
+        db.ListingReports.Add(new ListingReport{Evidence=evidence,ReporterId=Caller,MessageId=input.MessageId,ApartmentId=input.ApartmentId,Reason=input.Reason,Details=input.Details?.Trim()??""});await db.SaveChangesAsync(ct);return NoContent();
     }
     [HttpGet("reports"),Authorize(Policy="ManagerOrAdmin")]public async Task<IActionResult> Reports([FromQuery]int offset=0,CancellationToken ct=default)=>Ok(await db.ListingReports.AsNoTracking().OrderBy(r=>r.ReviewedAt!=null).ThenByDescending(r=>r.CreatedAt).Skip(Math.Clamp(offset,0,100000)).Take(30).ToListAsync(ct));
     [HttpPost("reports/{id:guid}/review"),Authorize(Policy="ManagerOrAdmin")]public async Task<IActionResult> Review(Guid id,CancellationToken ct)

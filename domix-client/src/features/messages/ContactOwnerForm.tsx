@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+import '@/features/community/workflows.i18n'
 import { useState } from 'react'
 import { ContactDetailsFields } from './ContactDetailsFields'
 import { EMPTY_CONTACT, withContactDetails } from './contactDetails'
@@ -27,6 +29,7 @@ interface Props {
 /** Contact-the-owner form shown on a listing's detail page. */
 export function ContactOwnerForm({ isAnonymous, ownerId, senderId, apartmentId, listingAddress, offeredApartmentId, exchangeStart, exchangeEnd }: Props) {
   const { t } = useTranslation()
+  const [sentThread, setSentThread] = useState<string | null>(null)
   const [contact, setContact] = useState(EMPTY_CONTACT)
   const sendMessage = useSendMessage()
   const pushToast = useToastStore((state) => state.push)
@@ -47,7 +50,8 @@ export function ContactOwnerForm({ isAnonymous, ownerId, senderId, apartmentId, 
     const validation = contactOwnerSchema.safeParse({ content })
     if (!validation.success) { setError('content', { message: validation.error.issues[0]?.message }); return }
     try {
-      await sendMessage.mutateAsync({ senderId, ownerId, apartmentId, offeredApartmentId, exchangeStart: offeredApartmentId ? exchangeStart : undefined, exchangeEnd: offeredApartmentId ? exchangeEnd : undefined, content })
+      const sent = await sendMessage.mutateAsync({ senderId, ownerId, apartmentId, offeredApartmentId, exchangeStart: offeredApartmentId ? exchangeStart : undefined, exchangeEnd: offeredApartmentId ? exchangeEnd : undefined, content })
+      setSentThread(sent.conversationId ?? null)
       reset({ content: '' }); setContact(EMPTY_CONTACT)
       pushToast({ variant: 'success', title: t('messages.contact.sent') })
     } catch (error) {
@@ -63,6 +67,7 @@ export function ContactOwnerForm({ isAnonymous, ownerId, senderId, apartmentId, 
       {isAnonymous && <p className="text-sm text-muted">{t('privateMessages:privacy')}</p>}
       {exchangeStart && <p className="text-sm text-muted">{t('discovery.contactHint')}</p>}
       {offeredApartmentId && <p className="text-sm">{t('exchange.proposalDates')}: {exchangeStart} — {exchangeEnd}</p>}
+      {sentThread && <Link className="text-primary underline" to={`/messages?thread=${sentThread}`}>{t('workflows:continue')}</Link>}
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-3">
         <TextareaField
           label={t('messages.contact.label')}
