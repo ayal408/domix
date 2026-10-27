@@ -22,9 +22,10 @@ public class ApartmentImageServiceTests
     /// -- required since UploadImageAsync now checks real file content, not just the extension.</summary>
     private static IFormFile MakeFormFile(long length, string fileName = "photo.jpg")
     {
-        using var picture = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(2, 2);
-        var output = new MemoryStream();
-        SixLabors.ImageSharp.ImageExtensions.SaveAsJpeg(picture, output);
+        using var picture = new SkiaSharp.SKBitmap(2, 2);
+        using var image = SkiaSharp.SKImage.FromBitmap(picture);
+        using var encoded = image.Encode(SkiaSharp.SKEncodedImageFormat.Jpeg, 90);
+        var output = new MemoryStream(); encoded.SaveTo(output);
         if (length > output.Length) output.SetLength(length);
         output.Position = 0;
         return new FormFile(output, 0, output.Length, "Image", fileName);
@@ -128,10 +129,10 @@ public class ApartmentImageServiceTests
     public async Task UploadImageAsync_AcceptsARealPngRegardlessOfItsClaimedExtension()
     {
         var (_, service, apartmentId, ownerId) = await SetupAsync();
-        using var png = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(2, 2);
-        using var output = new MemoryStream();
-        SixLabors.ImageSharp.ImageExtensions.SaveAsPng(png, output);
-        var pngHeader = output.ToArray();
+        using var png = new SkiaSharp.SKBitmap(2, 2);
+        using var pngImage = SkiaSharp.SKImage.FromBitmap(png);
+        using var encoded = pngImage.Encode(SkiaSharp.SKEncodedImageFormat.Png, 100);
+        var pngHeader = encoded.ToArray();
         var dto = new UploadImageDto
         {
             ApartmentId = apartmentId,

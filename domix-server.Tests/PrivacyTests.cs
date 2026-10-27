@@ -11,9 +11,7 @@ using serverApi.Models;
 using serverApi.Models.DTOs;
 using serverApi.Services.Implementations;
 using serverApi.Services.Interfaces;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SkiaSharp;
 
 namespace domix_server.Tests;
 
@@ -95,13 +93,15 @@ public class PrivacyTests
     [Fact]
     public async Task ImageMetadataIsRemovedAndImageIsReencoded()
     {
-        using var image = new Image<Rgba32>(3, 3);
-        image.Metadata.ExifProfile = new ExifProfile(); image.Metadata.ExifProfile.SetValue(ExifTag.Artist, "Private owner");
-        using var source = new MemoryStream(); await image.SaveAsJpegAsync(source); source.Position = 0;
+        using var source = new MemoryStream(ImageEngineTests.JpegWithExif(3, 5, 6));
         var bytes = await PrivacyImages.SanitizeAsync(source, default);
-        using var sanitized = Image.Load(bytes); Assert.Null(sanitized.Metadata.ExifProfile); Assert.Null(sanitized.Metadata.XmpProfile);
+        using var sanitized = SKBitmap.Decode(bytes);
+        Assert.Equal(5, sanitized.Width); Assert.Equal(3, sanitized.Height);
+        Assert.DoesNotContain("Exif", System.Text.Encoding.ASCII.GetString(bytes));
+        Assert.DoesNotContain("Private owner", System.Text.Encoding.ASCII.GetString(bytes));
         await Assert.ThrowsAsync<ArgumentException>(() => PrivacyImages.SanitizeAsync(new MemoryStream(new byte[] { 0xff, 0xd8, 0xff }), default));
     }
+
     [Fact]
     public async Task AccountDeletionScrubsSupportAndQueuedDeliveryCopies()
     {
@@ -126,7 +126,8 @@ public class PrivacyTests
     {
         await using var db = Db(); var owner = Owner(); var home = Home(owner.UserId); var archived = Home(owner.UserId); archived.IsDeleted = true;
         var url = "/images/" + Guid.NewGuid() + ".jpg"; var path = PrivacyImages.LocalPath(url)!; Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        using var picture = new Image<Rgba32>(2, 2); await picture.SaveAsJpegAsync(path);
+        using var picture = new SKBitmap(2, 2); using var image = SKImage.FromBitmap(picture);
+        using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 90); await File.WriteAllBytesAsync(path, encoded.ToArray());
         db.Add(owner); db.AddRange(home, archived); db.AddRange(new ApartmentImage { ImageId = Guid.NewGuid(), ApartmentId = archived.ApartmentId, ImageUrl = url }, new ApartmentImage { ImageId = Guid.NewGuid(), ApartmentId = home.ApartmentId, ImageUrl = url }); await db.SaveChangesAsync();
         var maintenance = new PrivacyMaintenance(db, Config(), NullLogger<PrivacyMaintenance>.Instance);
         try

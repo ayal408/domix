@@ -89,8 +89,12 @@ jobs:
         run: npm test
 
   backend:
-    name: .NET backend
-    runs-on: ubuntu-latest
+    name: .NET backend (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     defaults:
       run:
         working-directory: domix-server

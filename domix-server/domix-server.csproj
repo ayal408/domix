@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>domix_server</RootNamespace>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,8 +18,8 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.4" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.1" />
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.2" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="2.1.13" />
-    <!-- Removed ImageSharp.Drawing to avoid commercial license requirement; using ImageSharp only -->
+    <PackageReference Include="SkiaSharp" Version="4.153.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="4.153.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.15" />
     <PackageReference Include="IdentityModel" Version="6.0.0" />
@@ -28,6 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="$(NuGetPackageRoot)skiasharp/4.153.1/LICENSE.txt" Link="third-party/SkiaSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)skiasharp.nativeassets.linux.nodependencies/4.153.1/THIRD-PARTY-NOTICES.txt" Link="third-party/SkiaSharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="domix-server.Tests" />
   </ItemGroup>
 
