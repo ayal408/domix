@@ -48,13 +48,18 @@ test('upgrade preserves legacy ratings and orphan references without deleting re
   // Historical invalid data must remain recoverable and archivable without inventing a new price.
   await c.query('UPDATE "Apartments" SET price=-5 WHERE "ApartmentId"=$1', [home]);
   await c.query(`INSERT INTO "Messages" ("MessageId","SenderId","OwnerId","ApartmentId","Content","CreatedAt","IsRead","IsDeleted","IsArchived") VALUES ('44444444-4444-4444-4444-444444444444',$1,$1,'99999999-9999-9999-9999-999999999999','Legacy message',now(),false,false,false)`, [owner]);
+  await legacyUser(c, '33333333-3333-3333-3333-333333333333', 'buyer@example.com', 'Buyer');
+  await c.query('UPDATE "Apartments" SET "IsAnonymous"=TRUE WHERE "ApartmentId"=$1', [home]);
+  await c.query(`INSERT INTO "Messages" ("MessageId","SenderId","OwnerId","ApartmentId","Content","CreatedAt","IsRead","IsDeleted","IsArchived") VALUES ('66666666-6666-6666-6666-666666666666','33333333-3333-3333-3333-333333333333',$1,$2,'Anonymous legacy inquiry',now(),false,false,false)`, [owner, home]);
   await c.query(sql('schema-upgrade.sql'));
+  const privacy = (await c.query(`SELECT "SenderIsAnonymous","RecipientIsAnonymous","Content" FROM "Messages" WHERE "MessageId"='66666666-6666-6666-6666-666666666666'`)).rows[0];
+  assert.equal(privacy.SenderIsAnonymous, false); assert.equal(privacy.RecipientIsAnonymous, true); assert.equal(privacy.Content, 'Anonymous legacy inquiry');
   const a = (await c.query('SELECT * FROM "Apartments" WHERE "ApartmentId"=$1', [home])).rows[0];
   assert.equal(Number(a.price), -5);
   await c.query('UPDATE "Apartments" SET "IsDeleted"=TRUE WHERE "ApartmentId"=$1', [home]);
   assert.equal(a.Rating, 4); assert.equal(a.RatingCount, 9); assert.equal(a.RecordedRatingCount, 0);
-  assert.equal((await c.query('SELECT * FROM "Messages"')).rows[0].ApartmentId, '99999999-9999-9999-9999-999999999999');
-  assert.equal((await c.query('SELECT "NormalizedEmail" FROM "Users"')).rows[0].NormalizedEmail, 'case@example.com');
+  assert.equal((await c.query(`SELECT * FROM "Messages" WHERE "MessageId"='44444444-4444-4444-4444-444444444444'`)).rows[0].ApartmentId, '99999999-9999-9999-9999-999999999999');
+  assert.equal((await c.query('SELECT "NormalizedEmail" FROM "Users" WHERE "UserId"=$1', [owner])).rows[0].NormalizedEmail, 'case@example.com');
   await assert.rejects(c.query(`INSERT INTO "Messages" ("MessageId","SenderId","OwnerId","ApartmentId","Content","CreatedAt","IsRead","IsDeleted","IsArchived") VALUES ('55555555-5555-5555-5555-555555555555',$1,$1,'99999999-9999-9999-9999-999999999999','New orphan',now(),false,false,false)`, [owner]), e => e.code === '23503');
 }));
 test('conflicting normalized identities abort upgrade without changing or deleting accounts', async () => fixture(async c => {
