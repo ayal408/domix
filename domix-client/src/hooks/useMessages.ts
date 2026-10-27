@@ -60,3 +60,11 @@ export function useDeleteMessage() {
     onSuccess: () => invalidateMessages(queryClient),
   })
 }
+
+export function useReplyMessage() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ messageId, content }: { messageId: Guid; content: string }) => messagesApi.replyMessage(messageId, content),
+    onSuccess: () => invalidateMessages(queryClient),
+  })
+}

@@ -11,10 +11,18 @@ namespace serverApi.Models.DTOs
         public required string Content { get; set; }
     }
 
+    public class ReplyMessageDto
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.StringLength(2000, MinimumLength = 1)]
+        public string Content { get; set; } = string.Empty;
+    }
+
     public class MessageResponseDto
     {
         public Guid MessageId { get; set; }
         public Guid SenderId { get; set; }
+        public bool SenderIsAnonymous { get; set; }
         public string? SenderName { get; set; }
         public Guid OwnerId { get; set; }
         public Guid? ApartmentId { get; set; }

@@ -16,7 +16,8 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { Button } from '@/components/ui/Button'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { cn } from '@/lib/cn'
-import type { Guid } from '@/types/api'
+import { ReplyMessageDialog } from './ReplyMessageDialog'
+import type { Message, Guid } from '@/types/api'
 
 const PAGE_SIZE = 20
 
@@ -35,6 +36,7 @@ export default function MessagesPage() {
 
   const [tab, setTab] = useState<Tab>('inbox')
   const [page, setPage] = useState(1)
+  const [replyTarget, setReplyTarget] = useState<Message | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Guid | null>(null)
 
   const ownerId = user?.userId
@@ -131,6 +133,7 @@ export default function MessagesPage() {
             <MessageItem
               key={message.messageId}
               message={message}
+              onReply={setReplyTarget}
               onMarkRead={handleMarkRead}
               onArchive={tab === 'inbox' ? handleArchive : undefined}
               onDelete={setDeleteTarget}
@@ -158,6 +161,8 @@ export default function MessagesPage() {
           </Button>
         </div>
       )}
+
+      {replyTarget && <ReplyMessageDialog key={replyTarget.messageId} message={replyTarget} onClose={() => setReplyTarget(null)} />}
 
       <ConfirmDialog
         open={deleteTarget != null}

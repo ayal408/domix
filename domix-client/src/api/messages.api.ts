@@ -51,3 +51,8 @@ export async function markMessageAsRead(messageId: Guid): Promise<void> {
 export async function deleteMessage(messageId: Guid): Promise<void> {
   await dataClient.delete(apiEndpoints.messages.remove(messageId))
 }
+
+export async function replyMessage(messageId: Guid, content: string): Promise<Message> {
+  const { data } = await dataClient.post<Message>(`/Message/${encodeURIComponent(messageId)}/reply`, { content })
+  return data
+}

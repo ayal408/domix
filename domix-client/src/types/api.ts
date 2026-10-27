@@ -408,6 +408,7 @@ export interface CreateSavedSearchRequest {
 
 /** `MessageResponseDto`. */
 export interface Message {
+  senderIsAnonymous?: boolean
   apartmentId?: Guid | null
   offeredApartmentId?: Guid | null
   exchangeStart?: string | null
