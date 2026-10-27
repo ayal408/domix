@@ -17,7 +17,7 @@ export function AppShell() {
       <ThemeSync />
       <Header />
       <EmailVerificationBanner />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 sm:py-8">
+      <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
         <Outlet />
       </main>
       <footer className="p-4 text-center text-sm"><Link to="/privacy" className="text-primary underline">{t('title')}</Link></footer>

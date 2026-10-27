@@ -26,3 +26,11 @@ export function useCreateNotification() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   })
 }
+
+export function useDismissNotifications() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: notificationsApi.dismissNotifications,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}

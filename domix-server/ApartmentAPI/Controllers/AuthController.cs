@@ -108,8 +108,13 @@ namespace serverApi.Controllers
             if (dto == null || dto.UserId == Guid.Empty)
                 return BadRequest(new { code = "INVALID_REQUEST" });
 
-            var sent = await _userService.ResendVerificationEmailAsync(dto.UserId, cancellationToken);
-            return sent ? Ok() : BadRequest(new { code = "ALREADY_VERIFIED_OR_NOT_FOUND" });
+            try
+            {
+                var sent = await _userService.ResendVerificationEmailAsync(dto.UserId, cancellationToken);
+                return sent ? Ok() : BadRequest(new { code = "ALREADY_VERIFIED_OR_NOT_FOUND" });
+            }
+            catch (serverApi.Services.Implementations.VerificationEmailDeliveryException ex)
+            { return StatusCode(503, new { code = ex.Message }); }
         }
 
         // ================= FORGOT PASSWORD =================

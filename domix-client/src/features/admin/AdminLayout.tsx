@@ -6,8 +6,8 @@ import './email.i18n'
 
 const tabClasses = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'border-b-2 px-3 py-2 text-sm font-medium transition-colors',
-    isActive ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-foreground',
+    'whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+    isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card-muted hover:text-foreground',
   )
 
 /** Shared shell for every `/admin/*` page — the route tree gates all of them on the ManagerOrAdmin policy. */
@@ -17,7 +17,7 @@ export function AdminLayout() {
 
   return (
     <div className="flex flex-col gap-6">
-      <nav className="flex gap-1 overflow-x-auto border-b border-border">
+      <nav className="flex flex-wrap gap-1 border-b border-border pb-3">
         <NavLink to="/admin/apartments" className={tabClasses}>
           {t('admin.nav.apartments')}
         </NavLink>

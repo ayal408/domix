@@ -55,6 +55,8 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
 
   const [cityQuery, setCityQuery] = useState('')
   const [addressQuery, setAddressQuery] = useState('')
+  const [desiredCityQuery, setDesiredCityQuery] = useState('')
+  const desiredCitySuggestions = useCitySuggestions(desiredCityQuery)
   const listingType = watch('listingType')
   const selectedCity = watch('city')
   const citySuggestions = useCitySuggestions(cityQuery)
@@ -64,6 +66,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
     if (open) {
       reset(apartment ? apartmentToFormValues(apartment) : APARTMENT_FORM_DEFAULTS)
       setCityQuery('')
+      setDesiredCityQuery('')
       setAddressQuery('')
     }
   }, [open, apartment, reset])
@@ -134,7 +137,13 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
                     <legend>{t('exchange.offerTerms')}</legend>
                     <Controller name="availableFrom" control={control} render={({ field }) => <HebrewDateField name={field.name} label={t('exchange.from')} required value={field.value ?? ''} onChange={field.onChange} error={errors.availableFrom?.message} />} />
                     <Controller name="availableTo" control={control} render={({ field }) => <HebrewDateField name={field.name} label={t('exchange.to')} required value={field.value ?? ''} onChange={field.onChange} minDate={watch('availableFrom') || undefined} error={errors.availableTo?.message} />} />
-                    <InputField label={t('exchange.destination')} required error={errors.desiredCity?.message} {...register('desiredCity')} />
+                    <Controller name="desiredCity" control={control} render={({ field }) => (
+                      <AddressAutocomplete label={t('exchange.destination')} required error={errors.desiredCity?.message}
+                        value={field.value ?? ''} onChange={field.onChange}
+                        query={desiredCityQuery} onQueryChange={setDesiredCityQuery}
+                        suggestions={desiredCitySuggestions.data ?? []} isLoading={desiredCitySuggestions.isFetching}
+                        placeholder={t('apartments.fields.cityPlaceholder')} />
+                    )} />
                     <p className="text-sm text-muted">{t('exchange.offerHint')}</p>
                   </fieldset>}
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

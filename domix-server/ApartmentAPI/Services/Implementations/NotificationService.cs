@@ -57,12 +57,13 @@ namespace serverApi.Services.Implementations
 
         public async Task<NotificationFeedDto> GetFeedAsync(Guid userId, CancellationToken cancellationToken = default)
         {
-            var seenAt = await _context.Users.AsNoTracking()
-                .Where(u => u.UserId == userId)
-                .Select(u => u.NotificationsSeenAt)
-                .FirstOrDefaultAsync(cancellationToken);
+            var account = await _context.Users.AsNoTracking().Where(u => u.UserId == userId)
+                .Select(u => new { u.NotificationsSeenAt, u.NotificationsDismissedAt }).SingleAsync(cancellationToken);
+            var seenAt = account.NotificationsSeenAt;
+            var dismissedAt = account.NotificationsDismissedAt;
 
             var notifications = await _context.Notifications
+                .Where(n => dismissedAt == null || n.CreatedAt > dismissedAt)
                 .Include(n => n.CreatedByUser)
                 .AsNoTracking()
                 .OrderByDescending(n => n.CreatedAt)
@@ -87,6 +88,15 @@ namespace serverApi.Services.Implementations
 
             user.NotificationsSeenAt = DateTime.UtcNow;
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task DismissThroughAsync(Guid userId, DateTime through, CancellationToken cancellationToken = default)
+        {
+            if (through.Kind != DateTimeKind.Utc || through > DateTime.UtcNow)
+                throw new ArgumentException("Invalid notification cutoff.");
+            // Monotonic and scoped to the authenticated user; never deletes shared announcements.
+            await _context.Users.Where(u => u.UserId == userId && (u.NotificationsDismissedAt == null || u.NotificationsDismissedAt < through))
+                .ExecuteUpdateAsync(s => s.SetProperty(u => u.NotificationsDismissedAt, through), cancellationToken);
         }
 
         private static NotificationDto ToDto(Notification notification, string? createdByUserName) => new NotificationDto

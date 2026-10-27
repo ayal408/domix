@@ -160,10 +160,12 @@ namespace serverApi.Extensions
             services.AddSingleton<GoogleOAuthService>();
             services.AddSingleton(new GmailTokenProtector(Environment.GetEnvironmentVariable("JWT_SECRET")!));
             services.AddSingleton<GmailConnectionService>();
+            services.AddSingleton<OutlookConnectionService>();
             services.AddScoped<EmailConfigurationService>();
             services.AddScoped<IEmailService, EmailService>();
 
             services.AddHttpClient("GoogleOAuth", client => client.Timeout = TimeSpan.FromSeconds(8));
+            services.AddHttpClient("OutlookMail", client => client.Timeout = TimeSpan.FromSeconds(10));
             services.AddHttpClient("GmailConsent", client => client.Timeout = TimeSpan.FromSeconds(10));
             services.AddHttpClient<IGeocodingService, NominatimGeocodingService>(client => client.Timeout = TimeSpan.FromSeconds(8));
             services.AddHttpClient<IIsraeliAddressService, IsraeliAddressService>();

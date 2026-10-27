@@ -11,6 +11,8 @@ namespace serverApi.Services.Interfaces
         Task<NotificationFeedDto> GetFeedAsync(Guid userId, CancellationToken cancellationToken = default);
 
         /// <summary>Marks every announcement up to now as read for this user.</summary>
+        Task DismissThroughAsync(Guid userId, DateTime through, CancellationToken cancellationToken = default);
+
         Task MarkSeenAsync(Guid userId, CancellationToken cancellationToken = default);
     }
 }

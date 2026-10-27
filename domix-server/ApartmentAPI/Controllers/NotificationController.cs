@@ -41,6 +41,15 @@ namespace serverApi.Controllers
             return NoContent();
         }
 
+        [HttpPost("dismiss")]
+        public async Task<IActionResult> Dismiss([FromBody] DismissNotificationsRequest input, CancellationToken ct)
+        {
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
+            try { await _notificationService.DismissThroughAsync(userId.Value, input.Through, ct); return NoContent(); }
+            catch (ArgumentException) { return BadRequest(new { code = "INVALID_REQUEST" }); }
+        }
+
         // POST: api/Notification
         [Authorize(Policy = "ManagerOrAdmin")]
         [HttpPost]
@@ -72,3 +81,5 @@ namespace serverApi.Controllers
         }
     }
 }
+
+namespace serverApi.Controllers { public sealed record DismissNotificationsRequest(DateTime Through); }
