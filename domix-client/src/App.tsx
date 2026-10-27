@@ -12,8 +12,11 @@ import { Spinner } from '@/components/ui/Spinner'
 import { LanguagePreferenceSync } from '@/components/LanguagePreferenceSync'
 import './i18n'
 import './features/community/workflows.i18n'
+import './features/community/return.i18n'
 import './features/privacy/privacy.i18n'
 
+const VisitCalendarPage = lazyWithReload(() => import('@/features/community/VisitCalendarPage'))
+const LeadsPage = lazyWithReload(() => import('@/features/community/LeadsPage'))
 const ModerationPage = lazyWithReload(() => import('@/features/community/ModerationPage'))
 const PrivacyPage = lazyWithReload(() => import('@/pages/PrivacyPage'))
 const ExchangePage = lazyWithReload(() => import('@/features/apartments/ExchangePage'))
@@ -108,7 +111,7 @@ export default function App() {
       <Routes>
         <Route element={<AppShell />}>
           <Route index element={<IndexRoute />} />
-          <Route path="apartments/:apartmentId" element={<ApartmentDetailPage />} />
+          <Route path="apartments/:apartmentId" element={<ProtectedRoute><ApartmentDetailPage /></ProtectedRoute>} />
           <Route path="exchange" element={<ExchangePage />} />
           <Route path="map" element={<MapPage />} />
           <Route path="mortgage-calculator" element={<MortgageCalculatorPage />} />
@@ -120,6 +123,8 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="visits" element={<ProtectedRoute><VisitCalendarPage /></ProtectedRoute>} />
+          <Route path="my-leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
           <Route
             path="messages"
             element={

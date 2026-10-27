@@ -98,8 +98,8 @@ namespace serverApi.Controllers
                 return Unauthorized("User identity is invalid.");
             }
 
-            var result = await _apartmentService.CreateApartmentAsync(dto, userId, cancellationToken);
-            return Ok(result);
+            try { var result = await _apartmentService.CreateApartmentAsync(dto, userId, cancellationToken); return Ok(result); }
+            catch(InvalidOperationException ex) when(ex.Message=="DRAFT_WITHDRAWN") { return Conflict(new{code="DRAFT_WITHDRAWN"}); }
         }
 
         // PUT: api/Apartment/{id}
@@ -245,7 +245,7 @@ namespace serverApi.Controllers
         public async Task<IActionResult> GetOgPreview(Guid id, CancellationToken cancellationToken)
         {
             var apartment = await _apartmentService.GetApartmentByIdAsync(id, cancellationToken);
-            if (apartment == null || apartment.Status != serverApi.Models.ApartmentStatus.Available)
+            if (apartment == null || (apartment.Status != serverApi.Models.ApartmentStatus.Available && apartment.Status != serverApi.Models.ApartmentStatus.Negotiating))
                 return NotFound();
 
             var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');

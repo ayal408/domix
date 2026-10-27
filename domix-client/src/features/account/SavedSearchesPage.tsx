@@ -1,3 +1,6 @@
+import { MatchAlertFeed } from '@/features/community/MatchAlertFeed'
+import { useReturnAction } from '@/features/community/returnApi'
+import { SelectField } from '@/components/ui/Field'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -30,6 +33,7 @@ export default function SavedSearchesPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { data: savedSearches, isLoading } = useSavedSearches()
+  const channelAction = useReturnAction()
   const deleteMutation = useDeleteSavedSearch()
   const pushToast = useToastStore((state) => state.push)
   const [pendingDeleteId, setPendingDeleteId] = useState<Guid | null>(null)
@@ -68,6 +72,7 @@ export default function SavedSearchesPage() {
         <p className="mt-1 text-sm text-muted">{t('savedSearches.subtitle')}</p>
       </div>
 
+      <MatchAlertFeed searches={savedSearches ?? []} onRun={applySearch} />
       {isLoading ? (
         <div className="flex flex-col gap-3">
           {Array.from({ length: 3 }).map((_, index) => (
@@ -87,6 +92,7 @@ export default function SavedSearchesPage() {
                   {t('savedSearches.createdAt', { date: formatDate(search.createdAt, i18n.language) })}
                 </p>
               </div>
+              <SelectField label={t('returnTools:channel')} value={search.alertChannel??'Both'} disabled={channelAction.isPending} onChange={e=>channelAction.mutate({path:`/return-tools/searches/${search.savedSearchId}/channel`,body:{channel:e.target.value}})}>{['Site','Email','Both','Off'].map(c=><option key={c} value={c}>{t(`returnTools:${c}`)}</option>)}</SelectField>
               <div className="flex gap-2">
                 <Button variant="secondary" size="sm" onClick={() => applySearch(search)}>
                   {t('savedSearches.run')}

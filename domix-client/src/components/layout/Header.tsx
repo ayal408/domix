@@ -43,6 +43,7 @@ export function Header() {
   ]
   if (can('ManagerOrAdmin')) primary.push({ to: '/admin/apartments', label: t('nav.admin') })
   const secondary: NavItem[] = [
+    {to:'/visits',label:t('returnTools:calendar')},{to:'/my-leads',label:t('returnTools:leads')},
     { to: '/favorites', label: t('nav.favorites') }, { to: '/saved-searches', label: t('nav.savedSearches') },
     { to: '/map', label: t('nav.map') }, { to: '/compare', label: t('nav.compare') },
     { to: '/mortgage-calculator', label: t('nav.mortgageCalculator') }, { to: '/account', label: t('nav.myAccount') },

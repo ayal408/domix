@@ -22,12 +22,23 @@ public class ListingReport
 public class ConversationVisit
 {
     public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid? ReminderDismissedARevision { get; set; }
+    public Guid? ReminderDismissedBRevision { get; set; }
     public Guid ConversationId { get; set; }
     public Guid ParticipantA { get; set; }
     public Guid ParticipantB { get; set; }
     public Guid ProposedBy { get; set; }
     public DateTime StartsAt { get; set; }
     [MaxLength(20)] public string Status { get; set; } = "Pending";
+    [ConcurrencyCheck] public Guid Revision { get; set; } = Guid.NewGuid();
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public class ConversationLead
+{
+    public Guid ConversationId { get; set; }
+    public Guid OwnerId { get; set; }
+    [MaxLength(20)] public string Status { get; set; } = "New";
     [ConcurrencyCheck] public Guid Revision { get; set; } = Guid.NewGuid();
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

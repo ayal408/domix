@@ -153,4 +153,14 @@ public class ApartmentImageServiceTests
 
         await Assert.ThrowsAsync<KeyNotFoundException>(() => service.UploadImageAsync(dto, Guid.NewGuid(), isPrivileged: false));
     }
+    [Fact]
+    public async Task PhotoReceiptDoesNotDuplicateAnUploadOrBypassOwnership()
+    {
+        var (db,service,apartmentId,ownerId)=await SetupAsync();
+        var receipt=Guid.NewGuid();
+        var first=await service.UploadImageAsync(new UploadImageDto{ApartmentId=apartmentId,Image=MakeFormFile(1024),ClientUploadId=receipt},ownerId,false);
+        var again=await service.UploadImageAsync(new UploadImageDto{ApartmentId=apartmentId,Image=MakeFormFile(1024),ClientUploadId=receipt},ownerId,false);
+        Assert.Equal(first.ImageId,again.ImageId);Assert.Single(db.ApartmentImages);
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(()=>service.UploadImageAsync(new UploadImageDto{ApartmentId=apartmentId,Image=MakeFormFile(1024),ClientUploadId=receipt},Guid.NewGuid(),false));
+    }
 }

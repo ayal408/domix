@@ -3,6 +3,9 @@ namespace serverApi.Models;
 /// <summary>A durable digest. Sending/Unknown are never automatically replayed.</summary>
 public class SavedSearchEmail
 {
+    public int MatchCount { get; set; }
+    public bool SiteVisible { get; set; } = true;
+    public DateTime? SeenAt { get; set; }
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid SavedSearchId { get; set; }
     public SavedSearch SavedSearch { get; set; } = null!;

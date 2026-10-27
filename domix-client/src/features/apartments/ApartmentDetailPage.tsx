@@ -1,3 +1,4 @@
+import { ShareListing } from './ShareListing'
 import { ReportDialog } from '@/features/community/ReportDialog'
 import { formatExchangeDate } from './exchangeDates'
 import { useParams, Link, useLocation } from 'react-router-dom'
@@ -166,6 +167,7 @@ export default function ApartmentDetailPage() {
       {currentUser && currentUser.userId !== apartment.userId && <a href="#contact-owner" className="inline-flex w-fit items-center justify-center rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring">{t('privateMessages:contact')}</a>}
       {currentUser && <button type="button" className="w-fit text-sm text-muted underline" onClick={()=>setReporting(true)}>{t('workflows:report')}</button>}
       {reporting && <ReportDialog target={{apartmentId:apartment.apartmentId}} onClose={()=>setReporting(false)} />}
+      <ShareListing apartment={apartment} />
       <OwnerProfileCard
         ownerId={apartment.userId}
         currentApartmentId={apartment.apartmentId}

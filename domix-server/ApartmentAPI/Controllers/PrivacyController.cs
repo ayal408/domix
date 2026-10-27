@@ -84,7 +84,7 @@ public class PrivacyController(ApartmentContext db, IConfiguration? config = nul
         var support = await db.SupportTickets.AsNoTracking().Where(t => t.UserId == id)
             .Select(t => new { t.SupportTicketId, t.ContactName, t.ContactEmail, t.Message, t.Transcript, t.Status, t.CreatedAt }).ToListAsync(ct);
         var searches = await db.SavedSearches.AsNoTracking().Where(s => s.UserId == id).Select(s => new {
-            s.SavedSearchId, s.Name, s.City, s.Area, s.ListingType, s.MinPrice, s.MaxPrice, s.MinRooms, s.MaxRooms,
+            s.SavedSearchId, s.Name, s.AlertChannel, s.City, s.Area, s.ListingType, s.MinPrice, s.MaxPrice, s.MinRooms, s.MaxRooms,
             s.PropertyType, s.Parking, s.Elevator, s.CreatedAt, s.LastNotifiedAt }).ToListAsync(ct);
         var oldSearches = await db.SearchRequests.AsNoTracking().Where(s => s.UserId == id).Select(s => new {
             s.SearchId, s.Location, s.MinPrice, s.MaxPrice, s.MinBedrooms, s.MaxBedrooms, s.CreatedAt }).ToListAsync(ct);
@@ -100,7 +100,9 @@ public class PrivacyController(ApartmentContext db, IConfiguration? config = nul
         var reports = await db.ListingReports.AsNoTracking().Where(r=>r.ReporterId==id)
             .Select(r=>new {r.Id,r.MessageId,r.ApartmentId,r.Reason,r.Details,r.Evidence,r.CreatedAt,r.ReviewedAt}).ToListAsync(ct);
         var blockedCount = await db.UserBlocks.CountAsync(b=>b.BlockerId==id,ct);
-        return Ok(new { Visits=visits, Reports=reports, BlockedCount=blockedCount, GeneratedAt = DateTime.UtcNow, Profile = profile, Listings = listings,
+        var leads=await db.ConversationLeads.AsNoTracking().Where(l=>l.OwnerId==id).Select(l=>new{l.ConversationId,l.Status,l.UpdatedAt}).ToListAsync(ct);
+        var alerts=await db.SavedSearchEmails.AsNoTracking().Where(e=>e.SavedSearch.UserId==id).Select(e=>new{e.Id,e.SavedSearchId,e.MatchCount,e.SiteVisible,e.SeenAt,e.CreatedAt,e.Status}).ToListAsync(ct);
+        return Ok(new { Leads=leads, MatchAlerts=alerts, Visits=visits, Reports=reports, BlockedCount=blockedCount, GeneratedAt = DateTime.UtcNow, Profile = profile, Listings = listings,
             Correspondence = correspondence, Support = support, SavedSearches = searches, Favorites = favorites, SearchRequests = oldSearches, Appointments = appointments, Ratings = ratings, Deals = deals });
     }
 }

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { ConversationWorkspace } from '@/features/community/ConversationWorkspace'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -181,5 +182,5 @@ function LegacyMessagesPage() {
 
 export default function MessagesPage() {
   const {t}=useTranslation('workflows');const [legacy,L]=useState(false)
-  return <div className="flex flex-col gap-4"><div className="flex flex-wrap gap-2"><Button variant={legacy?'secondary':'primary'} onClick={()=>L(false)}>{t('threads')}</Button><Button variant={legacy?'primary':'secondary'} onClick={()=>L(true)}>{t('legacy')}</Button></div>{legacy?<LegacyMessagesPage/>:<ConversationWorkspace/>}</div>
+  return <div className="flex flex-col gap-4"><Link className="w-fit text-primary underline" to="/visits">{t('returnTools:calendar')}</Link><div className="flex flex-wrap gap-2"><Button variant={legacy?'secondary':'primary'} onClick={()=>L(false)}>{t('threads')}</Button><Button variant={legacy?'primary':'secondary'} onClick={()=>L(true)}>{t('legacy')}</Button></div>{legacy?<LegacyMessagesPage/>:<ConversationWorkspace/>}</div>
 }

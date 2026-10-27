@@ -25,6 +25,7 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
       INTERNAL_SERVICE_KEY: internalServiceKey,
       ASPNETCORE_URLS: `http://localhost:${domixServerPort}`,
       ASPNETCORE_ENVIRONMENT: "Production",
+      SavedSearchAlerts__IntervalMinutes: "1", // test-only: exercise the real periodic matcher within the suite
       // No Gmail credentials in CI: EmailService logs and swallows the failure rather than
       // throwing, so registration/verification flows still complete without real email.
     },

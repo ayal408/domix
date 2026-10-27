@@ -1,3 +1,4 @@
+import { clearApartmentDraft } from '@/features/apartments/apartmentDraftStore'
 import { queryClient } from '@/api/queryClient'
 import { useChatWidgetStore } from '@/stores/chatWidget.store'
 import { useCompareStore } from '@/stores/compare.store'
@@ -186,6 +187,7 @@ setSessionExpiredHandler(() => {
 useAuthStore.subscribe((state, previous) => {
   if (state.user?.userId !== previous.user?.userId ||
       (state.status === 'unauthenticated' && previous.status !== 'unauthenticated')) {
+    if(previous.user?.userId)void clearApartmentDraft(previous.user.userId).catch(()=>{})
     void queryClient.cancelQueries()
     queryClient.clear()
     useChatWidgetStore.getState().reset()

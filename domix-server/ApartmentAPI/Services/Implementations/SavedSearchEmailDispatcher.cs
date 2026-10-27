@@ -26,7 +26,7 @@ public sealed class SavedSearchEmailDispatcher(ApartmentContext db, IEmailServic
             if (claimed != 1) continue;
             var item = await db.SavedSearchEmails.SingleOrDefaultAsync(x => x.Id == id, ct);
             if (item is null) continue;
-            var active = await db.Users.AnyAsync(u => !u.IsBlocked && db.SavedSearches.Any(s => s.SavedSearchId == item.SavedSearchId && s.UserId == u.UserId), ct);
+            var active = await db.Users.AnyAsync(u => !u.IsBlocked && db.SavedSearches.Any(s => s.SavedSearchId == item.SavedSearchId && s.UserId == u.UserId && (s.AlertChannel=="Email" || s.AlertChannel=="Both")), ct);
             if (!active)
             {
                 item.Status = "Cancelled"; item.Recipient = ""; item.Subject = ""; item.HtmlBody = "";
