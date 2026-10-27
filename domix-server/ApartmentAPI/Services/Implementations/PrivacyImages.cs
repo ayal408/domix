@@ -53,7 +53,8 @@ public static class PrivacyImages
             surface.Canvas.Clear(SKColors.White);
             // Apply orientation to pixels before re-encoding; no source EXIF/XMP/IPTC/ICC is copied.
             surface.Canvas.SetMatrix(Orientation(codec.EncodedOrigin, width, height));
-            surface.Canvas.DrawBitmap(bitmap, 0, 0);
+            using var decoded = SKImage.FromBitmap(bitmap);
+            surface.Canvas.DrawImage(decoded, 0, 0, new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None));
             using var image = surface.Snapshot();
             using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 85);
             return encoded.ToArray();
