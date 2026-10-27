@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import pg from 'pg';
 import { parseDotNetConnectionString } from '../helpers/db.js';
 
@@ -30,7 +30,11 @@ async function legacyHome(c) {
 }
 test('exported complete migration SQL executes and database enforces new writes', async () => fixture(async c => {
   await c.query(sql('schema-all.sql'));
-  assert.equal(Number((await c.query('SELECT count(*) AS n FROM "__EFMigrationsHistory"')).rows[0].n), 8);
+  const expectedMigrations = readdirSync(new URL('../../domix-server/ApartmentAPI/Migrations/', import.meta.url))
+    .filter(name => /^\d{14}_.+\.cs$/.test(name) && !name.endsWith('.Designer.cs'))
+    .map(name => name.slice(0, -3)).sort();
+  const applied = (await c.query('SELECT "MigrationId" FROM "__EFMigrationsHistory" ORDER BY "MigrationId"')).rows.map(row => row.MigrationId);
+  assert.deepEqual(applied, expectedMigrations);
   await legacyUser(c); await legacyHome(c);
   if ((await c.query(`SELECT column_name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='Users' AND column_name='SharePhone'`)).rows.length) assert.equal((await c.query('SELECT "SharePhone" FROM "Users"')).rows[0].SharePhone, false);
   await assert.rejects(c.query('UPDATE "Apartments" SET price=-1 WHERE "ApartmentId"=$1', [home]), e => e.code === '23514');
