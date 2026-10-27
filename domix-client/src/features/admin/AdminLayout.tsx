@@ -21,6 +21,7 @@ export function AdminLayout() {
         <NavLink to="/admin/apartments" className={tabClasses}>
           {t('admin.nav.apartments')}
         </NavLink>
+        <NavLink to="/admin/reports" className={tabClasses}>{t('workflows:moderation')}</NavLink>
         <NavLink to="/admin/support" className={tabClasses}>
           {t('admin.nav.support')}
         </NavLink>

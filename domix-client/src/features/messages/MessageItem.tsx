@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import type { Message } from '@/types/api'
 
 interface Props {
+  hideActions?: boolean
   message: Message
   onReply?: (message: Message) => void
   onMarkRead: (messageId: string) => void
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export function MessageItem({
+  hideActions,
   message,
   onReply,
   onMarkRead,
@@ -57,7 +59,7 @@ export function MessageItem({
         </>}
         <p className="whitespace-pre-line break-words text-sm text-foreground">{message.content}</p>
 
-        <div className="mt-1 flex flex-wrap gap-2">
+        {!hideActions && <div className="mt-1 flex flex-wrap gap-2">
           {onReply && <Button variant="secondary" size="sm" onClick={() => onReply(message)}>{t('privateMessages:reply')}</Button>}
           {!message.isRead && (
             <Button variant="secondary" size="sm" loading={markReadPending} onClick={() => onMarkRead(message.messageId)}>
@@ -72,7 +74,7 @@ export function MessageItem({
           <Button variant="ghost" size="sm" loading={deletePending} onClick={() => onDelete(message.messageId)}>
             {t('common.delete')}
           </Button>
-        </div>
+        </div>}
       </div>
     </Card>
   )

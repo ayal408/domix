@@ -1,3 +1,4 @@
+import '@/features/community/workflows.i18n'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDeleteApartment, useSetApartmentStatus } from '@/hooks/useApartments'
@@ -23,6 +24,7 @@ type DialogState =
   | { kind: 'delete'; apartmentId: Guid }
 
 const STATUS_TONE: Record<ApartmentStatusValue, 'success' | 'neutral'> = {
+  Negotiating: 'neutral',
   Available: 'success',
   Rented: 'neutral',
   Sold: 'neutral',

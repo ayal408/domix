@@ -242,6 +242,10 @@ namespace serverApi.Services.Implementations
                 ticket.Message = "תוכן הפנייה הוסר בעקבות מחיקת החשבון";
                 ticket.UserId = null; ticket.Status = SupportTicketStatus.Resolved; ticket.ResolvedAt = DateTime.UtcNow;
             }
+            var reports = await _context.ListingReports.Where(r=>r.ReporterId==userId).ToListAsync(cancellationToken);
+            foreach(var report in reports) { report.Details=""; report.Evidence=""; }
+            var visits = await _context.ConversationVisits.Where(v=>(v.ParticipantA==userId || v.ParticipantB==userId) && (v.Status=="Pending" || v.Status=="Accepted")).ToListAsync(cancellationToken);
+            foreach(var visit in visits) { visit.Status="Cancelled"; visit.Revision=Guid.NewGuid(); visit.UpdatedAt=DateTime.UtcNow; }
             // Tombstone the account and withdraw its listings; retain both sides' message/deal history.
             user.IsDeleted = true;
             user.DeletedAt = DateTime.UtcNow;

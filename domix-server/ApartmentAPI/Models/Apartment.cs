@@ -13,6 +13,8 @@ namespace serverApi.Models
         public DateOnly? AvailableFrom { get; set; }
         public DateOnly? AvailableTo { get; set; }
         public string? DesiredCity { get; set; }
+        public DateTime? LastConfirmedAt { get; set; }
+        public DateTime? RenewalSnoozedUntil { get; set; }
         public bool IsDeleted { get; set; }
         public DateTime? DeletedAt { get; set; }
         public string NormalizedCity { get; set; } = "";

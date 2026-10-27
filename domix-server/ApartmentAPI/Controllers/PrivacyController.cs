@@ -95,7 +95,12 @@ public class PrivacyController(ApartmentContext db, IConfiguration? config = nul
         var deals = await db.ClosingDeals.AsNoTracking().Where(d => d.idUserBuyer == id || d.idUserManager == id).Select(d => new {
             d.ClosingDealId, d.ApartmentId, IsBuyer = d.idUserBuyer == id, d.dealCloseingDate, d.startDate, d.endDate }).ToListAsync(ct);
         var favorites = await db.Favorites.AsNoTracking().Where(f => f.UserId == id).Select(f => f.ApartmentId).ToListAsync(ct);
-        return Ok(new { GeneratedAt = DateTime.UtcNow, Profile = profile, Listings = listings,
+        var visits = await db.ConversationVisits.AsNoTracking().Where(v=>v.ParticipantA==id || v.ParticipantB==id)
+            .Select(v=>new {v.Id,v.ConversationId,v.StartsAt,v.Status,v.UpdatedAt,ProposedByMe=v.ProposedBy==id}).ToListAsync(ct);
+        var reports = await db.ListingReports.AsNoTracking().Where(r=>r.ReporterId==id)
+            .Select(r=>new {r.Id,r.MessageId,r.ApartmentId,r.Reason,r.Details,r.Evidence,r.CreatedAt,r.ReviewedAt}).ToListAsync(ct);
+        var blockedCount = await db.UserBlocks.CountAsync(b=>b.BlockerId==id,ct);
+        return Ok(new { Visits=visits, Reports=reports, BlockedCount=blockedCount, GeneratedAt = DateTime.UtcNow, Profile = profile, Listings = listings,
             Correspondence = correspondence, Support = support, SavedSearches = searches, Favorites = favorites, SearchRequests = oldSearches, Appointments = appointments, Ratings = ratings, Deals = deals });
     }
 }

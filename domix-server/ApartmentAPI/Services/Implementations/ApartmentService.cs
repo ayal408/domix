@@ -116,7 +116,7 @@ namespace serverApi.Services.Implementations
         {
             // Rented/Sold listings are "removed from the pool" without being deleted:
             // they never surface through search or saved-search alert matching.
-            query = query.Where(a => a.Status == ApartmentStatus.Available);
+            query = query.Where(a => (a.Status == ApartmentStatus.Available || a.Status == ApartmentStatus.Negotiating));
 
             if (!string.IsNullOrWhiteSpace(listingType))
                 query = query.Where(a => a.ListingType == listingType);

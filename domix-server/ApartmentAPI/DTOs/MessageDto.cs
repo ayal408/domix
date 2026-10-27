@@ -20,6 +20,8 @@ namespace serverApi.Models.DTOs
 
     public class MessageResponseDto
     {
+        public Guid ConversationId { get; set; }
+        public bool IsMine { get; set; }
         public Guid MessageId { get; set; }
         public Guid SenderId { get; set; }
         public bool SenderIsAnonymous { get; set; }

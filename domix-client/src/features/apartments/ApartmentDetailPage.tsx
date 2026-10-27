@@ -1,3 +1,4 @@
+import { ReportDialog } from '@/features/community/ReportDialog'
 import { formatExchangeDate } from './exchangeDates'
 import { useParams, Link, useLocation } from 'react-router-dom'
 import { useState } from 'react'
@@ -22,6 +23,7 @@ import type { Guid } from '@/types/api'
 
 export default function ApartmentDetailPage() {
   const { t, i18n } = useTranslation()
+  const [reporting, setReporting] = useState(false)
   const location = useLocation()
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo
   const back = returnTo?.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/'
@@ -162,6 +164,8 @@ export default function ApartmentDetailPage() {
       </dl>
 
       {currentUser && currentUser.userId !== apartment.userId && <a href="#contact-owner" className="inline-flex w-fit items-center justify-center rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring">{t('privateMessages:contact')}</a>}
+      {currentUser && <button type="button" className="w-fit text-sm text-muted underline" onClick={()=>setReporting(true)}>{t('workflows:report')}</button>}
+      {reporting && <ReportDialog target={{apartmentId:apartment.apartmentId}} onClose={()=>setReporting(false)} />}
       <OwnerProfileCard
         ownerId={apartment.userId}
         currentApartmentId={apartment.apartmentId}

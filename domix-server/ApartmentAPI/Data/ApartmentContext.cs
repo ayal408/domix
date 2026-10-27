@@ -9,6 +9,9 @@ namespace serverApi.Data
         {
         }
 
+        public DbSet<UserBlock> UserBlocks { get; set; }
+        public DbSet<ListingReport> ListingReports { get; set; }
+        public DbSet<ConversationVisit> ConversationVisits { get; set; }
         public DbSet<User> Users { get; set; }
         public DbSet<ApartmentRating> ApartmentRatings { get; set; }
         public DbSet<Apartment> Apartments { get; set; }
@@ -49,6 +52,20 @@ namespace serverApi.Data
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
+            modelBuilder.Entity<UserBlock>().HasKey(x => new { x.BlockerId, x.BlockedId });
+            modelBuilder.Entity<UserBlock>().HasOne<User>().WithMany().HasForeignKey(x => x.BlockerId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<UserBlock>().HasOne<User>().WithMany().HasForeignKey(x => x.BlockedId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ListingReport>().HasIndex(x => new { x.ReviewedAt, x.CreatedAt });
+            modelBuilder.Entity<ListingReport>().HasOne<User>().WithMany().HasForeignKey(x => x.ReporterId).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ConversationVisit>().HasIndex(x => new { x.ConversationId, x.UpdatedAt });
+            modelBuilder.Entity<ConversationVisit>().HasIndex(x => x.ConversationId).IsUnique().HasFilter("\"Status\" IN ('Pending','Accepted')");
+            modelBuilder.Entity<ConversationVisit>().HasOne<User>().WithMany().HasForeignKey(x => x.ParticipantA).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ConversationVisit>().HasOne<User>().WithMany().HasForeignKey(x => x.ParticipantB).OnDelete(DeleteBehavior.Restrict);
+            modelBuilder.Entity<ConversationVisit>().ToTable(t => {
+                t.HasCheckConstraint("CK_ConversationVisits_Status", "\"Status\" IN ('Pending','Accepted','Declined','Cancelled','Completed','Expired')");
+                t.HasCheckConstraint("CK_ConversationVisits_Participants", "\"ParticipantA\" <> \"ParticipantB\" AND \"ProposedBy\" IN (\"ParticipantA\",\"ParticipantB\")");
+            });
+            modelBuilder.Entity<Message>().HasIndex(x => new { x.ConversationId, x.CreatedAt, x.MessageId });
             modelBuilder.Entity<User>().Property(u => u.ReceiveMessageEmails).HasDefaultValue(true);
             modelBuilder.Entity<SystemEmailSettings>().Property(s => s.Provider).HasDefaultValue("gmail");
             modelBuilder.Entity<User>().HasQueryFilter(x => !x.IsDeleted);
@@ -78,7 +95,7 @@ namespace serverApi.Data
             modelBuilder.Entity<Apartment>().ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Apartments_ListingType", "\"IsDeleted\" OR (\"ListingType\" IN ('Unspecified','Exchange','Rent','Sale'))");
-                t.HasCheckConstraint("CK_Apartments_Status", "\"IsDeleted\" OR (\"Status\" IN (0,1,2))");
+                t.HasCheckConstraint("CK_Apartments_Status", "\"IsDeleted\" OR (\"Status\" IN (0,1,2,3))");
                 t.HasCheckConstraint("CK_Apartments_Price", "\"IsDeleted\" OR (price >= 0 AND (\"ListingType\" = 'Exchange' OR price > 0))");
                 t.HasCheckConstraint("CK_Apartments_Address", "\"IsDeleted\" OR (trim(city) <> '' AND trim(address) <> '' AND trim(area) <> '')");
                 t.HasCheckConstraint("CK_Apartments_Dimensions", "\"IsDeleted\" OR ((\"SumOfRooms\" IS NULL OR \"SumOfRooms\" > 0) AND (\"SquareMeters\" IS NULL OR \"SquareMeters\" > 0) AND (\"SumOfBeds\" IS NULL OR \"SumOfBeds\" >= 0))");
