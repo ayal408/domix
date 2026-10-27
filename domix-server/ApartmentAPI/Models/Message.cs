@@ -4,6 +4,7 @@ namespace serverApi.Models
 {
     public class Message
     {
+        public Guid ConversationId { get; set; }
         public Guid MessageId { get; set; }
         public Guid SenderId { get; set; }
         public Guid OwnerId { get; set; }

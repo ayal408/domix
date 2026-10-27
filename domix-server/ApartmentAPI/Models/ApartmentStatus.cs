@@ -4,6 +4,7 @@ namespace serverApi.Models
     {
         Available = 0,
         Rented = 1,
-        Sold = 2
+        Sold = 2,
+        Negotiating = 3
     }
 }

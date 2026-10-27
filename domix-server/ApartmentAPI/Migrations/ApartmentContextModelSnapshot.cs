@@ -145,6 +145,8 @@ namespace domix_server.ApartmentAPI.Migrations
                         .HasPrecision(14, 2)
                         .HasColumnType("numeric(14,2)");
 
+                    b.Property<DateTime?>("LastConfirmedAt").HasColumnType("timestamp with time zone");
+                    b.Property<DateTime?>("RenewalSnoozedUntil").HasColumnType("timestamp with time zone");
                     b.HasKey("ApartmentId");
 
                     b.HasIndex("UserId");
@@ -178,7 +180,7 @@ namespace domix_server.ApartmentAPI.Migrations
 
                             t.HasCheckConstraint("CK_Apartments_RecordedRating", "\"RecordedRatingCount\" >= 0 AND \"RatingSum\" >= \"RecordedRatingCount\" AND \"RatingSum\" <= 5 * CAST(\"RecordedRatingCount\" AS bigint)");
 
-                            t.HasCheckConstraint("CK_Apartments_Status", "\"IsDeleted\" OR (\"Status\" IN (0,1,2))");
+                            t.HasCheckConstraint("CK_Apartments_Status", "\"IsDeleted\" OR (\"Status\" IN (0,1,2,3))");
                         });
                 });
 
@@ -410,6 +412,8 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<bool>("RecipientIsAnonymous")
                         .HasColumnType("boolean");
 
+                    b.Property<Guid>("ConversationId").HasColumnType("uuid");
+                    b.HasIndex("ConversationId", "CreatedAt", "MessageId");
                     b.HasKey("MessageId");
 
                     b.HasIndex("ApartmentId");
@@ -1095,6 +1099,47 @@ namespace domix_server.ApartmentAPI.Migrations
 
                     b.Navigation("SearchRequests");
                 });
+            modelBuilder.Entity("serverApi.Models.UserBlock", b => {
+                b.Property<Guid>("BlockerId").HasColumnType("uuid");
+                b.Property<Guid>("BlockedId").HasColumnType("uuid");
+                b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.HasKey("BlockerId", "BlockedId"); b.HasIndex("BlockedId");
+                b.ToTable("UserBlocks");
+            });
+            modelBuilder.Entity("serverApi.Models.UserBlock").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("BlockerId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            modelBuilder.Entity("serverApi.Models.UserBlock").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("BlockedId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            modelBuilder.Entity("serverApi.Models.ListingReport", b => {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("ReporterId").HasColumnType("uuid");
+                b.Property<Guid?>("MessageId").HasColumnType("uuid");
+                b.Property<Guid?>("ApartmentId").HasColumnType("uuid");
+                b.Property<string>("Reason").IsRequired().HasMaxLength(40).HasColumnType("character varying(40)");
+                b.Property<string>("Details").IsRequired().HasMaxLength(1000).HasColumnType("character varying(1000)");
+                b.Property<DateTime>("CreatedAt").HasColumnType("timestamp with time zone");
+                b.Property<DateTime?>("ReviewedAt").HasColumnType("timestamp with time zone");
+                b.Property<Guid?>("ReviewedBy").HasColumnType("uuid");
+                b.HasKey("Id");
+                b.HasIndex("ReporterId"); b.HasIndex("ReviewedAt", "CreatedAt");
+                b.ToTable("ListingReports");
+            });
+            modelBuilder.Entity("serverApi.Models.ListingReport").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("ReporterId").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            modelBuilder.Entity("serverApi.Models.ConversationVisit", b => {
+                b.Property<Guid>("Id").ValueGeneratedOnAdd().HasColumnType("uuid");
+                b.Property<Guid>("ConversationId").HasColumnType("uuid");
+                b.Property<Guid>("ParticipantA").HasColumnType("uuid");
+                b.Property<Guid>("ParticipantB").HasColumnType("uuid");
+                b.Property<Guid>("ProposedBy").HasColumnType("uuid");
+                b.Property<DateTime>("StartsAt").HasColumnType("timestamp with time zone");
+                b.Property<string>("Status").IsRequired().HasMaxLength(20).HasColumnType("character varying(20)");
+                b.Property<Guid>("Revision").IsConcurrencyToken().HasColumnType("uuid");
+                b.Property<DateTime>("UpdatedAt").HasColumnType("timestamp with time zone");
+                b.HasKey("Id");
+                b.HasIndex("ParticipantA"); b.HasIndex("ParticipantB"); b.HasIndex("ConversationId", "UpdatedAt");
+                b.HasIndex("ConversationId").IsUnique().HasFilter("\"Status\" IN ('Pending','Accepted')");
+                b.ToTable("ConversationVisits", t => { t.HasCheckConstraint("CK_ConversationVisits_Status", "\"Status\" IN ('Pending','Accepted','Declined','Cancelled','Completed','Expired')"); t.HasCheckConstraint("CK_ConversationVisits_Participants", "\"ParticipantA\" <> \"ParticipantB\" AND \"ProposedBy\" IN (\"ParticipantA\",\"ParticipantB\")"); });
+            });
+            modelBuilder.Entity("serverApi.Models.ConversationVisit").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("ParticipantA").OnDelete(DeleteBehavior.Restrict).IsRequired();
+            modelBuilder.Entity("serverApi.Models.ConversationVisit").HasOne("serverApi.Models.User", null).WithMany().HasForeignKey("ParticipantB").OnDelete(DeleteBehavior.Restrict).IsRequired();
 #pragma warning restore 612, 618
         }
     }
