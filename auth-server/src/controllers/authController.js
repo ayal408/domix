@@ -92,6 +92,9 @@ export async function resetPassword(req, res) {
   }
 }
 function sendAuthError(res, err) {
+  if (["EMAIL_RECONNECT_REQUIRED", "EMAIL_SEND_FAILED"].includes(err?.message)) {
+    return res.status(503).json({ code: err.message });
+  }
   if (err?.isAxiosError || err?.message === "GOOGLE_AUTH_NOT_CONFIGURED") {
     res.set("Retry-After", "3");
     return res.status(503).json({ code: "AUTH_TEMPORARILY_UNAVAILABLE" });

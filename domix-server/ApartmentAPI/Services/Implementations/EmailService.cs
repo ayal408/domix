@@ -13,7 +13,7 @@ namespace serverApi.Services.Implementations;
 
 public class EmailService(
     EmailConfigurationService configuration, GoogleOAuthService oauth, ApartmentContext db,
-    IConfiguration serverConfiguration, ILogger<EmailService> logger) : IEmailService
+    IConfiguration serverConfiguration, ILogger<EmailService> logger, OutlookConnectionService outlook) : IEmailService
 {
     public async Task SendTestEmailAsync(string? recipientEmail = null, CancellationToken cancellationToken = default)
     {
@@ -40,23 +40,35 @@ public class EmailService(
         var settings = await configuration.GetAsync(cancellationToken);
         try
         {
+            var body = htmlBody;
+            var signature = string.IsNullOrWhiteSpace(settings.Signature) ? "" :
+                "<hr><div dir=\"auto\">" + WebUtility.HtmlEncode(settings.Signature).Replace("\n", "<br>") + "</div>";
+            if (body.Contains("<!-- DOMIX_SIGNATURE -->")) body = body.Replace("<!-- DOMIX_SIGNATURE -->", signature);
+            else body += signature;
+            if (settings.Provider == "outlook")
+            {
+                var refresh = await configuration.GetOutlookRefreshTokenAsync(deadline.Token);
+                var tokens = await outlook.RefreshAsync(refresh, deadline.Token);
+                if (!string.IsNullOrWhiteSpace(tokens.RefreshToken))
+                    await configuration.RotateOutlookTokenAsync(settings.ProtectedRefreshToken, tokens.RefreshToken, deadline.Token);
+                var mime = CreateEmail(to, settings.Email, settings.SenderName, settings.ReplyTo, subject, body);
+                await outlook.SendAsync(tokens.AccessToken, mime, deadline.Token);
+            }
+            else
+            {
             var credentials = await configuration.GetCredentialsAsync(cancellationToken);
             var token = await oauth.GetAccessTokenAsync(credentials, deadline.Token);
             using var service = new GmailService(new BaseClientService.Initializer
             {
                 HttpClientInitializer = GoogleCredential.FromAccessToken(token), ApplicationName = "DOMIX"
             });
-            var body = htmlBody;
-            var signature = string.IsNullOrWhiteSpace(settings.Signature) ? "" :
-                "<hr><div dir=\"auto\">" + WebUtility.HtmlEncode(settings.Signature).Replace("\n", "<br>") + "</div>";
-            if (body.Contains("<!-- DOMIX_SIGNATURE -->")) body = body.Replace("<!-- DOMIX_SIGNATURE -->", signature);
-            else body += signature;
-            var raw = CreateEmail(to, credentials.Email, settings.SenderName, settings.ReplyTo, subject, body);
-            var message = new Google.Apis.Gmail.v1.Data.Message
-            {
-                Raw = Convert.ToBase64String(Encoding.UTF8.GetBytes(raw)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
-            };
-            await service.Users.Messages.Send(message, "me").ExecuteAsync(deadline.Token);
+                var raw = CreateEmail(to, credentials.Email, settings.SenderName, settings.ReplyTo, subject, body);
+                var message = new Google.Apis.Gmail.v1.Data.Message
+                {
+                    Raw = Convert.ToBase64String(Encoding.UTF8.GetBytes(raw)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+                };
+                await service.Users.Messages.Send(message, "me").ExecuteAsync(deadline.Token);
+            }
             delivery.Succeeded = true;
             try { await configuration.RecordHealthAsync(settings.UpdatedAt, "verified", cancellationToken); }
             catch (Exception ex) when (ex is not OperationCanceledException)

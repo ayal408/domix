@@ -4,6 +4,7 @@ namespace serverApi.Models;
 public class SystemEmailSettings
 {
     public int Id { get; set; } = 1;
+    public string Provider { get; set; } = "gmail";
     public string SenderName { get; set; } = "DOMIX";
     public string Email { get; set; } = "";
     public string ReplyTo { get; set; } = "";

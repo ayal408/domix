@@ -65,22 +65,24 @@ export default function AdminEmailPage() {
   const outbox = useQuery({ queryKey: ['admin', 'email', 'outbox'], queryFn: emailApi.getEmailOutbox })
   const history = useQuery({ queryKey: historyKey, queryFn: emailApi.getEmailHistory })
   const connect = useMutation({ mutationFn: emailApi.connectGmail })
+  const connectOutlook = useMutation({ mutationFn: emailApi.connectOutlook })
   const disconnect = useMutation({ mutationFn: emailApi.disconnectGmail })
   const test = useMutation({ mutationFn: emailApi.sendTestEmail })
 
   useEffect(() => {
-    const status = params.get('gmail')
+    const status = params.get('gmail') ?? params.get('outlook')
     if (!status) return
     pushToast({ variant: status === 'connected' ? 'success' : 'error', title: t(status === 'connected' ? 'consentSuccess' : 'consentFailed') })
     const next = new URLSearchParams(params)
     next.delete('gmail')
+    next.delete('outlook')
     setParams(next, { replace: true })
   }, [params, setParams, pushToast, t])
 
   const showError = (error: unknown) => pushToast({ variant: 'error', title: t(`errors.${toApiError(error).code}`, { defaultValue: t('error') }) })
-  async function handleConnect() {
+  async function handleConnect(provider: 'gmail' | 'outlook' = 'gmail') {
     try {
-      const result = await connect.mutateAsync()
+      const result = provider === 'outlook' ? await connectOutlook.mutateAsync() : await connect.mutateAsync()
       // The server creates a one-use consent state bound to the signed-in administrator.
       window.location.assign(result.authorizationUrl)
     } catch (error) { showError(error) }
@@ -109,10 +111,13 @@ export default function AdminEmailPage() {
       <Card className="flex flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">{t('account')}</h2><span className="text-sm text-muted">{t(settings.data.connected ? `connectionStates.${settings.data.connectionStatus ?? 'configured'}` : 'disconnected')}</span></div>
         {settings.data.lastCheckedAt && <p className="text-sm text-muted">{t('lastChecked')}: {formatDate(settings.data.lastCheckedAt, i18n.language)}</p>}
+        <p className="text-sm text-muted">{t('provider')}: {settings.data.provider === 'outlook' ? 'Outlook / Microsoft 365' : 'Gmail'}</p>
         {settings.data.senderEmail && <p dir="ltr" className="text-start text-sm">{settings.data.senderEmail}</p>}
-        <div className="flex flex-wrap gap-2"><Button disabled={!settings.data.oauthAvailable || disconnect.isPending} loading={connect.isPending} onClick={() => void handleConnect()}>{t(settings.data.connected ? 'switchAccount' : 'connect')}</Button>
-          {settings.data.connected && <Button variant="danger" disabled={connect.isPending} loading={disconnect.isPending} onClick={() => void handleDisconnect()}>{t('disconnect')}</Button>}</div>
+        <div className="flex flex-wrap gap-2"><Button disabled={!settings.data.oauthAvailable || disconnect.isPending || connectOutlook.isPending} loading={connect.isPending} onClick={() => void handleConnect()}>{t('connect')}</Button>
+          <Button variant="secondary" disabled={!settings.data.outlookOAuthAvailable || disconnect.isPending || connect.isPending} loading={connectOutlook.isPending} onClick={() => void handleConnect('outlook')}>{t('connectOutlook')}</Button>
+          {settings.data.connected && <Button variant="danger" disabled={connect.isPending || connectOutlook.isPending} loading={disconnect.isPending} onClick={() => void handleDisconnect()}>{t('disconnect')}</Button>}</div>
         {!settings.data.oauthAvailable && <p className="text-sm text-muted">{t('noKeys')}</p>}
+        {!settings.data.outlookOAuthAvailable && <p className="text-sm text-muted">{t('noOutlookKeys')}</p>}
       </Card>
       <Card className="p-6"><SenderForm key={settings.data.updatedAt} settings={settings.data} /></Card>
       <Card className="p-6"><h2 className="mb-4 font-semibold">{t('testTitle')}</h2><form onSubmit={handleTest} className="flex flex-col gap-4">

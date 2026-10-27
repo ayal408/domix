@@ -700,6 +700,12 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<string>("ProtectedRefreshToken")
                         .HasColumnType("text");
 
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("gmail");
+
                     b.Property<string>("ReplyTo")
                         .IsRequired()
                         .HasColumnType("text");
@@ -784,6 +790,9 @@ namespace domix_server.ApartmentAPI.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("text")
                         .HasComputedColumnSql("NULLIF(lower(trim(\"EmailAddress\")), '')", true);
+
+                    b.Property<DateTime?>("NotificationsDismissedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("NotificationsSeenAt")
                         .HasColumnType("timestamp with time zone");

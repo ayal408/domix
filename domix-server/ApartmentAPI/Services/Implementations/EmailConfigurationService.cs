@@ -6,7 +6,7 @@ using serverApi.Models;
 namespace serverApi.Services.Implementations;
 
 public sealed class EmailConfigurationService(
-    ApartmentContext db, IOptions<GmailSettings> defaults, GmailTokenProtector protector)
+    ApartmentContext db, IOptions<GmailSettings> defaults, GmailTokenProtector protector, IConfiguration? serverConfiguration = null)
 {
     public async Task<SystemEmailSettings> GetAsync(CancellationToken ct = default) =>
         await db.SystemEmailSettings.AsNoTracking().SingleOrDefaultAsync(x => x.Id == 1, ct)
@@ -15,6 +15,7 @@ public sealed class EmailConfigurationService(
     public async Task<GmailSettings> GetCredentialsAsync(CancellationToken ct = default)
     {
         var config = await GetAsync(ct);
+        if (config.Provider != "gmail") throw new EmailNotConfiguredException("EMAIL_NOT_CONFIGURED");
         if (!config.Enabled) throw new EmailNotConfiguredException("EMAIL_DISCONNECTED");
         var settings = new GmailSettings
         {
@@ -32,10 +33,33 @@ public sealed class EmailConfigurationService(
 
     public async Task<bool> IsConnectedAsync(CancellationToken ct = default)
     {
-        try { await GetCredentialsAsync(ct); return true; }
+        try {
+            var value = await GetAsync(ct);
+            if (value.Provider == "outlook") return value.Enabled && OutlookAvailable && !string.IsNullOrWhiteSpace(value.ProtectedRefreshToken);
+            await GetCredentialsAsync(ct); return true;
+        }
         catch (InvalidOperationException) { return false; }
         catch (System.Security.Cryptography.CryptographicException) { return false; }
         catch (FormatException) { return false; }
+    }
+
+    public bool OutlookAvailable => !string.IsNullOrWhiteSpace(serverConfiguration?["Outlook:ClientId"])
+        && !string.IsNullOrWhiteSpace(serverConfiguration?["Outlook:ClientSecret"]);
+
+    public async Task<string> GetOutlookRefreshTokenAsync(CancellationToken ct)
+    {
+        var value = await GetAsync(ct);
+        if (value.Provider != "outlook" || !value.Enabled || !OutlookAvailable || string.IsNullOrWhiteSpace(value.ProtectedRefreshToken))
+            throw new EmailNotConfiguredException("EMAIL_NOT_CONFIGURED");
+        return protector.Unprotect(value.ProtectedRefreshToken);
+    }
+
+    // Rotating an old token must not overwrite a newly connected/disconnected account.
+    public async Task RotateOutlookTokenAsync(string? expected, string token, CancellationToken ct)
+    {
+        var encrypted = protector.Protect(token);
+        await db.SystemEmailSettings.Where(x => x.Id == 1 && x.Provider == "outlook" && x.Enabled && x.ProtectedRefreshToken == expected)
+            .ExecuteUpdateAsync(s => s.SetProperty(x => x.ProtectedRefreshToken, encrypted), ct);
     }
 
     public bool OAuthAvailable => !string.IsNullOrWhiteSpace(defaults.Value.ClientId)
@@ -53,7 +77,16 @@ public sealed class EmailConfigurationService(
 
     public async Task ConnectAsync(string email, string refreshToken, CancellationToken ct = default)
     {
+        await ConnectAccountAsync("gmail", email, refreshToken, ct);
+    }
+
+    public Task ConnectOutlookAsync(string email, string refreshToken, CancellationToken ct = default) =>
+        ConnectAccountAsync("outlook", email, refreshToken, ct);
+
+    private async Task ConnectAccountAsync(string provider, string email, string refreshToken, CancellationToken ct)
+    {
         var settings = await GetAsync(ct);
+        settings.Provider = provider;
         settings.Email = email;
         settings.ProtectedRefreshToken = protector.Protect(refreshToken);
         settings.Enabled = true;

@@ -424,3 +424,38 @@ test("privacy boundaries protect anonymous listings, contacts, exports and suppo
   const scrubbed = (await testQuery(POSTGRES_URL, 'SELECT "ContactEmail","Transcript","Message" FROM "SupportTickets" WHERE "SupportTicketId"=$1', [support.supportTicketId])).rows[0];
   assert.equal(scrubbed.ContactEmail, null); assert.equal(scrubbed.Transcript, null); assert.equal(scrubbed.Message.includes('Private support'), false);
 });
+
+test('notification cleanup is personal, monotonic and preserves newer announcements', async () => {
+  const sessions = [];
+  for (let i = 0; i < 2; i++) {
+    const response = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': `192.0.2.${220 + i}` },
+      body: JSON.stringify({ userName: `notice${i}${runId}`, email: `notice-${i}-${runId}@example.com`, password: 'password123' }) });
+    assert.equal(response.status, 200); sessions.push(await response.json());
+  }
+  const { randomUUID } = await import('node:crypto');
+  const oldId = randomUUID(), newId = randomUUID();
+  await testQuery(POSTGRES_URL, 'INSERT INTO "Notifications" ("NotificationId","Title","Message","CreatedAt","CreatedByUserId") VALUES ($1,$2,$3,$4,$5)',
+    [oldId, 'Old notice', 'Previous notice', '2025-01-01T00:00:00Z', adminUserId]);
+  const request = (path, session, body) => fetch(`${services.domixServerUrl}/api/Notification${path}`, {
+    method: body ? 'POST' : 'GET', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.accessToken}` }, body: body ? JSON.stringify(body) : undefined
+  });
+  assert.equal((await request('/dismiss', sessions[0], { through: '2025-01-01T00:00:00Z' })).status, 204);
+  assert.equal((await request('/dismiss', sessions[0], { through: '2024-01-01T00:00:00Z' })).status, 204);
+  await testQuery(POSTGRES_URL, 'INSERT INTO "Notifications" ("NotificationId","Title","Message","CreatedAt","CreatedByUserId") VALUES ($1,$2,$3,$4,$5)',
+    [newId, 'New notice', 'Newer notice', '2026-01-01T00:00:00Z', adminUserId]);
+  const own = await (await request('', sessions[0])).json(); const other = await (await request('', sessions[1])).json();
+  assert.equal(own.notifications.some(n => n.notificationId === oldId), false);
+  assert.equal(own.notifications.some(n => n.notificationId === newId), true);
+  assert.equal(other.notifications.some(n => n.notificationId === oldId), true);
+  assert.equal((await request('/dismiss', sessions[0], { through: '2099-01-01T00:00:00Z' })).status, 400);
+  assert.equal((await testQuery(POSTGRES_URL, 'SELECT COUNT(*)::int AS count FROM "Notifications" WHERE "NotificationId"=$1', [oldId])).rows[0].count, 1);
+});
+
+test('verification resend reports unavailable delivery instead of claiming sent', async () => {
+  const registered = await authFetch('/register', { method: 'POST', headers: { 'X-Forwarded-For': '192.0.2.229' },
+    body: JSON.stringify({ userName: `mailfailure${runId}`, email: `mailfailure-${runId}@example.com`, password: 'password123' }) });
+  assert.equal(registered.status, 200); const session = await registered.json();
+  const resend = await authFetch('/resend-verification', { method: 'POST', headers: { Authorization: `Bearer ${session.accessToken}` }, body: '{}' });
+  assert.equal(resend.status, 503); const result = await resend.json();
+  assert.equal(result.code, 'EMAIL_SEND_FAILED'); assert.notEqual(result.sent, true);
+});

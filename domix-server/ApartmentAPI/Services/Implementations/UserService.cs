@@ -168,7 +168,7 @@ namespace serverApi.Services.Implementations
             user.EmailVerificationTokenExpiresAt = DateTime.UtcNow.Add(VerificationTokenLifetime);
             await _context.SaveChangesAsync(cancellationToken);
 
-            await SendVerificationEmailAsync(user, cancellationToken);
+            await SendVerificationEmailAsync(user, cancellationToken, suppressFailure: false);
             return true;
         }
 
@@ -286,7 +286,7 @@ namespace serverApi.Services.Implementations
             return true;
         }
 
-        private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken)
+        private async Task SendVerificationEmailAsync(User user, CancellationToken cancellationToken, bool suppressFailure = true)
         {
             var clientAppUrl = (_configuration["CLIENT_APP_URL"] ?? "http://localhost").TrimEnd('/');
             var verifyLink = $"{clientAppUrl}/verify-email?token={Uri.EscapeDataString(user.EmailVerificationToken!)}";
@@ -301,7 +301,8 @@ namespace serverApi.Services.Implementations
                 // Same tolerance as MessageService's notification email: the account still exists
                 // and can request a fresh link via resend-verification, so this must not fail the
                 // caller's request (registration or resend) just because mail delivery is down.
-                _logger.LogError(ex, "Failed to send verification email to user {UserId}.", user.UserId);
+                _logger.LogWarning("Verification email failed for {UserId} ({FailureType}).", user.UserId, ex.GetType().Name);
+                if (!suppressFailure) throw new VerificationEmailDeliveryException(ex is GmailReconnectRequiredException ? "EMAIL_RECONNECT_REQUIRED" : "EMAIL_SEND_FAILED");
             }
         }
 
@@ -474,3 +475,5 @@ namespace serverApi.Services.Implementations
         }
     }
 }
+
+namespace serverApi.Services.Implementations { public sealed class VerificationEmailDeliveryException(string code) : Exception(code); }

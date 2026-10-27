@@ -18,3 +18,7 @@ export async function createNotification(payload: CreateNotificationRequest): Pr
   const { data } = await dataClient.post<AppNotification>(apiEndpoints.notifications.create(), payload)
   return data
 }
+
+export async function dismissNotifications(through: string): Promise<void> {
+  await dataClient.post('/Notification/dismiss', { through })
+}

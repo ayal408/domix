@@ -15,7 +15,7 @@ namespace serverApi.Controllers;
 [Authorize(Policy = "AdminOnly")]
 public class EmailController(
     IEmailService emailService, EmailConfigurationService settings,
-    GmailConnectionService connection, ApartmentContext db, ILogger<EmailController> logger) : ControllerBase
+    GmailConnectionService connection, OutlookConnectionService outlook, ApartmentContext db, ILogger<EmailController> logger) : ControllerBase
 {
     [HttpGet("settings")]
     public async Task<IActionResult> GetSettings(CancellationToken ct)
@@ -23,7 +23,7 @@ public class EmailController(
         var value = await settings.GetAsync(ct);
         return Ok(new
         {
-            senderEmail = value.Email, value.SenderName, value.ReplyTo, value.Signature,
+            provider = value.Provider, outlookOAuthAvailable = outlook.Available, senderEmail = value.Email, value.SenderName, value.ReplyTo, value.Signature,
             value.TestSubject, value.TestBody, value.Enabled, value.UpdatedAt,
             connectionStatus = value.Enabled ? value.ConnectionStatus : "disconnected", value.LastCheckedAt,
             connected = await settings.IsConnectedAsync(ct), oauthAvailable = settings.OAuthAvailable
@@ -85,7 +85,42 @@ public class EmailController(
         return Redirect(connection.ClientUrl + "/admin/email?gmail=" + result);
     }
 
+    [HttpPost("outlook/connect")]
+    public IActionResult ConnectOutlook()
+    {
+        if (!outlook.Available) return Conflict(new { code = "EMAIL_NOT_CONFIGURED" });
+        return Ok(new { authorizationUrl = outlook.Start(User.GetUserId()) });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("outlook/callback")]
+    public async Task<IActionResult> OutlookCallback([FromQuery] string? state, [FromQuery] string? code,
+        [FromQuery] string? error, CancellationToken ct)
+    {
+        var pending = outlook.Consume(state);
+        var result = "failed";
+        if (pending is not null && string.IsNullOrEmpty(error) && !string.IsNullOrWhiteSpace(code))
+        {
+            var admin = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.UserId == pending.AdminId, ct);
+            if (admin?.Role == "Admin" && !admin.IsBlocked)
+            {
+                try
+                {
+                    var account = await outlook.CompleteAsync(pending, code, ct);
+                    await settings.ConnectOutlookAsync(account.Email, account.RefreshToken, ct);
+                    await db.SavedSearchEmails.Where(x => x.Status == "Blocked")
+                        .ExecuteUpdateAsync(s => s.SetProperty(x => x.Status, "Pending").SetProperty(x => x.FailureCode, (string?)null), ct);
+                    result = "connected";
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                { logger.LogWarning("Microsoft mail consent failed ({FailureType}).", ex.GetType().Name); }
+            }
+        }
+        return Redirect(outlook.ClientUrl + "/admin/email?outlook=" + result);
+    }
+
     [HttpDelete("gmail/connection")]
+    [HttpDelete("connection")]
     public async Task<IActionResult> Disconnect(CancellationToken ct)
     {
         await settings.DisconnectAsync(ct);

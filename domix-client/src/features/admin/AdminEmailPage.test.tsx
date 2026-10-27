@@ -58,3 +58,16 @@ describe('System sender administration', () => {
     expect(screen.getByRole('button', { name: 'Connect Gmail' })).toBeEnabled()
   })
 })
+
+it('offers Outlook only when Microsoft credentials are configured on the server', async () => {
+  open()
+  expect(await screen.findByRole('button', { name: 'Connect Outlook' })).toBeDisabled()
+  expect(screen.getByText('Microsoft mail connection is not configured on the server.')).toBeInTheDocument()
+})
+
+it('shows the connected Microsoft provider and enables its consent button', async () => {
+  vi.mocked(emailApi.getEmailSettings).mockResolvedValue({ ...settings, provider: 'outlook', outlookOAuthAvailable: true })
+  open()
+  expect(await screen.findByRole('button', { name: 'Connect Outlook' })).toBeEnabled()
+  expect(screen.getByText(/Outlook \/ Microsoft 365/)).toBeInTheDocument()
+})

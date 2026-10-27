@@ -4,11 +4,13 @@ import { useAuthStore } from '@/stores/auth.store'
 import * as authApi from '@/api/auth.api'
 import { useToastStore } from '@/stores/toast.store'
 import { errorTranslationKey, toApiError } from '@/api/errors'
+import '@/features/admin/email.i18n'
 import { Button } from '@/components/ui/Button'
 
 /** Shown app-wide for a signed-in user whose password account hasn't clicked the verification link yet. */
 export function EmailVerificationBanner() {
   const { t } = useTranslation()
+  const { t: mail } = useTranslation('email')
   const status = useAuthStore((state) => state.status)
   const isEmailVerified = useAuthStore((state) => state.user?.isEmailVerified)
   const pushToast = useToastStore((state) => state.push)
@@ -23,7 +25,7 @@ export function EmailVerificationBanner() {
       pushToast({ variant: 'success', title: t('auth.verificationBanner.sent') })
     } catch (error) {
       const apiError = toApiError(error)
-      pushToast({ variant: 'error', title: t(errorTranslationKey(error), apiError.message) })
+      pushToast({ variant: 'error', title: apiError.code === 'EMAIL_RECONNECT_REQUIRED' ? mail('errors.EMAIL_RECONNECT_REQUIRED') : apiError.code === 'EMAIL_SEND_FAILED' ? mail('errors.EMAIL_SEND_FAILED') : t(errorTranslationKey(error), apiError.message) })
     } finally {
       setIsSending(false)
     }

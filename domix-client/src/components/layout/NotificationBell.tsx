@@ -1,14 +1,17 @@
-import { Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
+import { CloseButton, Popover, PopoverButton, PopoverPanel } from '@headlessui/react'
 import { useTranslation } from 'react-i18next'
-import { useNotificationFeed, useMarkNotificationsSeen } from '@/hooks/useNotifications'
+import { useNotificationFeed, useMarkNotificationsSeen, useDismissNotifications } from '@/hooks/useNotifications'
 import { formatDate } from '@/lib/format'
+import '@/features/auth/auth.design.i18n'
 import { EmptyState } from '@/components/ui/EmptyState'
 
 /** Bell icon with an unread badge — see PresenceHub's `NotificationPosted` broadcast for the live push. */
 export function NotificationBell() {
   const { t, i18n } = useTranslation()
+  const { t: text } = useTranslation('authDesign')
   const { data } = useNotificationFeed()
   const markSeen = useMarkNotificationsSeen()
+  const dismiss = useDismissNotifications()
 
   const unreadCount = data?.unreadCount ?? 0
 
@@ -33,11 +36,22 @@ export function NotificationBell() {
       </PopoverButton>
       <PopoverPanel
         anchor="bottom end"
+        focus
+        role="dialog"
+        aria-label={t('notifications.title')}
         className="z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-2 shadow-lg"
       >
-        <p className="px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
-          {t('notifications.title')}
-        </p>
+        <div className="flex items-center justify-between gap-3 border-b border-border px-2 pb-2">
+          <p className="text-sm font-semibold text-foreground">{t('notifications.title')}</p>
+          <CloseButton aria-label={t('common.close')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-muted hover:bg-card-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+            <span aria-hidden="true">×</span>
+          </CloseButton>
+        </div>
+        {!!data?.notifications.length && <button type="button" disabled={dismiss.isPending} onClick={() => {
+          const through = data.notifications.reduce((latest, item) => item.createdAt > latest ? item.createdAt : latest, data.notifications[0]!.createdAt)
+          dismiss.mutate(through)
+        }} className="my-2 rounded px-2 py-2 text-sm text-primary hover:bg-card-muted disabled:opacity-50">{text('clearNotifications')}</button>}
+        {dismiss.isError && <p role="alert" className="px-2 py-2 text-sm text-danger">{text('clearFailed')}</p>}
         {!data || data.notifications.length === 0 ? (
           <EmptyState title={t('notifications.empty')} />
         ) : (

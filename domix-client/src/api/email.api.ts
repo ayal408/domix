@@ -2,6 +2,8 @@ import { dataClient } from '@/api/http'
 import { apiEndpoints } from '@/api/endpoints'
 
 export interface EmailSettings {
+  provider?: 'gmail' | 'outlook'
+  outlookOAuthAvailable?: boolean
   senderEmail: string
   senderName: string
   replyTo: string
@@ -30,7 +32,9 @@ export const saveEmailSettings = async (input: EmailSettingsInput): Promise<Emai
   (await dataClient.put<EmailSettings>(apiEndpoints.email.settings(), input)).data
 export const connectGmail = async (): Promise<{ authorizationUrl: string }> =>
   (await dataClient.post<{ authorizationUrl: string }>(apiEndpoints.email.connect())).data
-export const disconnectGmail = async (): Promise<void> => { await dataClient.delete(apiEndpoints.email.disconnect()) }
+export const connectOutlook = async (): Promise<{ authorizationUrl: string }> =>
+  (await dataClient.post<{ authorizationUrl: string }>('/email/outlook/connect')).data
+export const disconnectGmail = async (): Promise<void> => { await dataClient.delete('/email/connection') }
 export const sendTestEmail = async (recipient: string): Promise<void> => {
   await dataClient.post(apiEndpoints.email.sendTest(), { recipient })
 }
