@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
 import {
@@ -7,9 +7,11 @@ import {
   type ApartmentSearchFormInput,
   type ApartmentSearchFormValues,
 } from '@/features/apartments/schemas'
-import { InputField, SelectField, CheckboxField } from '@/components/ui/Field'
+import { SelectField } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { useCities } from '@/hooks/useApartments'
+import { useQuery } from '@tanstack/react-query'
+import { dataClient } from '@/api/http'
 import { PROPERTY_TYPES, SORT_OPTIONS } from '@/types/api'
 
 interface Props {
@@ -27,14 +29,27 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
+    control,
     formState: { errors },
   } = useForm<ApartmentSearchFormInput, unknown, ApartmentSearchFormValues>({
     resolver: zodResolver(apartmentSearchSchema),
     defaultValues: initialValues ?? APARTMENT_SEARCH_DEFAULTS,
   })
 
+  const selectedCity = watch('city')
+  const areas = useQuery({
+    queryKey: ['apartment-filter-areas', selectedCity ?? ''],
+    queryFn: async ({ signal }) => (await dataClient.get<string[]>('/Apartment/areas', { params: { city: selectedCity || undefined }, signal })).data,
+    staleTime: 5 * 60 * 1000,
+  })
+  const includeSelected = (values: string[], selected?: string) => Array.from(new Set([...(selected ? [selected] : []), ...values]))
+  const priceOptions = Array.from(new Set([0, 500, 1000, 1500, 2000, 2500, 3000, 4000, 5000, 6000, 7000, 8000, 10000, 15000, 20000, 30000, 50000, 100000, 500000, 1000000, 2000000, 3000000, 5000000, 10000000, watch('minPrice'), watch('maxPrice')].filter((value): value is number => value != null && Number.isFinite(Number(value))).map(Number))).sort((a, b) => a - b)
+  const roomOptions = Array.from(new Set([...Array.from({ length: 21 }, (_, index) => index / 2), 12, 15, 20, watch('minRooms'), watch('maxRooms')].filter((value): value is number => value != null && Number.isFinite(Number(value))).map(Number))).sort((a, b) => a - b)
+
   function handleClear() {
-    reset(APARTMENT_SEARCH_DEFAULTS)
+    reset({ ...APARTMENT_SEARCH_DEFAULTS, minPrice: '', maxPrice: '', minRooms: '', maxRooms: '', propertyType: '', sortBy: '', parking: '', elevator: '' })
     onClear()
   }
 
@@ -44,56 +59,23 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
       className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-3 lg:grid-cols-6"
     >
       <div className="col-span-2 sm:col-span-1">
-        <InputField
-          label={t('apartments.filters.city')}
-          placeholder={t('apartments.filters.cityPlaceholder')}
-          list="domix-cities"
-          {...register('city')}
-        />
-        <datalist id="domix-cities">
-          {cities?.map((city) => <option key={city} value={city} />)}
-        </datalist>
+        <SelectField label={t('apartments.filters.city')} {...register('city', { onChange: () => setValue('area', '') })}>
+          <option value="">{t('apartments.filters.cityPlaceholder')}</option>
+          {includeSelected(cities ?? [], watch('city')).map(city => <option key={city} value={city}>{city}</option>)}
+        </SelectField>
       </div>
-      <InputField
-        label={t('apartments.filters.minPrice')}
-        type="number"
-        min={0}
-        inputMode="numeric"
-        error={errors.minPrice?.message}
-        {...register('minPrice')}
-      />
-      <InputField
-        label={t('apartments.filters.maxPrice')}
-        type="number"
-        min={0}
-        inputMode="numeric"
-        error={errors.maxPrice?.message}
-        {...register('maxPrice')}
-      />
-      <InputField
-        label={t('apartments.filters.minRooms')}
-        type="number"
-        min={0}
-        step="0.5"
-        inputMode="decimal"
-        error={errors.minRooms?.message}
-        {...register('minRooms')}
-      />
-      <InputField
-        label={t('apartments.filters.maxRooms')}
-        type="number"
-        min={0}
-        step="0.5"
-        inputMode="decimal"
-        error={errors.maxRooms?.message}
-        {...register('maxRooms')}
-      />
+      {(['minPrice', 'maxPrice', 'minRooms', 'maxRooms'] as const).map(name => (
+        <SelectField key={name} label={t(`apartments.filters.${name}`)} error={errors[name]?.message} {...register(name)}>
+          <option value="">{t('apartments.filters.any')}</option>
+          {(name.endsWith('Price') ? priceOptions : roomOptions).map(value => <option key={value} value={value}>{new Intl.NumberFormat().format(value)}</option>)}
+        </SelectField>
+      ))}
       <div className="col-span-2 sm:col-span-1">
-        <InputField
-          label={t('apartments.filters.area')}
-          placeholder={t('apartments.filters.areaPlaceholder')}
-          {...register('area')}
-        />
+        <SelectField label={t('apartments.filters.area')} disabled={areas.isFetching && !areas.data} {...register('area')}>
+          <option value="">{t('apartments.filters.areaPlaceholder')}</option>
+          {includeSelected(areas.data ?? [], watch('area')).map(area => <option key={area} value={area}>{area}</option>)}
+        </SelectField>
+        {areas.isError && <button type="button" onClick={() => void areas.refetch()} className="mt-1 text-xs text-danger underline">{t('common.retry')}</button>}
       </div>
       <SelectField label={t('apartments.filters.propertyType')} {...register('propertyType')}>
         <option value="">{t('apartments.filters.any')}</option>
@@ -110,12 +92,13 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
           </option>
         ))}
       </SelectField>
-      <div className="col-span-2 flex items-end gap-4 sm:col-span-1">
-        <CheckboxField label={t('apartments.filters.elevator')} {...register('elevator')} />
-        <CheckboxField label={t('apartments.filters.parking')} {...register('parking')} />
-      </div>
-      <div className="col-span-2 flex items-end gap-2 sm:col-span-3 lg:col-span-1">
-        <Button type="submit" className="flex-1">
+      {(['elevator', 'parking'] as const).map(name => <Controller key={name} name={name} control={control} render={({ field }) => (
+        <SelectField label={t(`apartments.filters.${name}`)} value={field.value == null ? '' : String(field.value)} onChange={event => field.onChange(event.target.value)}>
+          <option value="">{t('apartments.filters.any')}</option><option value="true">{t('common.yes')}</option><option value="false">{t('common.no')}</option>
+        </SelectField>
+      )} />)}
+      <div className="col-span-2 flex items-end gap-2 sm:col-span-3 lg:col-span-2">
+        <Button type="submit" className="flex-1 whitespace-nowrap">
           {t('apartments.filters.apply')}
         </Button>
         <Button type="button" variant="secondary" onClick={handleClear}>

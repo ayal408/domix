@@ -13,7 +13,7 @@ export default function HomePage() {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 py-16 text-center">
-      <img src="/hero.png" alt="" className="h-28 w-auto sm:h-36" aria-hidden="true" />
+      <img src="/domix-mark.svg" alt="" className="h-20 w-20 sm:h-24 sm:w-24" aria-hidden="true" />
       <h1 className="text-3xl font-bold text-foreground sm:text-4xl">{t('home.title')}</h1>
       <p className="text-base text-muted sm:text-lg">{t('home.description')}</p>
       <p className="text-muted">{t('discovery.promise')}</p>

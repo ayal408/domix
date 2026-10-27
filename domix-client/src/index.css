@@ -152,3 +152,24 @@
   width: 100%;
   margin: 0 !important;
 }
+
+/* Keep dialogs within the visible viewport, including browser zoom and mobile keyboards. */
+.domix-scroll-panel {
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+}
+.domix-scroll-list {
+  max-height: min(60vh, 24rem);
+  max-height: min(60dvh, 24rem);
+  overflow-y: auto;
+}
+.domix-scroll-panel, .domix-scroll-list {
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-muted) var(--color-card-muted);
+}
+.domix-scroll-panel::-webkit-scrollbar, .domix-scroll-list::-webkit-scrollbar { width: 10px; }
+.domix-scroll-panel::-webkit-scrollbar-track, .domix-scroll-list::-webkit-scrollbar-track { background: var(--color-card-muted); border-radius: 12px; }
+.domix-scroll-panel::-webkit-scrollbar-thumb, .domix-scroll-list::-webkit-scrollbar-thumb { background: var(--color-muted); border: 2px solid var(--color-card-muted); border-radius: 12px; }

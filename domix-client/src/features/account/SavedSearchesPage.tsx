@@ -44,8 +44,8 @@ export default function SavedSearchesPage() {
     if (search.minRooms != null) params.set('minRooms', String(search.minRooms))
     if (search.maxRooms != null) params.set('maxRooms', String(search.maxRooms))
     if (search.propertyType) params.set('propertyType', search.propertyType)
-    if (search.parking) params.set('parking', 'true')
-    if (search.elevator) params.set('elevator', 'true')
+    if (search.parking != null) params.set('parking', String(search.parking))
+    if (search.elevator != null) params.set('elevator', String(search.elevator))
     navigate(`/?${params.toString()}`)
   }
 

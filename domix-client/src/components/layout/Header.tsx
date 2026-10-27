@@ -16,7 +16,7 @@ const navLinkClasses = ({ isActive }: { isActive: boolean }) => cn(
   'flex min-h-10 items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
   isActive ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-card-muted',
 )
-const menuClasses = 'z-[60] mt-2 max-h-[min(70vh,32rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-xl focus:outline-none'
+const menuClasses = 'domix-scroll-list z-[60] mt-2 max-h-[min(70vh,32rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-xl border border-border bg-card p-2 shadow-xl focus:outline-none'
 type NavItem = { to: string; label: string }
 function NavMenu({ label, items, icon, className }: { label: string; items: NavItem[]; icon?: boolean; className?: string }) {
   return <Menu as="div" className={cn('relative', className)}>

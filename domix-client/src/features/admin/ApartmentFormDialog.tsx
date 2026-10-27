@@ -123,7 +123,7 @@ export function ApartmentFormDialog({ open, apartment, onClose, onCreated }: Pro
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <DialogPanel className="w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-lg">
+              <DialogPanel className="domix-scroll-panel w-full max-w-2xl rounded-xl border border-border bg-card p-6 shadow-lg">
                 <DialogTitle className="text-lg font-semibold text-foreground">
                   {isEdit ? t('admin.apartments.editApartment') : t('admin.apartments.newApartment')}
                 </DialogTitle>

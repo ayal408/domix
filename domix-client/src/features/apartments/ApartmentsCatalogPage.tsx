@@ -21,8 +21,8 @@ function toSearchQuery(values: ApartmentSearchFormValues): ApartmentSearchQuery 
     minRooms: values.minRooms,
     maxRooms: values.maxRooms,
     propertyType: values.propertyType,
-    parking: values.parking || undefined,
-    elevator: values.elevator || undefined,
+    parking: values.parking,
+    elevator: values.elevator,
     sortBy: values.sortBy,
   }
 }
@@ -37,8 +37,8 @@ function isEmptyQuery(query: ApartmentSearchQuery): boolean {
     query.minRooms == null &&
     query.maxRooms == null &&
     !query.propertyType &&
-    !query.parking &&
-    !query.elevator &&
+    query.parking == null &&
+    query.elevator == null &&
     !query.sortBy
   )
 }
@@ -56,8 +56,8 @@ function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSear
     minRooms: searchParams.has('minRooms') ? Number(searchParams.get('minRooms')) : undefined,
     maxRooms: searchParams.has('maxRooms') ? Number(searchParams.get('maxRooms')) : undefined,
     propertyType: (PROPERTY_TYPES as readonly string[]).includes(propertyType ?? '') ? (propertyType as PropertyType) : undefined,
-    parking: searchParams.get('parking') === 'true' || undefined,
-    elevator: searchParams.get('elevator') === 'true' || undefined,
+    parking: searchParams.get('parking') === 'true' ? true : searchParams.get('parking') === 'false' ? false : undefined,
+    elevator: searchParams.get('elevator') === 'true' ? true : searchParams.get('elevator') === 'false' ? false : undefined,
   }
 
   return {
@@ -72,8 +72,8 @@ function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSear
       minRooms: query.minRooms,
       maxRooms: query.maxRooms,
       propertyType: query.propertyType as ApartmentSearchFormValues['propertyType'],
-      parking: query.parking ?? false,
-      elevator: query.elevator ?? false,
+      parking: query.parking,
+      elevator: query.elevator,
     },
   }
 }

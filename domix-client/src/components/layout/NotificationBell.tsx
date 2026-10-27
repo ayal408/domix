@@ -40,9 +40,9 @@ export function NotificationBell() {
         focus
         role="dialog"
         aria-label={t('notifications.title')}
-        className="z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-2 shadow-lg"
+        className="domix-scroll-list z-50 mt-1 w-80 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-card p-2 shadow-lg"
       >
-        <div className="flex items-center justify-between gap-3 border-b border-border px-2 pb-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border bg-card px-2 pb-2">
           <p className="text-sm font-semibold text-foreground">{t('notifications.title')}</p>
           <CloseButton aria-label={t('common.close')} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl text-muted hover:bg-card-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             <span aria-hidden="true">×</span>
@@ -56,7 +56,7 @@ export function NotificationBell() {
         {!data || data.notifications.length === 0 ? (
           <EmptyState title={t('notifications.empty')} />
         ) : (
-          <div className="max-h-96 space-y-1 overflow-y-auto">
+          <div className="space-y-1">
             {data.notifications.map((n) => (
               <div key={n.notificationId} className="rounded px-2 py-2 hover:bg-card-muted">
                 <p className="text-sm font-semibold text-foreground">{n.title}</p>

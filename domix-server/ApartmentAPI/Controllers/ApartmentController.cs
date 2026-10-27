@@ -45,6 +45,10 @@ namespace serverApi.Controllers
             return Ok(result);
         }
 
+        [HttpGet("areas")]
+        public async Task<ActionResult<IEnumerable<string>>> GetAreas([FromQuery, StringLength(100)] string? city, CancellationToken ct) =>
+            Ok(await _apartmentService.GetAreasAsync(city, ct));
+
         // GET: api/Apartment/Search
         [HttpGet("Search")]
         public async Task<ActionResult<IEnumerable<ApartmentDTO>>> Search(
