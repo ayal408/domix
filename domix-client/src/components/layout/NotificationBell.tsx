@@ -22,6 +22,7 @@ export function NotificationBell() {
 
   return (
     <Popover className="relative">
+      {({ close }) => <>
       <PopoverButton
         onClick={handleButtonClick}
         className="relative flex h-9 w-9 items-center justify-center rounded text-foreground hover:bg-card-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -49,7 +50,7 @@ export function NotificationBell() {
         </div>
         {!!data?.notifications.length && <button type="button" disabled={dismiss.isPending} onClick={() => {
           const through = data.notifications.reduce((latest, item) => item.createdAt > latest ? item.createdAt : latest, data.notifications[0]!.createdAt)
-          dismiss.mutate(through)
+          dismiss.mutate(through, { onSuccess: () => close() })
         }} className="my-2 rounded px-2 py-2 text-sm text-primary hover:bg-card-muted disabled:opacity-50">{text('clearNotifications')}</button>}
         {dismiss.isError && <p role="alert" className="px-2 py-2 text-sm text-danger">{text('clearFailed')}</p>}
         {!data || data.notifications.length === 0 ? (
@@ -66,6 +67,7 @@ export function NotificationBell() {
           </div>
         )}
       </PopoverPanel>
+      </>}
     </Popover>
   )
 }

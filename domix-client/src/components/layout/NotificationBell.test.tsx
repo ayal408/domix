@@ -10,7 +10,7 @@ vi.mock('@/hooks/useNotifications', () => ({
   useMarkNotificationsSeen: () => ({ mutate: vi.fn() }),
   useDismissNotifications: () => ({ mutate: dismiss, isPending: false, isError: false }),
 }))
-beforeEach(async () => { vi.clearAllMocks(); await i18n.changeLanguage('en'); vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }) })
+beforeEach(async () => { vi.clearAllMocks(); dismiss.mockReset(); await i18n.changeLanguage('en'); vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} }) })
 it('closes explicitly and restores focus to the bell', async () => {
   render(<NotificationBell />); const user = userEvent.setup(); const bell = screen.getByRole('button', { name: 'Notifications' })
   await user.click(bell); await screen.findByRole('dialog'); await user.click(screen.getByRole('button', { name: 'Close' }))
@@ -25,5 +25,14 @@ it('closes with Escape and an outside click', async () => {
 })
 it('clears only through the latest displayed timestamp', async () => {
   render(<NotificationBell />); const user = userEvent.setup(); await user.click(screen.getByRole('button', { name: 'Notifications' }))
-  await user.click(await screen.findByRole('button', { name: 'Clear my notifications' })); expect(dismiss).toHaveBeenCalledWith('2026-01-01T00:00:00Z')
+  await user.click(await screen.findByRole('button', { name: 'Clear my notifications' })); expect(dismiss).toHaveBeenCalledWith('2026-01-01T00:00:00Z', { onSuccess: expect.any(Function) })
+})
+
+it('closes after successful cleanup so removed controls cannot strand focus', async () => {
+  dismiss.mockImplementation((_through, options) => options.onSuccess())
+  render(<NotificationBell />); const user = userEvent.setup()
+  await user.click(screen.getByRole('button', { name: 'Notifications' }))
+  await user.click(await screen.findByRole('button', { name: 'Clear my notifications' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  expect(screen.getByRole('button', { name: 'Notifications' })).toHaveFocus()
 })
