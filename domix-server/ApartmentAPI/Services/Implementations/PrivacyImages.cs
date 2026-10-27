@@ -1,6 +1,4 @@
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Processing;
+using SkiaSharp;
 namespace serverApi.Services.Implementations;
 
 public static class PrivacyImages
@@ -37,23 +35,46 @@ public static class PrivacyImages
             if (!jpeg && !png && !webp) throw new ArgumentException("התמונה אינה בפורמט נתמך");
             if (webp && read >= 21 && header.AsSpan(12, 4).SequenceEqual("VP8X"u8) && (header[20] & 2) != 0)
                 throw new ArgumentException("יש להעלות תמונה ללא הנפשה");
-            var info = await Image.IdentifyAsync(source, ct);
-            if (info is null || (long)info.Width * info.Height > 16_000_000)
+            using var input = new MemoryStream();
+            await source.CopyToAsync(input, ct);
+            using var data = SKData.CreateCopy(input.ToArray());
+            using var codec = SKCodec.Create(data);
+            if (codec is null || codec.Info.Width <= 0 || codec.Info.Height <= 0 ||
+                (long)codec.Info.Width * codec.Info.Height > 16_000_000 || codec.FrameCount > 1)
                 throw new ArgumentException("התמונה גדולה מדי או אינה תקינה");
-            source.Position = 0;
-            using var image = await Image.LoadAsync(source, ct);
-            image.Mutate(x => x.AutoOrient());
-            image.Metadata.ExifProfile = null; image.Metadata.IccProfile = null;
-            image.Metadata.IptcProfile = null; image.Metadata.XmpProfile = null;
-            foreach (var frame in image.Frames)
-            {
-                frame.Metadata.ExifProfile = null; frame.Metadata.XmpProfile = null;
-            }
-            using var output = new MemoryStream();
-            await image.SaveAsJpegAsync(output, new JpegEncoder { Quality = 85 }, ct);
-            return output.ToArray();
+            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Rgba8888, SKAlphaType.Premul);
+            using var bitmap = new SKBitmap(info);
+            if (codec.GetPixels(info, bitmap.GetPixels()) != SKCodecResult.Success)
+                throw new ArgumentException("התמונה אינה תקינה");
+            ct.ThrowIfCancellationRequested();
+            var width = info.Width; var height = info.Height;
+            var swap = (int)codec.EncodedOrigin >= 5;
+            using var surface = SKSurface.Create(new SKImageInfo(swap ? height : width, swap ? width : height));
+            surface.Canvas.Clear(SKColors.White);
+            // Apply orientation to pixels before re-encoding; no source EXIF/XMP/IPTC/ICC is copied.
+            surface.Canvas.SetMatrix(Orientation(codec.EncodedOrigin, width, height));
+            surface.Canvas.DrawBitmap(bitmap, 0, 0);
+            using var image = surface.Snapshot();
+            using var encoded = image.Encode(SKEncodedImageFormat.Jpeg, 85);
+            return encoded.ToArray();
         }
-        catch (UnknownImageFormatException) { throw new ArgumentException("התמונה אינה תקינה"); }
-        catch (InvalidImageContentException) { throw new ArgumentException("התמונה אינה תקינה"); }
+        catch (InvalidOperationException) { throw new ArgumentException("התמונה אינה תקינה"); }
+    }
+
+    private static SKMatrix Orientation(SKEncodedOrigin origin, int width, int height)
+    {
+        var (sx, kx, tx, ky, sy, ty) = origin switch
+        {
+            SKEncodedOrigin.TopRight => (-1f, 0f, (float)width, 0f, 1f, 0f),
+            SKEncodedOrigin.BottomRight => (-1f, 0f, (float)width, 0f, -1f, (float)height),
+            SKEncodedOrigin.BottomLeft => (1f, 0f, 0f, 0f, -1f, (float)height),
+            SKEncodedOrigin.LeftTop => (0f, 1f, 0f, 1f, 0f, 0f),
+            SKEncodedOrigin.RightTop => (0f, -1f, (float)height, 1f, 0f, 0f),
+            SKEncodedOrigin.RightBottom => (0f, -1f, (float)height, -1f, 0f, (float)width),
+            SKEncodedOrigin.LeftBottom => (0f, 1f, 0f, -1f, 0f, (float)width),
+            _ => (1f, 0f, 0f, 0f, 1f, 0f),
+        };
+        return new SKMatrix { ScaleX = sx, SkewX = kx, TransX = tx, SkewY = ky, ScaleY = sy, TransY = ty, Persp2 = 1 };
+
     }
 }

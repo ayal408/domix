@@ -8,10 +8,7 @@ using serverApi.Models.DTOs;
 using serverApi.Services.Interfaces;
 using System.Security.Cryptography;
 using System.Text;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
-// Removed dependency on SixLabors.ImageSharp.Drawing to avoid license requirement
+using SkiaSharp;
 
 namespace serverApi.Services.Implementations
 {
@@ -417,55 +414,24 @@ namespace serverApi.Services.Implementations
             return ToDto(user);
         }
 
-        private byte[] GenerateIdenticon(string input, int size = 256)
+        private static byte[] GenerateIdenticon(string input, int size = 256)
         {
             var hash = SHA256.HashData(Encoding.UTF8.GetBytes(input.Trim().ToLower()));
-            var color = new Rgba32(hash[0], hash[1], hash[2]);
-
-            int grid = 5;
-            int cell = size / grid;
-
-            using var image = new Image<Rgba32>(size, size);
-
-            // Fill background
-            image.Mutate(ctx => ctx.BackgroundColor(new Rgba32(255, 255, 255)));
-
-            for (int y = 0; y < grid; y++)
-            {
-                for (int x = 0; x < (grid + 1) / 2; x++)
-                {
-                    int i = (x + y * grid) % hash.Length;
-
-                    if (hash[i] % 2 == 0)
+            using var bitmap = new SKBitmap(size, size);
+            using var canvas = new SKCanvas(bitmap);
+            canvas.Clear(SKColors.White);
+            using var paint = new SKPaint { Color = new SKColor(hash[0], hash[1], hash[2]), IsAntialias = false };
+            var cell = size / 5;
+            for (var y = 0; y < 5; y++)
+                for (var x = 0; x < 3; x++)
+                    if (hash[(x + y * 5) % hash.Length] % 2 == 0)
                     {
-                        int x1 = x * cell;
-                        int y1 = y * cell;
-                        int x2 = (grid - 1 - x) * cell;
-                        int y2 = y1;
-
-                        // draw filled rectangles by drawing pixels manually for compatibility
-                        for (int yy = 0; yy < cell; yy++)
-                        {
-                            for (int xx = 0; xx < cell; xx++)
-                            {
-                                int px1 = x1 + xx;
-                                int py1 = y1 + yy;
-                                int px2 = x2 + xx;
-                                int py2 = y2 + yy;
-
-                                if (px1 >= 0 && px1 < size && py1 >= 0 && py1 < size)
-                                    image[px1, py1] = color;
-                                if (px2 >= 0 && px2 < size && py2 >= 0 && py2 < size)
-                                    image[px2, py2] = color;
-                            }
-                        }
+                        canvas.DrawRect(x * cell, y * cell, cell, cell, paint);
+                        canvas.DrawRect((4 - x) * cell, y * cell, cell, cell, paint);
                     }
-                }
-            }
-
-            using var ms = new MemoryStream();
-            image.SaveAsPng(ms);
-            return ms.ToArray();
+            using var image = SKImage.FromBitmap(bitmap);
+            using var encoded = image.Encode(SKEncodedImageFormat.Png, 100);
+            return encoded.ToArray();
         }
 
         private static UserResponseDto ToDto(User user)
