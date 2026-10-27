@@ -8,13 +8,15 @@ import { loginSchema, type LoginFormValues } from '@/features/auth/schemas'
 import { useAuthStore } from '@/stores/auth.store'
 import { InputField } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
+import './auth.design.i18n'
+import './auth-design.css'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 import { isGoogleAuthEnabled } from '@/config/env'
 import { errorTranslationKey, toApiError } from '@/api/errors'
 
 export default function LoginPage() {
   const { t } = useTranslation()
+  const { t: design } = useTranslation('authDesign')
   const navigate = useNavigate()
   const location = useLocation()
   const signInWithPassword = useAuthStore((state) => state.signInWithPassword)
@@ -55,10 +57,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="mx-auto flex max-w-sm flex-col gap-6 py-8">
-      <h1 className="text-center text-2xl font-bold text-foreground">{t('auth.loginTitle')}</h1>
-      <Card className="p-6">
-        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4" noValidate>
+    <section className="auth-entry" aria-labelledby="login-heading">
+      <aside className="auth-entry-story">
+        <span className="auth-entry-wordmark" dir="ltr">DOMIX<span>·</span></span>
+        <div className="auth-entry-story-copy">
+          <span className="auth-entry-eyebrow">{design('eyebrow')}</span>
+          <h2>{design('headline')}</h2>
+          <p>{design('description')}</p>
+        </div>
+        <svg className="auth-entry-houses" viewBox="0 0 440 230" fill="none" aria-hidden="true">
+          <circle cx="345" cy="53" r="34" fill="#c4b5fd" fillOpacity=".25" />
+          <path d="M20 215H420" stroke="#c4b5fd" strokeOpacity=".35" />
+          <path d="M52 215V122L126 66L200 122V215" fill="#a78bfa" fillOpacity=".2" stroke="#c4b5fd" strokeWidth="2" />
+          <path d="M179 215V85L273 18L367 85V215" fill="#c4b5fd" fillOpacity=".12" stroke="#ddd6fe" strokeWidth="2" />
+          <path d="M158 99L273 18L388 99" stroke="#ede9fe" strokeWidth="3" strokeLinecap="round" />
+          <path d="M39 132L126 66L213 132" stroke="#c4b5fd" strokeWidth="3" strokeLinecap="round" />
+          <rect x="239" y="143" width="66" height="72" rx="32" fill="#ddd6fe" fillOpacity=".3" />
+          <rect x="235" y="85" width="26" height="28" rx="5" fill="#e9d5ff" />
+          <rect x="285" y="85" width="26" height="28" rx="5" fill="#e9d5ff" fillOpacity=".45" />
+          <rect x="86" y="145" width="24" height="27" rx="4" fill="#ddd6fe" fillOpacity=".6" />
+          <rect x="140" y="145" width="24" height="27" rx="4" fill="#ddd6fe" fillOpacity=".3" />
+          <path d="M397 215V156M397 188C370 188 368 158 381 149C377 126 409 118 416 142C439 152 426 183 397 188Z" fill="#a7f3d0" fillOpacity=".55" stroke="#a7f3d0" strokeWidth="2" />
+        </svg>
+        <span className="auth-entry-story-note">{design('note')}</span>
+      </aside>
+      <div className="auth-entry-panel">
+        <div className="auth-entry-form">
+          <header className="auth-entry-heading">
+            <span className="auth-entry-kicker">{design('welcome')}</span>
+            <h1 id="login-heading">{t('auth.loginTitle')}</h1>
+            <p>{design('subtitle')}</p>
+          </header>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5" noValidate>
           <InputField
             label={t('auth.username')}
             autoComplete="username"
@@ -82,7 +112,7 @@ export default function LoginPage() {
               {formError}
             </p>
           )}
-          <Button type="submit" loading={isSubmitting} className="mt-2">
+          <Button type="submit" loading={isSubmitting} className="mt-1 h-12 rounded-xl">
             {t('auth.loginButton')}
           </Button>
         </form>
@@ -101,13 +131,14 @@ export default function LoginPage() {
             )}
           </div>
         )}
-      </Card>
-      <p className="text-center text-sm text-muted">
+      <p className="auth-entry-register text-center text-sm text-muted">
         {t('auth.noAccount')}{' '}
         <Link to="/register" state={location.state} className="font-medium text-primary hover:underline">
           {t('auth.createOne')}
         </Link>
       </p>
-    </div>
+        </div>
+      </div>
+    </section>
   )
 }

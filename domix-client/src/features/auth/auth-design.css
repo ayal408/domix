@@ -1,0 +1,30 @@
+.auth-entry { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1fr); max-width: 980px; margin: clamp(8px, 4vh, 44px) auto; border: 1px solid var(--color-border); border-radius: 28px; background: var(--color-card); box-shadow: 0 24px 75px -35px rgba(35, 18, 70, .35); overflow: hidden; }
+.auth-entry-story { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 36px; color: #f5f3ff; background: radial-gradient(ellipse at 10% 100%, #6350a0 0%, transparent 60%), #30214f; }
+.auth-entry-wordmark { align-self: flex-start; font-size: 23px; font-weight: 800; letter-spacing: 3px; }
+.auth-entry-wordmark span { color: #a7f3d0; }
+.auth-entry-story-copy { margin-top: 60px; position: relative; z-index: 1; }
+.auth-entry-eyebrow { color: #d7cbf1; font-size: 12px; letter-spacing: .05em; }
+.auth-entry-story h2 { max-width: 340px; margin: 15px 0 18px; font-size: clamp(30px, 3.5vw, 42px); font-weight: 700; line-height: 1.3; letter-spacing: -.025em; text-wrap: balance; }
+.auth-entry-story p { max-width: 320px; color: #d7cbf1; font-size: 15px; line-height: 1.9; }
+.auth-entry-houses { width: calc(100% + 24px); margin: 32px -12px 14px; margin-top: auto; padding-top: 32px; }
+.auth-entry-story-note { color: #d7cbf1; font-size: 12px; }
+.auth-entry-panel { padding: 48px 40px; align-self: center; min-width: 0; }
+.auth-entry-form { max-width: 380px; margin-inline: auto; }
+.auth-entry-heading { margin-bottom: 32px; }
+.auth-entry-kicker { color: var(--color-primary); font-size: 13px; font-weight: 600; }
+.auth-entry-heading h1 { margin-top: 10px; font-size: 29px; font-weight: 750; line-height: 1.35; letter-spacing: -.035em; color: var(--color-foreground); }
+.auth-entry-heading p { margin-top: 10px; font-size: 14px; line-height: 1.8; color: var(--color-muted); }
+.auth-entry input { min-height: 48px; border-radius: 12px; padding-inline: 14px; background: var(--color-background); font-size: 16px; }
+.auth-entry label { font-size: 13px; }
+.auth-entry-register { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--color-border); line-height: 1.9; }
+@media (max-width: 700px) {
+ .auth-entry { display: block; max-width: 460px; border-radius: 22px; margin-top: 0; }
+ .auth-entry-story { padding: 22px 26px; }
+ .auth-entry-wordmark { font-size: 18px; }
+ .auth-entry-story-copy { margin-top: 18px; }
+ .auth-entry-story h2 { font-size: 26px; margin: 8px 0 0; max-width: none; }
+ .auth-entry-eyebrow, .auth-entry-story p, .auth-entry-houses, .auth-entry-story-note { display: none; }
+ .auth-entry-panel { padding: 28px 24px; }
+ .auth-entry-heading { margin-bottom: 26px; }
+ .auth-entry-heading h1 { font-size: 25px; }
+}
