@@ -40,6 +40,13 @@ export const usePresenceStore = create<PresenceState>((set) => ({
 
     connection = new signalR.HubConnectionBuilder()
       .withUrl(`${env.apiUrl}/hubs/presence`, { accessTokenFactory: resolveAccessToken })
+      .configureLogging({
+        // SignalR messages can contain the full WebSocket URL and its bearer token.
+        // Keep a generic warning, never provider-generated text or error objects.
+        log: (level) => {
+          if (level >= signalR.LogLevel.Warning) console.warn('Presence connection warning.')
+        },
+      })
       .withAutomaticReconnect()
       .build()
 

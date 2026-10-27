@@ -19,6 +19,8 @@ RUN --mount=type=secret,id=extra_ca,required=false \
       && cp /run/secrets/extra_ca /usr/local/share/domix/extra-ca.pem; fi
 COPY . .
 COPY docker-entrypoint.sh /usr/local/bin/domix-auth-entrypoint
+# Windows checkouts may supply CRLF even when the repository stores LF.
+RUN sed -i 's/\r$//' /usr/local/bin/domix-auth-entrypoint
 EXPOSE 5000
 ENTRYPOINT ["sh", "/usr/local/bin/domix-auth-entrypoint"]
 CMD ["node", "app.js"]
