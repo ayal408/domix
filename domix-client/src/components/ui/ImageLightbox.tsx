@@ -63,7 +63,7 @@ export function ImageLightbox({ images, initialIndex, onClose }: Props) {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="relative flex h-full w-full max-w-5xl items-center justify-center">
+            <DialogPanel className="domix-scroll-panel relative flex h-full w-full max-w-5xl items-center justify-center">
               <img
                 src={images[index]}
                 alt=""

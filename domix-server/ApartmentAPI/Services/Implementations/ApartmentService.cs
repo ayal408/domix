@@ -44,6 +44,14 @@ namespace serverApi.Services.Implementations
             return apartment == null ? null : Map(apartment);
         }
 
+        public async Task<IEnumerable<string>> GetAreasAsync(string? city, CancellationToken cancellationToken = default)
+        {
+            var query = _context.Apartments.AsNoTracking();
+            if (!string.IsNullOrWhiteSpace(city)) query = query.Where(a => a.city == city.Trim());
+            return await query.Where(a => a.area != null && a.area.Trim() != "")
+                .Select(a => a.area.Trim()).Distinct().OrderBy(area => area).ToListAsync(cancellationToken);
+        }
+
         public async Task<IEnumerable<string>> GetCitiesAsync(CancellationToken cancellationToken = default)
         {
             return await _context.Apartments

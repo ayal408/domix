@@ -129,6 +129,11 @@ export function toUpdateApartmentRequest(values: ApartmentFormValues): UpdateApa
 }
 
 /** Search/filter bar above the catalog. All fields optional — an empty form matches everything. */
+const optionalSearchBoolean = z.preprocess(
+  value => value === '' ? undefined : value === 'true' ? true : value === 'false' ? false : value,
+  z.boolean().optional(),
+)
+
 export const apartmentSearchSchema = z
   .object({
     city: z.string().trim().optional(),
@@ -138,8 +143,8 @@ export const apartmentSearchSchema = z
     minRooms: emptyToUndefined(z.coerce.number().nonnegative()),
     maxRooms: emptyToUndefined(z.coerce.number().nonnegative()),
     propertyType: emptyToUndefined(z.enum(PROPERTY_TYPES)),
-    parking: z.boolean().optional(),
-    elevator: z.boolean().optional(),
+    parking: optionalSearchBoolean,
+    elevator: optionalSearchBoolean,
     sortBy: emptyToUndefined(z.enum(SORT_OPTIONS)),
   })
   .refine((data) => data.minPrice == null || data.maxPrice == null || data.minPrice <= data.maxPrice, {
@@ -162,7 +167,7 @@ export const APARTMENT_SEARCH_DEFAULTS: ApartmentSearchFormValues = {
   minRooms: undefined,
   maxRooms: undefined,
   propertyType: undefined,
-  parking: false,
-  elevator: false,
+  parking: undefined,
+  elevator: undefined,
   sortBy: undefined,
 }

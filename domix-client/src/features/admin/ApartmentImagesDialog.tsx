@@ -81,7 +81,7 @@ export function ApartmentImagesDialog({ open, apartment, onClose }: Props) {
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg">
+            <DialogPanel className="domix-scroll-panel w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-lg">
               <DialogTitle className="text-lg font-semibold text-foreground">
                 {t('admin.apartments.images')} — {apartment.city}
               </DialogTitle>

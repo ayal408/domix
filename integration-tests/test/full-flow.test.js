@@ -514,3 +514,18 @@ test('message email choice is self-scoped and unread count belongs only to the r
   // The initial verification attempt is recorded; sending the private message adds no email attempt.
   assert.equal(delivery.rows[0].count, 1);
 });
+
+test('area dropdown options follow the selected city and exclude archived listings', async () => {
+  const city = `Options-${runId}`;
+  const request = (path, method = 'GET', body) => fetch(`${services.domixServerUrl}/api${path}`, {
+    method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminAccessToken}` }, body: body ? JSON.stringify(body) : undefined
+  });
+  const first = await request('/Apartment', 'POST', { city, area: 'Area A', address: 'Street 1', price: 4000, listingType: 'Rent' });
+  const second = await request('/Apartment', 'POST', { city, area: 'Area B', address: 'Street 2', price: 5000, listingType: 'Rent' });
+  assert.equal(first.status, 200); assert.equal(second.status, 200);
+  assert.deepEqual(await (await request(`/Apartment/areas?city=${encodeURIComponent(city)}`)).json(), ['Area A', 'Area B']);
+  assert.equal((await request(`/Apartment/${(await first.json()).apartmentId}`, 'DELETE')).status, 204);
+  assert.deepEqual(await (await request(`/Apartment/areas?city=${encodeURIComponent(city)}`)).json(), ['Area B']);
+  const negativeAmenities = await request(`/Apartment/Search?city=${encodeURIComponent(city)}&parking=false&elevator=false`);
+  assert.equal(negativeAmenities.status, 200); assert.equal((await negativeAmenities.json()).length, 1);
+});

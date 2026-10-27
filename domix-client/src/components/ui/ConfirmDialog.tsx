@@ -50,7 +50,7 @@ export function ConfirmDialog({
             leaveFrom="opacity-100 scale-100"
             leaveTo="opacity-0 scale-95"
           >
-            <DialogPanel className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
+            <DialogPanel className="domix-scroll-panel w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-lg">
               <DialogTitle className="text-base font-semibold text-foreground">{title}</DialogTitle>
               {description && <Description className="mt-2 text-sm text-muted">{description}</Description>}
               <div className="mt-6 flex justify-end gap-2">

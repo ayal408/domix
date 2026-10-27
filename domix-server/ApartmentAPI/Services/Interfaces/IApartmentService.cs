@@ -9,6 +9,7 @@ namespace serverApi.Services.Interfaces
 
         /// <summary>Returns null when no apartment with the given id exists. Used by the anonymous social-share preview endpoint.</summary>
         Task<ApartmentDTO?> GetApartmentByIdAsync(Guid apartmentId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<string>> GetAreasAsync(string? city, CancellationToken cancellationToken = default);
         Task<IEnumerable<string>> GetCitiesAsync(CancellationToken cancellationToken = default);
         Task<IEnumerable<ApartmentDTO>> SearchApartmentsAsync(
             string? city,

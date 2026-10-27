@@ -74,7 +74,7 @@ export function AddressAutocomplete({
           {isOpen && (query.trim().length >= 2 || isLoading) && (
             <ComboboxOptions
               static
-              className="absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-auto rounded border border-border bg-card py-1 shadow-lg"
+              className="domix-scroll-list absolute inset-x-0 top-full z-50 mt-1 max-h-56 overflow-auto rounded border border-border bg-card py-1 shadow-lg"
               onBlur={() => setIsOpen(false)}
             >
               {isLoading ? (
