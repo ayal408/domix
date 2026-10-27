@@ -14,7 +14,7 @@ try {
     [System.IO.File]::WriteAllText($good, $pem + $pem) # Multiple roots must be accepted, not guessed as a single root.
     & pwsh -NoProfile -File (Join-Path $root 'scripts/start-local.ps1') -ExtraCaCertPath $good -ValidateOnly
     if ($LASTEXITCODE -ne 0) { throw 'Valid CA bundle was rejected.' }
-    foreach ($invalid in @('not a certificate', $pem + '-----BEGIN PRIVATE KEY-----')) {
+    foreach ($invalid in @('not a certificate', ($pem + '-----BEGIN PRIVATE KEY-----'))) {
         $bad = Join-Path $temp 'bad.pem'; [System.IO.File]::WriteAllText($bad, $invalid)
         & pwsh -NoProfile -File (Join-Path $root 'scripts/start-local.ps1') -ExtraCaCertPath $bad -ValidateOnly
         if ($LASTEXITCODE -eq 0) { throw 'Invalid/private-key input was accepted.' }
