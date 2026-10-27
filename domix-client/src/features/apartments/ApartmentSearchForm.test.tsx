@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { dataClient } from '@/api/http'
@@ -13,10 +13,10 @@ function open(props: Partial<Parameters<typeof ApartmentSearchForm>[0]> = {}) {
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ApartmentSearchForm onSubmit={submit} onClear={clear} {...props} /></QueryClientProvider>)
   return { submit, clear }
 }
-it('uses dropdowns for every filter and submits numeric and negative boolean choices accurately', async () => {
+it('uses range pickers for numeric filters and submits numeric and negative boolean choices accurately', async () => {
   const { submit } = open(); const user = userEvent.setup()
-  expect(screen.getAllByRole('combobox')).toHaveLength(10); expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
-  await user.selectOptions(screen.getByLabelText('Min price'), '2000'); await user.selectOptions(screen.getByLabelText('Min rooms'), '2.5')
+  expect(screen.getAllByRole('combobox')).toHaveLength(6); expect(screen.getAllByRole('slider')).toHaveLength(4)
+  await user.type(screen.getByRole('spinbutton', { name: 'Min price' }), '2000'); await user.type(screen.getByRole('spinbutton', { name: 'Min rooms' }), '2.5')
   await user.selectOptions(screen.getByLabelText('Parking'), 'false'); await user.selectOptions(screen.getByLabelText('Elevator'), 'true')
   await user.click(screen.getByRole('button', { name: 'Apply filters' }))
   await waitFor(() => expect(submit).toHaveBeenCalled())
@@ -24,7 +24,7 @@ it('uses dropdowns for every filter and submits numeric and negative boolean cho
 })
 it('preserves saved custom bounds and clears the area when city changes', async () => {
   open({ initialValues: { city: 'Jerusalem', area: 'Old area', minPrice: 3333, maxRooms: 11.5 } }); const user = userEvent.setup()
-  expect(screen.getByLabelText('Min price')).toHaveValue('3333'); expect(screen.getByLabelText('Max rooms')).toHaveValue('11.5')
+  expect(screen.getByRole('spinbutton', { name: 'Min price' })).toHaveValue(3333); expect(screen.getByRole('spinbutton', { name: 'Max rooms' })).toHaveValue(11.5)
   await user.selectOptions(screen.getByLabelText('City'), 'Haifa')
   expect(screen.getByLabelText('Area / neighbourhood')).toHaveValue('')
   await waitFor(() => expect(dataClient.get).toHaveBeenCalledWith('/Apartment/areas', expect.objectContaining({ params: { city: 'Haifa' } })))
@@ -32,7 +32,18 @@ it('preserves saved custom bounds and clears the area when city changes', async 
 it('clears dropdowns without turning any amenity into a negative filter', async () => {
   const { clear, submit } = open({ initialValues: { parking: false, minPrice: 2000 } }); const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Clear filters' })); expect(clear).toHaveBeenCalled()
-  expect(screen.getByLabelText('Parking')).toHaveValue(''); expect(screen.getByLabelText('Min price')).toHaveValue('')
+  expect(screen.getByLabelText('Parking')).toHaveValue(''); expect(screen.getByRole('spinbutton', { name: 'Min price' })).toHaveValue(null)
   await user.click(screen.getByRole('button', { name: 'Apply filters' })); await waitFor(() => expect(submit).toHaveBeenCalled())
   expect(submit.mock.calls[0]![0].parking).toBeUndefined()
+})
+
+it('moves range handles without crossing and submits their actual values', async () => {
+  const { submit } = open({ initialValues: { minRooms: 2, maxRooms: 4 } })
+  fireEvent.change(screen.getByRole('slider', { name: 'Min rooms' }), { target: { value: '12' } })
+  expect(screen.getByRole('spinbutton', { name: 'Min rooms' })).toHaveValue(4)
+  fireEvent.change(screen.getByRole('slider', { name: 'Max rooms' }), { target: { value: '1' } })
+  expect(screen.getByRole('spinbutton', { name: 'Max rooms' })).toHaveValue(4)
+  await userEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
+  await waitFor(() => expect(submit).toHaveBeenCalled())
+  expect(submit.mock.calls[0]![0]).toMatchObject({ minRooms: 4, maxRooms: 4 })
 })
