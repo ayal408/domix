@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>domix_server</RootNamespace>
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <WarningsAsErrors>$(WarningsAsErrors);NU1901;NU1902;NU1903;NU1904</WarningsAsErrors>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +30,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="$(NuGetPackageRoot)skiasharp/4.153.1/LICENSE.txt" Link="third-party/SkiaSharp-LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="$(NuGetPackageRoot)skiasharp.nativeassets.linux.nodependencies/4.153.1/THIRD-PARTY-NOTICES.txt" Link="third-party/SkiaSharp-THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <InternalsVisibleTo Include="domix-server.Tests" />
   </ItemGroup>
 
