@@ -50,7 +50,7 @@ export default function ComparePage() {
   ]
   const loaded = apartments.filter((a): a is Apartment => !!a)
   const visibleRows = rows.filter(row => !differencesOnly || loaded.length < 2 || new Set(loaded.map(row.value)).size > 1)
-  return <div className="flex min-w-0 flex-col gap-4">
+  return <div className="flex w-full min-w-0 flex-col gap-4">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t('compare.title')}</h1><p className="mt-1 text-sm text-muted">{text('hint')}</p></div>
       {apartmentIds.length > 0 && <Button variant="secondary" size="sm" onClick={clear}>{t('compare.clearAll')}</Button>}
@@ -59,7 +59,7 @@ export default function ComparePage() {
       action={<Link to="/" className="text-primary underline">{t('apartments.detail.back')}</Link>} /> : <>
       <p className="text-sm text-muted">{text('selection', { count: apartmentIds.length, max: MAX_COMPARE })}</p>
       <label className="flex w-fit items-center gap-2 text-sm"><input type="checkbox" checked={differencesOnly} onChange={e => setDifferencesOnly(e.target.checked)} />{text('differences')}</label>
-      <div role="region" aria-label={t('compare.title')} tabIndex={0} className="max-w-full overflow-x-auto rounded-xl border border-border focus-visible:ring-2 focus-visible:ring-ring">
+      <div role="region" aria-label={t('compare.title')} tabIndex={0} className="w-full min-w-0 max-w-full overflow-x-auto rounded-xl border border-border focus-visible:ring-2 focus-visible:ring-ring">
         <table className="w-full border-collapse text-start">
           <caption className="sr-only">{t('compare.title')}</caption>
           <thead><tr>
