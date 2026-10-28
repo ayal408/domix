@@ -44,7 +44,7 @@ export function FloatingChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-4 end-4 z-40 flex flex-col items-end gap-3">
+    <div className="fixed end-4 z-40 flex flex-col items-end gap-3" style={{ bottom: 'calc(var(--mobile-nav-space, 0px) + 1rem)' }}>
       <Transition
         show={isOpen}
         enter="ease-out duration-150"
@@ -54,7 +54,7 @@ export function FloatingChatWidget() {
         leaveFrom="opacity-100 translate-y-0 scale-100"
         leaveTo="opacity-0 translate-y-2 scale-95"
       >
-        <div className="flex h-[28rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg">
+        <div style={{ maxHeight: 'calc(100dvh - var(--mobile-nav-space, 0px) - 7rem)' }} className="flex h-[28rem] w-[22rem] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-lg">
           <div className="flex items-center justify-between border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-semibold text-foreground">

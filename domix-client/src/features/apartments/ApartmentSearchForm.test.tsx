@@ -8,9 +8,11 @@ import { ApartmentSearchForm } from './ApartmentSearchForm'
 vi.mock('@/hooks/useApartments', () => ({ useCities: () => ({ data: ['Jerusalem', 'Haifa'] }) }))
 vi.mock('@/api/http', () => ({ dataClient: { get: vi.fn() } }))
 beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage('en'); vi.mocked(dataClient.get).mockResolvedValue({ data: ['Center', 'Carmel'] }) })
-function open(props: Partial<Parameters<typeof ApartmentSearchForm>[0]> = {}) {
+function open(props: Partial<Parameters<typeof ApartmentSearchForm>[0]> = {}, revealAdvanced = true) {
   const submit = vi.fn(), clear = vi.fn()
   render(<QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}><ApartmentSearchForm onSubmit={submit} onClear={clear} {...props} /></QueryClientProvider>)
+  const toggle = screen.queryByRole('button', { name: /More filters/ })
+  if (revealAdvanced && toggle) fireEvent.click(toggle)
   return { submit, clear }
 }
 it('uses range pickers for numeric filters and submits numeric and negative boolean choices accurately', async () => {
@@ -46,4 +48,15 @@ it('moves range handles without crossing and submits their actual values', async
   await userEvent.click(screen.getByRole('button', { name: 'Apply filters' }))
   await waitFor(() => expect(submit).toHaveBeenCalled())
   expect(submit.mock.calls[0]![0]).toMatchObject({ minRooms: 4, maxRooms: 4 })
+})
+
+it('keeps additional choices when their panel is collapsed and submitted', async () => {
+  const { submit } = open({}, false)
+  expect(screen.queryByLabelText('Parking')).not.toBeVisible()
+  await userEvent.click(screen.getByRole('button', {name:/More filters/}))
+  await userEvent.selectOptions(screen.getByLabelText('Parking'), 'false')
+  await userEvent.click(screen.getByRole('button', {name:/Fewer filters/}))
+  await userEvent.click(screen.getByRole('button', {name:'Apply filters'}))
+  await waitFor(() => expect(submit).toHaveBeenCalled())
+  expect(submit.mock.calls[0]![0].parking).toBe(false)
 })

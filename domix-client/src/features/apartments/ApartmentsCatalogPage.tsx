@@ -1,4 +1,7 @@
-import { useMemo } from 'react'
+import { MarketplaceTools } from './MarketplaceTools'
+import { MarketIcon } from '@/components/ui/MarketIcon'
+import './marketplace.i18n'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useApartmentPages } from '@/hooks/useApartments'
@@ -80,6 +83,9 @@ function fromSearchParams(searchParams: URLSearchParams): { query: ApartmentSear
 
 export default function ApartmentsCatalogPage() {
   const { t } = useTranslation()
+  const { t: market } = useTranslation('marketplace')
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [layout, setLayout] = useState<'list' | 'grid'>('list')
   const [searchParams, setSearchParams] = useSearchParams()
   const initial = useMemo(() => fromSearchParams(searchParams), [searchParams])
   const activeQuery = initial.query
@@ -91,6 +97,7 @@ export default function ApartmentsCatalogPage() {
   const listings = useMemo(() => data?.pages.flat() ?? [], [data])
 
   function handleSearchSubmit(values: ApartmentSearchFormValues) {
+    setFiltersOpen(false)
     const query = { ...toSearchQuery(values), listingType: searchParams.get('listingType') || undefined }
     const next = new URLSearchParams()
     if (ownerId) next.set('owner', ownerId)
@@ -101,30 +108,34 @@ export default function ApartmentsCatalogPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground sm:text-3xl">{t('apartments.catalogTitle')}</h1>
-        <p className="mt-1 text-sm text-muted">{t('apartments.catalogSubtitle')}</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div><p className="market-kicker mb-2">DOMIX / {market('filters')}</p><h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">{market('title')}</h1><p className="mt-2 text-sm text-muted">{market('searchHint')}</p></div>
       </div>
-
-      <label className="flex flex-col gap-2 text-sm">{t('exchange.listingType')}
-        <select className="rounded border border-border bg-card p-2" value={searchParams.get('listingType') ?? ''} onChange={e => { const next = new URLSearchParams(searchParams); if (e.target.value) next.set('listingType', e.target.value); else next.delete('listingType'); setSearchParams(next) }}>
-          <option value="">{t('apartments.filters.any')}</option>
-          {['Exchange', 'Rent', 'Sale', 'Unspecified'].map(type => <option key={type} value={type}>{t(`exchange.types.${type}`)}</option>)}
-        </select>
-      </label>
+      <div className="market-tabs" role="group" aria-label={t('exchange.listingType')}>
+        {['', 'Sale', 'Rent', 'Exchange', 'Unspecified'].map(type => <button key={type} type="button" aria-pressed={(searchParams.get('listingType') ?? '') === type}
+          onClick={() => { const next = new URLSearchParams(searchParams); if (type) next.set('listingType',type); else next.delete('listingType'); setSearchParams(next) }}>{market(type || 'all')}</button>)}
+      </div>
+      <button type="button" aria-expanded={filtersOpen} aria-controls="market-search-panel" onClick={() => setFiltersOpen(value => !value)} className="flex min-h-12 items-center justify-between rounded-xl border border-border bg-card px-4 text-start text-sm font-semibold lg:hidden"><span>{market('filters')}{activeQuery?.city ? ` · ${activeQuery.city}` : ''}</span><MarketIcon name="search" /></button>
+      <div id="market-search-panel" className={filtersOpen ? '' : 'hidden lg:block'}>
       <ApartmentSearchForm
         key={searchParams.toString()}
         onSubmit={handleSearchSubmit}
         onClear={() => setSearchParams(ownerId ? { owner: ownerId } : {})}
         initialValues={initial.formValues}
       />
+      </div>
 
-      {isSearching && (
-        <div className="flex justify-end">
-          <SaveSearchButton query={activeQuery} />
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-3">
+        <div><h2 className="text-lg font-bold">{market('results')}</h2>{!isLoading && !isError && <p role="status" className="mt-1 text-xs text-muted">{market('loaded', {count:listings.length})}</p>}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          {isSearching && <SaveSearchButton query={activeQuery} />}
+          <div className="flex rounded-lg border border-border bg-card p-1" role="group" aria-label={market('display')}>
+            {(['list','grid'] as const).map(mode => <button key={mode} type="button" aria-label={market(mode)} aria-pressed={layout === mode} onClick={() => setLayout(mode)} className={`flex min-h-10 min-w-10 items-center justify-center rounded-md ${layout === mode ? 'bg-card-muted text-primary' : 'text-muted'}`}><MarketIcon name={mode} /></button>)}
+          </div>
         </div>
-      )}
-
+      </div>
+      <div className="grid min-w-0 gap-7 lg:grid-cols-[minmax(0,1fr)_260px]">
+      <div className="min-w-0">
       {isError ? (
         <EmptyState
           title={t('apartments.loadError')}
@@ -135,7 +146,7 @@ export default function ApartmentsCatalogPage() {
           }
         />
       ) : isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={layout === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2' : 'flex flex-col gap-4'}>
           {Array.from({ length: 8 }).map((_, index) => (
             <ApartmentCardSkeleton key={index} />
           ))}
@@ -143,14 +154,17 @@ export default function ApartmentsCatalogPage() {
       ) : listings.length === 0 ? (
         <EmptyState title={t('apartments.empty.title')} description={t('apartments.empty.description')} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div className={layout === 'grid' ? 'grid grid-cols-1 gap-4 md:grid-cols-2' : 'flex flex-col gap-4'}>
           {listings.map((apartment) => (
-            <ApartmentCard key={apartment.apartmentId} apartment={apartment} />
+            <ApartmentCard key={apartment.apartmentId} apartment={apartment} layout={layout} />
           ))}
         </div>
       )}
-      {results.hasNextPage && <div className="flex justify-center"><Button
+      {results.hasNextPage && <div className="mt-5 flex justify-center"><Button
         loading={results.isFetchingNextPage} onClick={() => void results.fetchNextPage()}>{t('common.loadMore')}</Button></div>}
+      </div>
+      <MarketplaceTools />
+      </div>
     </div>
   )
 }

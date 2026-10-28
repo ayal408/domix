@@ -2,7 +2,7 @@ import { RenewalReminders } from '@/features/community/RenewalReminders'
 import { Link, useSearchParams } from 'react-router-dom'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApartments } from '@/hooks/useApartments'
 import { useAuthStore } from '@/stores/auth.store'
@@ -11,7 +11,10 @@ import { ApartmentManagementList } from '@/features/apartments/ApartmentManageme
 /** Every authenticated user's own listings — create/edit/delete/images, scoped to what they own. */
 export default function MyApartmentsPage() {
   const { t } = useTranslation()
-  const [params] = useSearchParams()
+  const [params, setParams] = useSearchParams()
+  const handleCreateRequest = useCallback(() => {
+    setParams(previous => { const next = new URLSearchParams(previous); next.delete('new'); return next }, { replace: true })
+  }, [setParams])
   const returnTo = params.get('returnTo') ?? ''
   const canReturn = returnTo === '/exchange' || returnTo.startsWith('/exchange?')
   const userId = useAuthStore((state) => state.user?.userId)
@@ -27,6 +30,8 @@ export default function MyApartmentsPage() {
     <Link className="w-fit text-primary underline" to="/my-leads">{t('returnTools:leads')}</Link>
     <RenewalReminders />
     <ApartmentManagementList
+      createRequested={params.get('new') === '1'}
+      onCreateRequestHandled={handleCreateRequest}
       apartments={own}
       isLoading={isLoading}
       title={t('myApartments.title')}

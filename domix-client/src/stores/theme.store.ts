@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
 /**
- * Theme state: light/dark/system mode only — DOMIX ships one brand palette (violet), not a
+ * Theme state: light/dark/system mode only — DOMIX ships one brand palette (forest green), not a
  * user-selectable accent, so there is nothing else to switch. All colour values live in CSS
  * custom properties in index.css, keyed off the single `data-theme` attribute on <html>, so
  * switching mode is one attribute write with no re-render of the tree and no flash.

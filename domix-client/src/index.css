@@ -2,22 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/**
- * Design tokens, resolved from the two attributes `useThemeStore` (see
- * stores/theme.store.ts) writes on <html>: `data-theme` (light|dark) and
- * `data-palette` (violet|ocean|emerald|sunset|rose). Every colour Tailwind
- * utility below (`bg-background`, `text-foreground`, `bg-primary`, ...) reads
- * one of these custom properties, so switching either attribute is a single
- * paint with no React re-render and no flash on load (theme is applied by
- * `initTheme()` before the app mounts).
- */
+/* DOMIX marketplace tokens. All fonts and icons are served locally. */
 :root {
-  --color-background: #f7f8fa;
-  --color-foreground: #14151a;
-  --color-muted: #6b7280;
+  --color-background: #f6f7f4;
+  --color-foreground: #172d29;
+  --color-muted: #61716c;
   --color-card: #ffffff;
-  --color-card-muted: #f1f2f5;
-  --color-border: #e3e5ea;
+  --color-card-muted: #eef2ee;
+  --color-border: #dfe6df;
   --color-ring-offset: #ffffff;
 
   --color-danger: #dc2626;
@@ -27,14 +19,14 @@
   --color-warning: #d97706;
   --color-warning-bg: #fffbeb;
 
-  --color-primary: #7c3aed;
-  --color-primary-hover: #6d28d9;
+  --color-primary: #116a52;
+  --color-primary-hover: #0c5542;
   --color-primary-foreground: #ffffff;
-  --color-ring: #a78bfa;
-  --color-primary-glow: rgba(124, 58, 237, 0.35);
+  --color-ring: #3ba788;
+  --color-primary-glow: rgba(17, 106, 82, 0.16);
 
-  /* Fixed brand mark — stays violet-to-emerald regardless of the active palette, so the wordmark reads as "DOMIX" no matter what accent the viewer picked. */
-  --gradient-brand: linear-gradient(90deg, #7c3aed, #10b981);
+  /* Brand accent shared by local marks and controls. */
+  --gradient-brand: linear-gradient(110deg, #116a52, #319478);
 
   --shadow-card: 0 1px 2px rgba(15, 15, 20, 0.06);
   --shadow-card-hover: 0 12px 24px -8px rgba(15, 15, 20, 0.18);
@@ -45,7 +37,11 @@
 }
 
 :root[data-theme='dark'] {
-  --color-background: #0e0f13;
+  --color-background: #101b18;
+  --color-primary: #69d6b1;
+  --color-primary-hover: #8ce6c7;
+  --color-primary-foreground: #092b21;
+  --color-ring: #69d6b1;
   --color-foreground: #f3f4f6;
   --color-muted: #9aa0ab;
   --color-card: #171922;
@@ -67,10 +63,10 @@
 }
 
 :root[data-palette='violet'] {
-  --color-primary: #7c3aed;
-  --color-primary-hover: #6d28d9;
-  --color-ring: #a78bfa;
-  --color-primary-glow: rgba(124, 58, 237, 0.35);
+  --color-primary: #116a52;
+  --color-primary-hover: #0c5542;
+  --color-ring: #3ba788;
+  --color-primary-glow: rgba(17, 106, 82, 0.16);
 }
 :root[data-palette='ocean'] {
   --color-primary: #0ea5e9;
@@ -182,3 +178,53 @@
 .domix-range input:focus-visible { outline: none; z-index: 1; }
 .domix-range input:focus-visible::-webkit-slider-thumb { outline: 3px solid var(--color-ring); outline-offset: 3px; }
 .domix-range input:focus-visible::-moz-range-thumb { outline: 3px solid var(--color-ring); outline-offset: 3px; }
+
+/* A quiet real-estate board: strong prices, generous photos, compact navigation. */
+.market-shell { --mobile-nav-space: 0px; }
+.market-kicker { color: var(--color-primary); font-size: .75rem; font-weight: 700; letter-spacing: .035em; }
+.market-tabs { display: flex; gap: .25rem; overflow-x: auto; scrollbar-width: thin; padding: .25rem; border-bottom: 1px solid var(--color-border); }
+.market-tabs button { flex: 0 0 auto; min-height: 46px; padding: .65rem 1rem; border-bottom: 3px solid transparent; font-size: .9rem; color: var(--color-muted); font-weight: 600; }
+.market-tabs button[aria-pressed='true'] { border-color: var(--color-primary); color: var(--color-primary); }
+.market-search { background: var(--color-card); border: 1px solid var(--color-border); border-radius: 18px; padding: 1.25rem; box-shadow: 0 6px 24px -18px #153c2e40; }
+.market-search fieldset { background: var(--color-background); border-color: transparent; }
+.market-search input:not([type='range']), .market-search select { min-height: 42px; border-radius: 8px; }
+.market-card { position: relative; display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 16px; background: var(--color-card); box-shadow: var(--shadow-card); transition: box-shadow .18s, border-color .18s; }
+.market-card:hover { border-color: var(--color-muted); box-shadow: var(--shadow-card-hover); }
+.market-card-photo { position: relative; flex-shrink: 0; height: 208px; overflow: hidden; background: var(--color-card-muted); }
+.market-card-photo img { height: 100%; width: 100%; object-fit: cover; transition: transform .2s; }
+.market-card:hover .market-card-photo img { transform: scale(1.025); }
+.market-card-body { display: flex; flex: 1; flex-direction: column; gap: .75rem; min-width: 0; padding: 1.1rem; }
+.market-card-stats { display: flex; flex-wrap: wrap; gap: .5rem 0; font-size: .85rem; color: var(--color-foreground); }
+.market-card-stats span + span { border-inline-start: 1px solid var(--color-border); margin-inline-start: .8rem; padding-inline-start: .8rem; }
+.market-card-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .5rem; border-top: 1px solid var(--color-border); padding-top: .6rem; margin-top: auto; }
+.market-mobile-nav { display: none; }
+.market-hero { position: relative; overflow: hidden; border: 1px solid var(--color-border); border-radius: 24px; background: var(--color-card); }
+.market-hero-art { background: linear-gradient(155deg, var(--color-card-muted), var(--color-card)); min-height: 220px; display: flex; align-items: center; justify-content: center; }
+.market-detail-gallery { display: grid; grid-template-columns: 1fr; gap: .5rem; }
+.market-detail-gallery button { position: relative; overflow: hidden; border-radius: 16px; background: var(--color-card-muted); }
+.market-detail-gallery img { width: 100%; height: 100%; object-fit: cover; }
+.market-detail-gallery button:first-child { height: 280px; }
+.market-detail-gallery button:not(:first-child) { display: none; }
+.market-detail-content { display: grid; gap: 1.5rem; min-width: 0; }
+.market-detail-content > * { min-width: 0; }
+@media (min-width: 640px) {
+  .market-card[data-layout='list'] { flex-direction: row; }
+  .market-card[data-layout='list'] .market-card-photo { width: 230px; height: auto; min-height: 232px; }
+  .market-detail-gallery { grid-template-columns: 2fr 1fr; grid-template-rows: 180px 180px; }
+  .market-detail-gallery button:first-child { height: auto; grid-row: span 2; }
+  .market-detail-gallery button:not(:first-child) { display: block; }
+}
+@media (min-width: 1024px) {
+  .market-detail-content { grid-template-columns: minmax(0, 1fr) 320px; align-items: start; }
+  .market-detail-aside { position: sticky; top: 142px; }
+}
+@media (max-width: 1023px) {
+  .market-shell[data-mobile-nav='true'] { --mobile-nav-space: calc(72px + env(safe-area-inset-bottom, 0px)); padding-bottom: var(--mobile-nav-space); }
+  .market-mobile-nav { position: fixed; z-index: 45; inset-inline: 0; bottom: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border-top: 1px solid var(--color-border); background: var(--color-card); padding: 8px 6px calc(8px + env(safe-area-inset-bottom, 0px)); box-shadow: 0 -5px 25px -18px #102c2866; }
+  .market-mobile-nav a { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; min-height: 48px; min-width: 0; color: var(--color-muted); font-size: 10px; font-weight: 600; }
+  .market-mobile-nav a[aria-current] { color: var(--color-primary); }
+  .market-mobile-publish > span:first-child { border-radius: 10px; background: var(--color-primary); color: var(--color-primary-foreground); padding: 6px 13px; margin-top: -12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .market-card, .market-card-photo img { transition: none; }
+}
