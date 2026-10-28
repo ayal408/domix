@@ -1,3 +1,5 @@
+import { CompareButton } from './CompareButton'
+import { ListingFreshness } from './ListingFreshness'
 import { ShareListing } from './ShareListing'
 import { ReportDialog } from '@/features/community/ReportDialog'
 import { formatExchangeDate } from './exchangeDates'
@@ -107,10 +109,11 @@ export default function ApartmentDetailPage() {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
               {apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}{apartment.listingType === 'Rent' ? ` ${t('exchange.perMonth')}` : ''}
             </h1>
+            <CompareButton apartmentId={apartment.apartmentId} />
             {isAuthenticated && (
               <Button
                 type="button"
@@ -143,6 +146,8 @@ export default function ApartmentDetailPage() {
           <Badge tone="neutral">{t(`admin.apartments.status.${apartment.status}`)}</Badge>
         )}
       </div>
+
+      <ListingFreshness apartment={apartment} detailed />
 
       <Card className="flex flex-col gap-2 p-4">
         <strong>{t(`exchange.types.${apartment.listingType ?? 'Unspecified'}`)}</strong>

@@ -204,7 +204,7 @@ const en = {
     remove: 'Remove from comparison',
     empty: {
       title: 'Nothing to compare yet',
-      description: 'Add up to 4 listings from the catalog using the "Compare" checkbox on each card.',
+      description: 'Choose up to 3 listings using Compare on a listing card or its details page.',
     },
   },
   savedSearches: {
@@ -679,7 +679,7 @@ const he: typeof en = {
     remove: 'הסרה מההשוואה',
     empty: {
       title: 'אין עדיין מה להשוות',
-      description: 'הוסיפו עד 4 מודעות מהקטלוג באמצעות תיבת הסימון "השוואה" בכל כרטיס.',
+      description: 'הוסיפו עד 3 מודעות מהקטלוג באמצעות תיבת הסימון "השוואה" בכל כרטיס.',
     },
   },
   savedSearches: {
@@ -1154,7 +1154,7 @@ const es: typeof en = {
     remove: 'Quitar de la comparación',
     empty: {
       title: 'Aún no hay nada que comparar',
-      description: 'Añade hasta 4 anuncios desde el catálogo con la casilla "Comparar" de cada tarjeta.',
+      description: 'Añade hasta 3 anuncios desde el catálogo con la casilla "Comparar" de cada tarjeta.',
     },
   },
   savedSearches: {
@@ -1629,7 +1629,7 @@ const fr: typeof en = {
     remove: 'Retirer de la comparaison',
     empty: {
       title: 'Rien à comparer pour le moment',
-      description: 'Ajoutez jusqu\'à 4 annonces depuis le catalogue avec la case "Comparer" de chaque carte.',
+      description: 'Ajoutez jusqu\'à 3 annonces depuis le catalogue avec la case "Comparer" de chaque carte.',
     },
   },
   savedSearches: {

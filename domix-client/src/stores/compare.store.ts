@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import type { Guid } from '@/types/api'
 
-const MAX_COMPARE = 4
+const MAX_COMPARE = 3
 
 interface CompareState {
   apartmentIds: Guid[]

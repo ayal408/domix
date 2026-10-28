@@ -37,12 +37,7 @@ export function useCities() {
   })
 }
 
-/**
- * There is no `GET /Apartment/{id}` on the backend, so a single listing is
- * selected out of the already-cached full list instead of a dedicated
- * network call. `useApartments` is the source of truth here — if the list
- * hasn't been fetched yet this triggers that same query.
- */
+/** Fetch one listing without loading the complete catalog. */
 export function useApartmentDetail(apartmentId: Guid | undefined) {
   return useQuery({
     queryKey: queryKeys.apartments.detail(apartmentId ?? ''),

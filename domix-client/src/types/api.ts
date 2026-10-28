@@ -244,6 +244,8 @@ export interface Apartment {
   parking?: boolean | null
   propertyType?: string | null
   dateInsert: IsoDateTime
+  /** Explicit owner confirmation only; publishing/editing does not imply confirmation. */
+  lastConfirmedAt?: IsoDateTime | null
   latitude?: number | null
   longitude?: number | null
   /** Running average, 0-5. 0 with `ratingCount` 0 means unrated. */

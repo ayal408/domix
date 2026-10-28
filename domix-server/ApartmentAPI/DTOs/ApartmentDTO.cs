@@ -25,6 +25,7 @@ namespace serverApi.Models.DTOs
         public bool? Parking { get; set; }
         public string? PropertyType { get; set; }
         public DateTime dateInsert { get; set; }
+        public DateTime? LastConfirmedAt { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
         /// <summary>Running average, 0-5. 0 with <see cref="RatingCount"/> 0 means unrated.</summary>

@@ -1,3 +1,4 @@
+import { CompareSelection } from '@/features/apartments/CompareSelection'
 import { Link, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
@@ -18,6 +19,7 @@ export function AppShell() {
       <Header />
       <EmailVerificationBanner />
       <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
+        <CompareSelection />
         <Outlet />
       </main>
       <footer className="p-4 text-center text-sm"><Link to="/privacy" className="text-primary underline">{t('title')}</Link></footer>
