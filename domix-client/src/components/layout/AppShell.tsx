@@ -1,3 +1,5 @@
+import { MobileNavigation } from './MobileNavigation'
+import '@/features/apartments/marketplace.i18n'
 import { CompareSelection } from '@/features/apartments/CompareSelection'
 import { Link, Outlet } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -10,19 +12,21 @@ import { Toaster } from '@/components/ui/Toaster'
 import { FloatingChatWidget } from '@/components/chat/FloatingChatWidget'
 
 export function AppShell() {
+  const authenticated = useAuthStore(state => state.status === 'authenticated')
   const userId = useAuthStore(state => state.user?.userId)
   const { t } = useTranslation('privacy')
   return (
-    <div className="flex min-h-svh flex-col bg-background">
+    <div className="market-shell flex min-h-svh flex-col bg-background" data-mobile-nav={authenticated}>
       <PresenceConnector />
       <ThemeSync />
       <Header />
       <EmailVerificationBanner />
-      <main className="mx-auto min-w-0 w-full max-w-6xl flex-1 px-4 py-4 sm:px-6 sm:py-6">
+      <main className="mx-auto min-w-0 w-full max-w-7xl flex-1 px-4 py-5 sm:px-6 sm:py-8">
         <CompareSelection />
         <Outlet />
       </main>
-      <footer className="p-4 text-center text-sm"><Link to="/privacy" className="text-primary underline">{t('title')}</Link></footer>
+      <footer className="mt-8 border-t border-border p-6 text-center text-sm"><Link to="/privacy" className="text-primary underline">{t('title')}</Link></footer>
+      <MobileNavigation />
       <Toaster />
       <FloatingChatWidget key={userId ?? 'guest'} />
     </div>

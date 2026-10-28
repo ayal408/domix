@@ -1,5 +1,5 @@
 import '@/features/community/workflows.i18n'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDeleteApartment, useSetApartmentStatus } from '@/hooks/useApartments'
 import { ApartmentFormDialog } from '@/features/admin/ApartmentFormDialog'
@@ -36,6 +36,8 @@ interface Props {
   title: string
   subtitle: string
   newApartmentLabel: string
+  createRequested?: boolean
+  onCreateRequestHandled?: () => void
   emptyLabel: string
 }
 
@@ -46,12 +48,16 @@ interface Props {
  * page-level copy, so that's parameterised while the table/dialog chrome stays
  * one implementation.
  */
-export function ApartmentManagementList({ apartments, isLoading, title, subtitle, newApartmentLabel, emptyLabel }: Props) {
+export function ApartmentManagementList({ apartments, isLoading, title, subtitle, newApartmentLabel, emptyLabel, createRequested, onCreateRequestHandled }: Props) {
   const { t, i18n } = useTranslation()
   const deleteMutation = useDeleteApartment()
   const setStatusMutation = useSetApartmentStatus()
   const pushToast = useToastStore((state) => state.push)
   const [dialog, setDialog] = useState<DialogState>({ kind: 'closed' })
+
+  useEffect(() => {
+    if (createRequested) { setDialog({ kind: 'create' }); onCreateRequestHandled?.() }
+  }, [createRequested, onCreateRequestHandled])
 
   const byId = useMemo(() => new Map((apartments ?? []).map((a) => [a.apartmentId, a])), [apartments])
   const activeApartment: Apartment | null =

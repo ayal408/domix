@@ -10,86 +10,50 @@ import { safeUrl } from '@/lib/sanitize'
 import { Badge } from '@/components/ui/Badge'
 import { StarRating } from '@/components/ui/StarRating'
 
-export function ApartmentCard({ apartment }: { apartment: Apartment }) {
+import { MarketIcon } from '@/components/ui/MarketIcon'
+import './marketplace.i18n'
+
+export function ApartmentCard({ apartment, layout = 'grid' }: { apartment: Apartment; layout?: 'list' | 'grid' }) {
   const { t, i18n } = useTranslation()
+  const { t: market } = useTranslation('marketplace')
   const location = useLocation()
   const cover = safeUrl(apartment.apartmentImages?.[0]?.imageUrl)
-  const isAuthenticated = useAuthStore((state) => state.status === 'authenticated')
+  const isAuthenticated = useAuthStore(state => state.status === 'authenticated')
   const { ids: favoriteIds } = useFavoriteIds()
   const toggleFavorite = useToggleFavorite()
   const isFavorited = favoriteIds.has(apartment.apartmentId)
-
-  function handleToggleFavorite(event: React.MouseEvent) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleFavorite.mutate({ apartmentId: apartment.apartmentId, isFavorited })
-  }
-
-  return (
-    <article
-      className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-card transition-all duration-200 ease-out hover:-translate-y-1 hover:shadow-card-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Link to={`/apartments/${apartment.apartmentId}${location.pathname === '/exchange' ? location.search : ''}`} state={{ returnTo: location.pathname + location.search }} className="absolute inset-0 z-10 rounded-xl focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${apartment.city}, ${apartment.address}`} />
-      <div className="relative h-44 w-full overflow-hidden bg-card-muted">
-        {cover ? (
-          <img
-            src={cover}
-            alt=""
-            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            loading="lazy"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-muted">
-            <BuildingIcon />
-          </div>
-        )}
-        {apartment.status !== 'Available' && (
-          <span className="absolute end-2 top-2">
-            <Badge tone="neutral">{t(`admin.apartments.status.${apartment.status}`)}</Badge>
-          </span>
-        )}
-        {isAuthenticated && (
-          <button
-            type="button"
-            onClick={handleToggleFavorite}
-            aria-pressed={isFavorited}
-            aria-label={t(isFavorited ? 'favorites.remove' : 'favorites.add')}
-            className="absolute z-20 start-2 top-2 flex h-11 w-11 items-center justify-center rounded-full bg-black/40 text-white transition-colors hover:bg-black/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <HeartIcon filled={isFavorited} />
-          </button>
-        )}
-        <CompareButton apartmentId={apartment.apartmentId} overlay />
+  const href = `/apartments/${apartment.apartmentId}${location.pathname === '/exchange' ? location.search : ''}`
+  const returnState = { returnTo: location.pathname + location.search }
+  return <article className="market-card" data-layout={layout}>
+    <Link to={href} state={returnState} className="absolute inset-0 z-10 rounded-2xl focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${apartment.city}, ${apartment.address}`} />
+    <div className="market-card-photo">
+      {cover ? <img src={cover} alt="" loading="lazy" /> : <div className="flex h-full flex-col items-center justify-center gap-2 text-muted"><BuildingIcon /><span className="text-xs">{market('missingPhoto')}</span></div>}
+      <div className="absolute end-3 top-3"><Badge tone="neutral">{t(`exchange.types.${apartment.listingType ?? 'Unspecified'}`)}</Badge></div>
+      {isAuthenticated && <button type="button" onClick={event => { event.preventDefault(); event.stopPropagation(); toggleFavorite.mutate({ apartmentId: apartment.apartmentId, isFavorited }) }}
+        disabled={toggleFavorite.isPending} aria-pressed={isFavorited} aria-label={t(isFavorited ? 'favorites.remove' : 'favorites.add')}
+        className="absolute start-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full bg-card text-primary shadow-sm focus-visible:ring-2 focus-visible:ring-ring"><HeartIcon filled={isFavorited} /></button>}
+      {(apartment.apartmentImages?.length ?? 0) > 0 && <span className="absolute bottom-3 end-3 rounded-md bg-black/60 px-2 py-1 text-xs text-white">{market('photos', { count: apartment.apartmentImages!.length })}</span>}
+    </div>
+    <div className="market-card-body">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0"><p className="text-base font-bold text-foreground">{apartment.city} · {apartment.area}</p><p className="mt-1 text-sm text-muted">{apartment.address}</p></div>
+        <p className="text-xl font-extrabold tracking-tight text-foreground">{apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}
+          {apartment.listingType === 'Rent' && <span className="ms-1 text-xs font-normal text-muted">{t('exchange.perMonth')}</span>}</p>
       </div>
-
-      <div className="flex flex-1 flex-col gap-1.5 p-4">
-        <p className="text-lg font-semibold text-foreground">
-          {apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}
-          {apartment.listingType === 'Rent' && <span className="text-sm"> {t('exchange.perMonth')}</span>}
-        </p>
-        <Badge tone="neutral">{t(`exchange.types.${apartment.listingType ?? 'Unspecified'}`)}</Badge>
-        <p className="truncate text-sm font-medium text-foreground">
-          {apartment.city} · {apartment.area}
-        </p>
-        <p className="truncate text-xs text-muted">{apartment.address}</p>
-        <ListingFreshness apartment={apartment} />
-
-        {apartment.ratingCount > 0 && (
-          <div><StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />{apartment.ratingIsLegacy && <span className="text-xs text-muted">{t('rating.legacy')}</span>}</div>
-        )}
-
-        <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-muted">
-          {apartment.sumOfRooms != null && (
-            <span>{t('apartments.card.roomsShort', { count: apartment.sumOfRooms })}</span>
-          )}
-          {apartment.squareMeters != null && (
-            <span>{t('apartments.card.sqmShort', { count: apartment.squareMeters })}</span>
-          )}
-          {apartment.floor != null && <span>{t('apartments.card.floorShort', { floor: apartment.floor })}</span>}
-        </div>
+      <div className="market-card-stats">
+        {apartment.sumOfRooms != null && <span>{t('apartments.card.roomsShort', { count: apartment.sumOfRooms })}</span>}
+        {apartment.squareMeters != null && <span>{t('apartments.card.sqmShort', { count: apartment.squareMeters })}</span>}
+        {apartment.floor != null && <span>{t('apartments.card.floorShort', { floor: apartment.floor })}</span>}
       </div>
-    </article>
-  )
+      {apartment.status !== 'Available' && <div><Badge tone="neutral">{t(`admin.apartments.status.${apartment.status}`)}</Badge></div>}
+      <ListingFreshness apartment={apartment} />
+      {apartment.ratingCount > 0 && <div><StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />{apartment.ratingIsLegacy && <span className="text-xs text-muted">{t('rating.legacy')}</span>}</div>}
+      <div className="market-card-actions">
+        <span className="relative z-20"><CompareButton apartmentId={apartment.apartmentId} compact /></span>
+        <span className="inline-flex items-center gap-2 text-sm font-semibold text-primary">{market('view')}<MarketIcon name="arrow" className="h-4 w-4 rtl:rotate-180" /></span>
+      </div>
+    </div>
+  </article>
 }
 
 function HeartIcon({ filled }: { filled: boolean }) {

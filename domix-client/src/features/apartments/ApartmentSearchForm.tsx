@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import './marketplace.i18n'
 import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useTranslation } from 'react-i18next'
@@ -24,6 +26,8 @@ interface Props {
 
 export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props) {
   const { t } = useTranslation()
+  const { t: market } = useTranslation('marketplace')
+  const [expanded, setExpanded] = useState(!!(initialValues?.parking != null || initialValues?.elevator != null || initialValues?.propertyType || initialValues?.sortBy))
   const { data: cities } = useCities()
 
   const {
@@ -57,13 +61,20 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-3 lg:grid-cols-6"
+      className="market-search grid grid-cols-2 gap-4 lg:grid-cols-6"
     >
-      <div className="col-span-2 sm:col-span-1">
+      <div className="col-span-1">
         <SelectField label={t('apartments.filters.city')} {...register('city', { onChange: () => setValue('area', '') })}>
           <option value="">{t('apartments.filters.cityPlaceholder')}</option>
           {includeSelected(cities ?? [], watch('city')).map(city => <option key={city} value={city}>{city}</option>)}
         </SelectField>
+      </div>
+      <div className="col-span-1">
+        <SelectField label={t('apartments.filters.area')} disabled={areas.isFetching && !areas.data} {...register('area')}>
+          <option value="">{t('apartments.filters.areaPlaceholder')}</option>
+          {includeSelected(areas.data ?? [], watch('area')).map(area => <option key={area} value={area}>{area}</option>)}
+        </SelectField>
+        {areas.isError && <button type="button" onClick={() => void areas.refetch()} className="mt-1 text-xs text-danger underline">{t('common.retry')}</button>}
       </div>
       {(['Price', 'Rooms'] as const).map(kind => {
         const min = `min${kind}` as const, max = `max${kind}` as const
@@ -73,13 +84,12 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
           onMinChange={value => setValue(min, value, { shouldDirty: true, shouldValidate: true })}
           onMaxChange={value => setValue(max, value, { shouldDirty: true, shouldValidate: true })} />
       })}
-      <div className="col-span-2 sm:col-span-1">
-        <SelectField label={t('apartments.filters.area')} disabled={areas.isFetching && !areas.data} {...register('area')}>
-          <option value="">{t('apartments.filters.areaPlaceholder')}</option>
-          {includeSelected(areas.data ?? [], watch('area')).map(area => <option key={area} value={area}>{area}</option>)}
-        </SelectField>
-        {areas.isError && <button type="button" onClick={() => void areas.refetch()} className="mt-1 text-xs text-danger underline">{t('common.retry')}</button>}
+      <div className="col-span-2 flex flex-wrap items-center justify-between gap-3 lg:col-span-6">
+        <button type="button" aria-expanded={expanded} aria-controls="market-advanced-filters" onClick={() => setExpanded(value => !value)} className="min-h-11 rounded-lg px-2 text-sm font-semibold text-primary">{market(expanded ? 'less' : 'advanced')} <span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
+        <div className="flex gap-2"><Button type="button" variant="ghost" onClick={handleClear}>{t('apartments.filters.clear')}</Button><Button type="submit" className="min-w-32 rounded-full">{t('apartments.filters.apply')}</Button></div>
       </div>
+      <div id="market-advanced-filters" hidden={!expanded} className="col-span-2 lg:col-span-6">
+        <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 lg:grid-cols-4">
       <SelectField label={t('apartments.filters.propertyType')} {...register('propertyType')}>
         <option value="">{t('apartments.filters.any')}</option>
         {PROPERTY_TYPES.map((type) => (
@@ -100,13 +110,7 @@ export function ApartmentSearchForm({ onSubmit, onClear, initialValues }: Props)
           <option value="">{t('apartments.filters.any')}</option><option value="true">{t('common.yes')}</option><option value="false">{t('common.no')}</option>
         </SelectField>
       )} />)}
-      <div className="col-span-2 flex items-end gap-2 sm:col-span-3 lg:col-span-2">
-        <Button type="submit" className="flex-1 whitespace-nowrap">
-          {t('apartments.filters.apply')}
-        </Button>
-        <Button type="button" variant="secondary" onClick={handleClear}>
-          {t('apartments.filters.clear')}
-        </Button>
+        </div>
       </div>
     </form>
   )

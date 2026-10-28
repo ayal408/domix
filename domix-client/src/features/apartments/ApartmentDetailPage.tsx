@@ -1,3 +1,4 @@
+import './marketplace.i18n'
 import { CompareButton } from './CompareButton'
 import { ListingFreshness } from './ListingFreshness'
 import { ShareListing } from './ShareListing'
@@ -26,6 +27,7 @@ import type { Guid } from '@/types/api'
 
 export default function ApartmentDetailPage() {
   const { t, i18n } = useTranslation()
+  const { t: market } = useTranslation('marketplace')
   const [reporting, setReporting] = useState(false)
   const location = useLocation()
   const returnTo = (location.state as { returnTo?: string } | null)?.returnTo
@@ -79,8 +81,8 @@ export default function ApartmentDetailPage() {
       </Link>
 
       {images.length > 0 ? (
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {images.map((src, index) => (
+        <div className="market-detail-gallery">
+          {images.slice(0, 3).map((src, index) => (
             <button
               key={src + index}
               type="button"
@@ -91,9 +93,10 @@ export default function ApartmentDetailPage() {
               <img
                 src={src}
                 alt=""
-                className="h-64 w-full rounded-xl border border-border object-cover transition-opacity hover:opacity-90"
+                className="transition-opacity hover:opacity-90"
                 loading={index === 0 ? 'eager' : 'lazy'}
               />
+              {index === 0 && <span className="absolute bottom-3 end-3 rounded-lg bg-black/60 px-3 py-2 text-xs text-white">{market('gallery', {count:images.length})}</span>}
             </button>
           ))}
         </div>
@@ -107,12 +110,15 @@ export default function ApartmentDetailPage() {
         <ImageLightbox images={images} initialIndex={lightboxIndex} onClose={() => setLightboxIndex(null)} />
       )}
 
+      <div className="market-detail-content">
+        <section className="flex min-w-0 flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground sm:text-3xl">
               {apartment.listingType === 'Exchange' && apartment.price === 0 ? t('exchange.noPayment') : formatCurrency(apartment.price, i18n.language)}{apartment.listingType === 'Rent' ? ` ${t('exchange.perMonth')}` : ''}
             </h1>
+            {currentUser && currentUser.userId !== apartment.userId && <a href="#contact-owner" className="inline-flex min-h-11 items-center rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground">{t('privateMessages:contact')}</a>}
             <CompareButton apartmentId={apartment.apartmentId} />
             {isAuthenticated && (
               <Button
@@ -169,17 +175,6 @@ export default function ApartmentDetailPage() {
         <Stat label={t('apartments.fields.parking')} value={apartment.parking == null ? t('exchange.unknown') : apartment.parking ? t('common.yes') : t('common.no')} />
       </dl>
 
-      {currentUser && currentUser.userId !== apartment.userId && <a href="#contact-owner" className="inline-flex w-fit items-center justify-center rounded-lg bg-primary px-4 py-2 font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring">{t('privateMessages:contact')}</a>}
-      {currentUser && <button type="button" className="w-fit text-sm text-muted underline" onClick={()=>setReporting(true)}>{t('workflows:report')}</button>}
-      {reporting && <ReportDialog target={{apartmentId:apartment.apartmentId}} onClose={()=>setReporting(false)} />}
-      <ShareListing apartment={apartment} />
-      <OwnerProfileCard
-        ownerId={apartment.userId}
-        currentApartmentId={apartment.apartmentId}
-        isAnonymous={apartment.isAnonymous}
-        listingAddress={`${apartment.address}, ${apartment.city}`}
-      />
-
       {apartment.description && (
         <div>
           <h2 className="text-base font-semibold text-foreground">{t('apartments.fields.description')}</h2>
@@ -189,8 +184,7 @@ export default function ApartmentDetailPage() {
 
       <p className="text-xs text-muted">{t('apartments.detail.posted', { date: formatDate(apartment.dateInsert, i18n.language) })}</p>
 
-      {currentUser && currentUser.userId !== apartment.userId && (
-        <>
+          {currentUser && currentUser.userId !== apartment.userId && <>
           <Card className="flex flex-col gap-2 p-4">
             <h2 className="text-base font-semibold text-foreground">{t('rating.rateThis')}</h2>
             <StarRatingInput
@@ -206,15 +200,29 @@ export default function ApartmentDetailPage() {
               }}
             />
           </Card>
+          </>}
+      {currentUser && <button type="button" className="w-fit text-sm text-muted underline" onClick={()=>setReporting(true)}>{t('workflows:report')}</button>}
+      {reporting && <ReportDialog target={{apartmentId:apartment.apartmentId}} onClose={()=>setReporting(false)} />}
+        </section>
+        <aside className="market-detail-aside flex flex-col gap-4">
+      <OwnerProfileCard
+        ownerId={apartment.userId}
+        currentApartmentId={apartment.apartmentId}
+        isAnonymous={apartment.isAnonymous}
+        listingAddress={`${apartment.address}, ${apartment.city}`}
+      />
+
+          {currentUser && currentUser.userId !== apartment.userId && <>
           <ContactOwnerForm isAnonymous={apartment.isAnonymous} apartmentId={apartment.apartmentId} listingAddress={apartment.address} ownerId={apartment.userId} senderId={currentUser.userId}
             offeredApartmentId={apartment.listingType === 'Exchange' ? params.get('offeredApartmentId') ?? undefined : undefined}
             exchangeStart={params.get('start') ?? undefined} exchangeEnd={params.get('end') ?? undefined} />
-        </>
-      )}
+          </>}
+          <ShareListing apartment={apartment} />
+        </aside>
+      </div>
     </div>
   )
 }
-
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
     <div>
