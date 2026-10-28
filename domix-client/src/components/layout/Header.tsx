@@ -1,8 +1,9 @@
+import '@/features/admin/admin-shell.i18n'
 import '@/features/apartments/catalog-tools.i18n'
 import { MarketIcon } from '@/components/ui/MarketIcon'
 import '@/features/apartments/marketplace.i18n'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
 import { LanguageSwitcher } from '@/components/layout/LanguageSwitcher'
@@ -37,6 +38,8 @@ export function Header() {
   const { t: market } = useTranslation('marketplace')
   const { t: navigation } = useTranslation('navigation')
   const navigate = useNavigate()
+  const {pathname} = useLocation()
+  const inAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
   const status = useAuthStore(state => state.status)
   const user = useAuthStore(state => state.user)
   const can = useAuthStore(state => state.can)
@@ -45,7 +48,7 @@ export function Header() {
     { to: '/', label: t('nav.home') }, { to: '/exchange', label: t('exchange.nav') },
     { to: '/favorites', label: t('nav.favorites') }, { to: '/messages', label: t('nav.messages') },
   ]
-  if (can('ManagerOrAdmin')) primary.push({ to: '/admin/apartments', label: t('nav.admin') })
+  if (can('ManagerOrAdmin')) primary.push({ to: '/admin', label: t('nav.admin') })
   const secondary: NavItem[] = [
     {to:'/recently-viewed',label:t('catalogTools:recent')},
     {to:'/visits',label:t('returnTools:calendar')},{to:'/my-leads',label:t('returnTools:leads')},
@@ -56,7 +59,7 @@ export function Header() {
   const avatar = base64ToImageSrc(user?.profileImageBase64)
   return <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md">
     <div className="mx-auto flex min-h-[72px] max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
-      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src="/domix-mark.svg" alt="" className="h-9 w-9" /><span className="bg-brand bg-clip-text text-transparent">{env.appName}</span><span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{market('tagline')}</span></NavLink>
+      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src="/domix-mark.svg?v=purple-4" alt="" className="h-9 w-9" /><span className="bg-brand bg-clip-text text-transparent">{env.appName}</span><span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{inAdmin ? t('adminShell:workspace') : market('tagline')}</span></NavLink>
       <div className="flex max-w-full flex-wrap items-center gap-1">
         <LanguageSwitcher /><ThemeSwitcher />
         {status === 'authenticated' && user ? <>
@@ -73,15 +76,15 @@ export function Header() {
               <MenuItem><button type="button" className="mt-1 flex min-h-10 w-full items-center rounded-lg px-3 text-start text-sm text-danger hover:bg-card-muted" onClick={async () => { await signOut(); navigate('/') }}>{t('nav.logout')}</button></MenuItem>
             </MenuItems>
           </Menu>
-          <NavLink to="/my-apartments?new=1" className="ms-2 hidden min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground lg:flex"><MarketIcon name="plus" />{market('publish')}</NavLink>
-          <NavMenu label={navigation('menu')} items={[...primary, ...secondary]} icon className="lg:hidden" />
+          {!inAdmin && <NavLink to="/my-apartments?new=1" className="ms-2 hidden min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground lg:flex"><MarketIcon name="plus" />{market('publish')}</NavLink>}
+          {!inAdmin && <NavMenu label={navigation('menu')} items={[...primary, ...secondary]} icon className="lg:hidden" />}
         </> : status === 'unauthenticated' ? <div className="flex items-center gap-1">
           <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>{t('nav.login')}</Button>
           <Button size="sm" onClick={() => navigate('/register')}>{t('nav.register')}</Button>
         </div> : null}
       </div>
     </div>
-    {status === 'authenticated' && <nav aria-label={navigation('primary')} className="mx-auto hidden max-w-7xl flex-wrap items-center gap-1 border-t border-border px-6 py-1.5 lg:flex">
+    {status === 'authenticated' && !inAdmin && <nav aria-label={navigation('primary')} className="mx-auto hidden max-w-7xl flex-wrap items-center gap-1 border-t border-border px-6 py-1.5 lg:flex">
       {primary.map(item => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={navLinkClasses}>{item.label}</NavLink>)}
       <NavMenu label={navigation('more')} items={secondary} />
     </nav>}

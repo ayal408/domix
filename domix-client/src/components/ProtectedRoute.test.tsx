@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import type { ComponentProps } from 'react'
 import ProtectedRoute from '@/components/ProtectedRoute'
@@ -74,4 +74,13 @@ describe('ProtectedRoute', () => {
     renderProtected({ roles: ['Admin'] })
     expect(screen.getByText('Unauthorized page')).toBeInTheDocument()
   })
+  it('revokes an open management page when the same account loses its role', () => {
+    useAuthStore.setState({ status: 'authenticated', user: managerUser })
+    renderProtected({ policy: 'ManagerOrAdmin' })
+    expect(screen.getByText('Secret content')).toBeInTheDocument()
+    act(() => useAuthStore.setState({ user: { ...managerUser, role: 'User' } }))
+    expect(screen.getByText('Unauthorized page')).toBeInTheDocument()
+    expect(screen.queryByText('Secret content')).not.toBeInTheDocument()
+  })
+
 })

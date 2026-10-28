@@ -1,42 +1,51 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { Dialog, DialogPanel, DialogTitle } from '@headlessui/react'
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/cn'
 import { useAuthStore } from '@/stores/auth.store'
+import { MarketIcon } from '@/components/ui/MarketIcon'
+import { AdminNavigation } from './AdminNavigation'
+import { activeAdminItem } from './adminNavigation'
 import './email.i18n'
+import './admin-shell.i18n'
 
-const tabClasses = ({ isActive }: { isActive: boolean }) =>
-  cn(
-    'whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-    isActive ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-card-muted hover:text-foreground',
-  )
-
-/** Shared shell for every `/admin/*` page — the route tree gates all of them on the ManagerOrAdmin policy. */
+/** Existing server/route policies still enforce access; the shell also follows live role changes. */
 export function AdminLayout() {
-  const { t } = useTranslation()
-  const can = useAuthStore((state) => state.can)
-
-  return (
-    <div className="flex flex-col gap-6">
-      <nav className="flex flex-wrap gap-1 border-b border-border pb-3">
-        <NavLink to="/admin/apartments" className={tabClasses}>
-          {t('admin.nav.apartments')}
-        </NavLink>
-        <NavLink to="/admin/reports" className={tabClasses}>{t('workflows:moderation')}</NavLink>
-        <NavLink to="/admin/support" className={tabClasses}>
-          {t('admin.nav.support')}
-        </NavLink>
-        {can('AdminOnly') && <NavLink to="/admin/users" className={tabClasses}>
-          {t('admin.nav.users')}
-        </NavLink>}
-        <NavLink to="/admin/analytics" className={tabClasses}>
-          {t('admin.nav.analytics')}
-        </NavLink>
-        <NavLink to="/admin/notifications" className={tabClasses}>
-          {t('admin.nav.notifications')}
-        </NavLink>
-        {can('AdminOnly') && <NavLink to="/admin/email" className={tabClasses}>{t('email:nav')}</NavLink>}
-      </nav>
-      <Outlet />
+  const {t}=useTranslation('adminShell')
+  const role=useAuthStore(s=>s.user?.role)
+  const {pathname}=useLocation()
+  const [collapsed,setCollapsed]=useState(false)
+  const [mobileOpen,setMobileOpen]=useState(false)
+  const active=activeAdminItem(pathname,role)
+  useEffect(()=>{
+    if(typeof window.matchMedia !== 'function')return
+    const media=window.matchMedia('(min-width: 1024px)')
+    const closeOnDesktop=()=>{if(media.matches)setMobileOpen(false)}
+    media.addEventListener('change',closeOnDesktop)
+    return ()=>media.removeEventListener('change',closeOnDesktop)
+  },[])
+  if(role!=='Admin'&&role!=='Manager')return <Navigate to="/unauthorized" replace/>
+  return <div className="admin-workspace" data-collapsed={collapsed}>
+    <aside className="admin-side-panel">
+      <div className="flex min-h-16 items-center justify-center gap-2 border-b border-border px-3"><img src="/domix-mark.svg?v=purple-4" alt="" className="h-8 w-8"/>{!collapsed&&<span className="text-sm font-bold">{t('workspace')}</span>}</div>
+      <AdminNavigation mini={collapsed} idPrefix="admin-desktop"/>
+      <button type="button" aria-label={t(collapsed?'expand':'collapse')} aria-expanded={!collapsed} onClick={()=>setCollapsed(value=>!value)} className="flex min-h-12 items-center justify-center gap-2 border-t border-border px-3 text-xs text-muted"><MarketIcon name="arrow" className={`h-4 w-4 ${collapsed?'rtl:rotate-180':'ltr:rotate-180'}`}/>{!collapsed&&t('collapse')}</button>
+    </aside>
+    <div className="min-w-0">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3">
+        <div className="flex min-w-0 items-center gap-3"><button type="button" onClick={()=>setMobileOpen(true)} aria-label={t('openMenu')} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border lg:hidden"><MarketIcon name="list"/></button>
+          <div><p className="text-xs text-muted">{t('workspace')} · {t(role==='Admin'?'admin':'manager')}</p><p className="mt-1 text-base font-bold">{t(active?.key??'dashboard')}</p></div>
+        </div>
+        <Link to="/" className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 text-sm text-primary hover:bg-card-muted"><MarketIcon name="home"/>{t('back')}</Link>
+      </div>
+      <Outlet/>
     </div>
-  )
+    <Dialog open={mobileOpen} onClose={()=>setMobileOpen(false)} className="relative z-[70]">
+      <div className="fixed inset-0 bg-black/50" aria-hidden="true"/>
+      <div className="fixed inset-0"><DialogPanel className="absolute inset-y-0 start-0 flex w-72 max-w-[88vw] flex-col border-e border-border bg-card shadow-xl">
+        <div className="flex min-h-16 items-center justify-between border-b border-border px-4"><DialogTitle className="text-base font-bold">{t('workspace')}</DialogTitle><button type="button" onClick={()=>setMobileOpen(false)} aria-label={t('closeMenu')} className="h-11 w-11 rounded-lg text-lg text-muted">×</button></div>
+        <AdminNavigation idPrefix="admin-mobile" onNavigate={()=>setMobileOpen(false)}/>
+      </DialogPanel></div>
+    </Dialog>
+  </div>
 }

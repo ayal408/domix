@@ -1,0 +1,24 @@
+import i18n from '@/i18n'
+const en = {
+  workspace:'Management workspace', dashboard:'Overview', dashboardHint:'Listings, people and requests — a clear view of what needs attention.',
+  operations:'Listings and safety', community:'Communication', system:'System', search:'Find a management screen', noResults:'No screens match this search.',
+  collapse:'Collapse sidebar', expand:'Expand sidebar', openMenu:'Open management menu', closeMenu:'Close management menu', back:'Back to site',
+  quick:'Quick actions', refresh:'Refresh summary', failed:'Could not load the management summary.', updated:'Summary loaded at {{time}}',
+  listings:'Manage listings', moderation:'Review reports', support:'Customer requests', notifications:'Site notifications', users:'User accounts', email:'Email connection', analytics:'Analytics',
+  manager:'Manager', admin:'Administrator', newListings:'New listings in the last 7 days', available:'Available listings', people:'Registered accounts', openSupport:'Open support requests',
+}
+const he: typeof en = {
+  workspace:'סביבת הניהול', dashboard:'לוח בקרה', dashboardHint:'מודעות, משתמשים ופניות — תמונת מצב ברורה של מה שקורה באתר.',
+  operations:'מודעות ובטיחות', community:'תקשורת עם המשתמשים', system:'ניהול המערכת', search:'חיפוש מסך ניהול', noResults:'לא נמצאו מסכים שמתאימים לחיפוש.',
+  collapse:'כיווץ תפריט הצד', expand:'הרחבת תפריט הצד', openMenu:'פתיחת תפריט הניהול', closeMenu:'סגירת תפריט הניהול', back:'חזרה לאתר',
+  quick:'פעולות מהירות', refresh:'רענון תמונת המצב', failed:'לא ניתן לטעון את נתוני הניהול.', updated:'תמונת המצב נטענה ב־{{time}}',
+  listings:'ניהול מודעות', moderation:'בדיקת דיווחים', support:'פניות משתמשים', notifications:'התראות האתר', users:'חשבונות משתמשים', email:'חיבור הדואר', analytics:'נתונים ופעילות',
+  manager:'מנהל תוכן', admin:'מנהל מערכת', newListings:'מודעות חדשות ב־7 הימים האחרונים', available:'מודעות זמינות', people:'חשבונות רשומים', openSupport:'פניות תמיכה פתוחות',
+}
+const es: typeof en = {
+  workspace:'Área de gestión', dashboard:'Resumen', dashboardHint:'Anuncios, usuarios y solicitudes: una vista clara de la actividad.', operations:'Anuncios y seguridad',community:'Comunicación',system:'Sistema',search:'Buscar pantalla de gestión',noResults:'No hay pantallas para esta búsqueda.',collapse:'Contraer menú lateral',expand:'Expandir menú lateral',openMenu:'Abrir menú de gestión',closeMenu:'Cerrar menú de gestión',back:'Volver al sitio',quick:'Acciones rápidas',refresh:'Actualizar resumen',failed:'No se pudo cargar el resumen.',updated:'Resumen cargado a las {{time}}',listings:'Gestionar anuncios',moderation:'Revisar reportes',support:'Solicitudes de usuarios',notifications:'Avisos del sitio',users:'Cuentas de usuario',email:'Conexión de correo',analytics:'Actividad y datos',manager:'Gestor',admin:'Administrador',newListings:'Anuncios nuevos en 7 días',available:'Anuncios disponibles',people:'Cuentas registradas',openSupport:'Solicitudes abiertas',
+}
+const fr: typeof en = {
+  workspace:'Espace de gestion',dashboard:'Vue d’ensemble',dashboardHint:'Annonces, utilisateurs et demandes : une vue claire de l’activité.',operations:'Annonces et sécurité',community:'Communication',system:'Système',search:'Rechercher un écran de gestion',noResults:'Aucun écran ne correspond à cette recherche.',collapse:'Réduire le menu latéral',expand:'Développer le menu latéral',openMenu:'Ouvrir le menu de gestion',closeMenu:'Fermer le menu de gestion',back:'Revenir au site',quick:'Actions rapides',refresh:'Actualiser le résumé',failed:'Impossible de charger le résumé.',updated:'Résumé chargé à {{time}}',listings:'Gérer les annonces',moderation:'Examiner les signalements',support:'Demandes des utilisateurs',notifications:'Notifications du site',users:'Comptes utilisateurs',email:'Connexion e-mail',analytics:'Données et activité',manager:'Gestionnaire',admin:'Administrateur',newListings:'Nouvelles annonces sur 7 jours',available:'Annonces disponibles',people:'Comptes inscrits',openSupport:'Demandes ouvertes',
+}
+for (const [lang,values] of Object.entries({en,he,es,fr})) i18n.addResourceBundle(lang,'adminShell',values,true,true)

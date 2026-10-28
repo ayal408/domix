@@ -39,7 +39,7 @@
   --shadow-card: 0 1px 2px rgba(15, 15, 20, 0.06);
   --shadow-card-hover: 0 12px 24px -8px rgba(15, 15, 20, 0.18);
 
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Heebo Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
   color-scheme: light;
 }
@@ -231,4 +231,14 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .market-card, .market-card-photo img { transition: none; }
+}
+
+
+/* Management shell follows the document direction: right in Hebrew, left in LTR. */
+.admin-workspace { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; min-width: 0; }
+.admin-side-panel { display: none; }
+@media (min-width: 1024px) {
+  .admin-workspace { grid-template-columns: 232px minmax(0, 1fr); }
+  .admin-workspace[data-collapsed='true'] { grid-template-columns: 72px minmax(0, 1fr); }
+  .admin-side-panel { position: sticky; top: 88px; display: flex; flex-direction: column; max-height: calc(100dvh - 104px); min-height: min(480px, calc(100dvh - 104px)); overflow: hidden; border: 1px solid var(--color-border); border-radius: 14px; background: var(--color-card); }
 }
