@@ -2,14 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
-/* DOMIX marketplace tokens. All fonts and icons are served locally. */
+/**
+ * Design tokens, resolved from the two attributes `useThemeStore` (see
+ * stores/theme.store.ts) writes on <html>: `data-theme` (light|dark) and
+ * `data-palette` (violet|ocean|emerald|sunset|rose). Every colour Tailwind
+ * utility below (`bg-background`, `text-foreground`, `bg-primary`, ...) reads
+ * one of these custom properties, so switching either attribute is a single
+ * paint with no React re-render and no flash on load (theme is applied by
+ * `initTheme()` before the app mounts).
+ */
 :root {
-  --color-background: #f6f7f4;
-  --color-foreground: #172d29;
-  --color-muted: #61716c;
+  --color-background: #f7f8fa;
+  --color-foreground: #14151a;
+  --color-muted: #6b7280;
   --color-card: #ffffff;
-  --color-card-muted: #eef2ee;
-  --color-border: #dfe6df;
+  --color-card-muted: #f1f2f5;
+  --color-border: #e3e5ea;
   --color-ring-offset: #ffffff;
 
   --color-danger: #dc2626;
@@ -19,14 +27,14 @@
   --color-warning: #d97706;
   --color-warning-bg: #fffbeb;
 
-  --color-primary: #116a52;
-  --color-primary-hover: #0c5542;
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
   --color-primary-foreground: #ffffff;
-  --color-ring: #3ba788;
-  --color-primary-glow: rgba(17, 106, 82, 0.16);
+  --color-ring: #a78bfa;
+  --color-primary-glow: rgba(124, 58, 237, 0.35);
 
-  /* Brand accent shared by local marks and controls. */
-  --gradient-brand: linear-gradient(110deg, #116a52, #319478);
+  /* Fixed brand mark — stays violet-to-emerald regardless of the active palette, so the wordmark reads as "DOMIX" no matter what accent the viewer picked. */
+  --gradient-brand: linear-gradient(90deg, #7c3aed, #10b981);
 
   --shadow-card: 0 1px 2px rgba(15, 15, 20, 0.06);
   --shadow-card-hover: 0 12px 24px -8px rgba(15, 15, 20, 0.18);
@@ -37,11 +45,7 @@
 }
 
 :root[data-theme='dark'] {
-  --color-background: #101b18;
-  --color-primary: #69d6b1;
-  --color-primary-hover: #8ce6c7;
-  --color-primary-foreground: #092b21;
-  --color-ring: #69d6b1;
+  --color-background: #0e0f13;
   --color-foreground: #f3f4f6;
   --color-muted: #9aa0ab;
   --color-card: #171922;
@@ -63,10 +67,10 @@
 }
 
 :root[data-palette='violet'] {
-  --color-primary: #116a52;
-  --color-primary-hover: #0c5542;
-  --color-ring: #3ba788;
-  --color-primary-glow: rgba(17, 106, 82, 0.16);
+  --color-primary: #7c3aed;
+  --color-primary-hover: #6d28d9;
+  --color-ring: #a78bfa;
+  --color-primary-glow: rgba(124, 58, 237, 0.35);
 }
 :root[data-palette='ocean'] {
   --color-primary: #0ea5e9;

@@ -1,3 +1,4 @@
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed.store'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -33,10 +34,12 @@ describe('privacy boundaries', () => {
   it('clears conversation, comparison and cached private data on identity change', () => {
     useChatWidgetStore.getState().addMessage('user', 'Private chat')
     useCompareStore.getState().toggle('private-listing')
+    useRecentlyViewedStore.getState().record(user.userId, 'private-listing')
     queryClient.setQueryData(['private-inbox'], ['Secret'])
     useAuthStore.setState({ user: { ...user, userId: 'other' } })
     expect(useChatWidgetStore.getState().messages).toEqual([])
     expect(useCompareStore.getState().apartmentIds).toEqual([])
+    expect(useRecentlyViewedStore.getState().apartmentIds).toEqual([])
     expect(queryClient.getQueryData(['private-inbox'])).toBeUndefined()
   })
   it('never fetches hidden contact information for an anonymous listing', () => {

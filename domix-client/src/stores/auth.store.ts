@@ -1,3 +1,4 @@
+import { useRecentlyViewedStore } from './recentlyViewed.store'
 import { clearApartmentDraft } from '@/features/apartments/apartmentDraftStore'
 import { queryClient } from '@/api/queryClient'
 import { useChatWidgetStore } from '@/stores/chatWidget.store'
@@ -192,5 +193,6 @@ useAuthStore.subscribe((state, previous) => {
     queryClient.clear()
     useChatWidgetStore.getState().reset()
     useCompareStore.getState().clear()
+    useRecentlyViewedStore.getState().clear()
   }
 })

@@ -1,3 +1,4 @@
+import './catalog-tools.i18n'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MarketIcon, type MarketIconName } from '@/components/ui/MarketIcon'
@@ -5,6 +6,7 @@ import './marketplace.i18n'
 export function MarketplaceTools() {
   const {t} = useTranslation('marketplace')
   const items: {title:string;hint:string;to:string;icon:MarketIconName}[] = [
+    {title:'catalogTools:recent',hint:'catalogTools:recentLink',to:'/recently-viewed',icon:'home'},
     {title:'savedTitle',hint:'savedHint',to:'/favorites',icon:'heart'},
     {title:'alertsTitle',hint:'alertsHint',to:'/saved-searches',icon:'bell'},
     {title:'visitTitle',hint:'visitHint',to:'/visits',icon:'calendar'},

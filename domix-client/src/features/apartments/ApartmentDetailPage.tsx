@@ -1,3 +1,4 @@
+import { useRecentlyViewedStore } from '@/stores/recentlyViewed.store'
 import './marketplace.i18n'
 import { CompareButton } from './CompareButton'
 import { ListingFreshness } from './ListingFreshness'
@@ -5,7 +6,7 @@ import { ShareListing } from './ShareListing'
 import { ReportDialog } from '@/features/community/ReportDialog'
 import { formatExchangeDate } from './exchangeDates'
 import { useParams, Link, useLocation } from 'react-router-dom'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApartmentDetail, useRateApartment } from '@/hooks/useApartments'
 import { useFavoriteIds, useToggleFavorite } from '@/hooks/useFavorites'
@@ -42,6 +43,12 @@ export default function ApartmentDetailPage() {
   const { ids: favoriteIds } = useFavoriteIds()
   const toggleFavorite = useToggleFavorite()
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+
+  const recordView = useRecentlyViewedStore(state => state.record)
+  useEffect(() => {
+    if (isAuthenticated && currentUser?.userId && apartment && apartment.apartmentId === apartmentId && !isError)
+      recordView(currentUser.userId, apartment.apartmentId)
+  }, [isAuthenticated, currentUser?.userId, apartment, apartmentId, isError, recordView])
 
   if (isLoading) {
     return (
