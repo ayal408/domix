@@ -1,13 +1,12 @@
 import { Link, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
-import { useCompareStore, MAX_COMPARE } from '@/stores/compare.store'
+import { CompareButton } from './CompareButton'
+import { ListingFreshness } from './ListingFreshness'
 import { useFavoriteIds, useToggleFavorite } from '@/hooks/useFavorites'
-import { useToastStore } from '@/stores/toast.store'
 import type { Apartment } from '@/types/api'
 import { formatCurrency } from '@/lib/format'
 import { safeUrl } from '@/lib/sanitize'
-import { cn } from '@/lib/cn'
 import { Badge } from '@/components/ui/Badge'
 import { StarRating } from '@/components/ui/StarRating'
 
@@ -18,26 +17,12 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
   const isAuthenticated = useAuthStore((state) => state.status === 'authenticated')
   const { ids: favoriteIds } = useFavoriteIds()
   const toggleFavorite = useToggleFavorite()
-  const isSelectedForCompare = useCompareStore((state) => state.isSelected(apartment.apartmentId))
-  const toggleCompare = useCompareStore((state) => state.toggle)
-  const compareCount = useCompareStore((state) => state.apartmentIds.length)
-  const pushToast = useToastStore((state) => state.push)
   const isFavorited = favoriteIds.has(apartment.apartmentId)
 
   function handleToggleFavorite(event: React.MouseEvent) {
     event.preventDefault()
     event.stopPropagation()
     toggleFavorite.mutate({ apartmentId: apartment.apartmentId, isFavorited })
-  }
-
-  function handleToggleCompare(event: React.MouseEvent) {
-    event.preventDefault()
-    event.stopPropagation()
-    if (!isSelectedForCompare && compareCount >= MAX_COMPARE) {
-      pushToast({ variant: 'info', title: t('compare.limitReached', { count: MAX_COMPARE }) })
-      return
-    }
-    toggleCompare(apartment.apartmentId)
   }
 
   return (
@@ -74,17 +59,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
             <HeartIcon filled={isFavorited} />
           </button>
         )}
-        <button
-          type="button"
-          onClick={handleToggleCompare}
-          aria-pressed={isSelectedForCompare}
-          className={cn(
-            'absolute z-20 bottom-2 start-2 rounded-full px-2 py-1 text-xs font-medium text-white transition-colors',
-            isSelectedForCompare ? 'bg-primary' : 'bg-black/40 hover:bg-black/60',
-          )}
-        >
-          {isSelectedForCompare ? `✓ ${t('compare.short')}` : t('compare.short')}
-        </button>
+        <CompareButton apartmentId={apartment.apartmentId} overlay />
       </div>
 
       <div className="flex flex-1 flex-col gap-1.5 p-4">
@@ -97,6 +72,7 @@ export function ApartmentCard({ apartment }: { apartment: Apartment }) {
           {apartment.city} · {apartment.area}
         </p>
         <p className="truncate text-xs text-muted">{apartment.address}</p>
+        <ListingFreshness apartment={apartment} />
 
         {apartment.ratingCount > 0 && (
           <div><StarRating value={apartment.rating} count={apartment.ratingCount} size="sm" />{apartment.ratingIsLegacy && <span className="text-xs text-muted">{t('rating.legacy')}</span>}</div>

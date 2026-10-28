@@ -333,6 +333,10 @@ namespace serverApi.Services.Implementations
                 throw new UnauthorizedAccessException("You do not own this apartment.");
             }
 
+            // A confirmation for a previous availability period must not survive closure/reopening.
+            if (status == ApartmentStatus.Rented || status == ApartmentStatus.Sold ||
+                apartment.Status == ApartmentStatus.Rented || apartment.Status == ApartmentStatus.Sold)
+                apartment.LastConfirmedAt = null;
             apartment.Status = status;
             await _context.SaveChangesAsync(cancellationToken);
 
@@ -374,6 +378,7 @@ namespace serverApi.Services.Implementations
             AvailableTo = a.AvailableTo,
             DesiredCity = a.DesiredCity,
             dateInsert = a.dateInsert,
+            LastConfirmedAt = a.LastConfirmedAt,
             Latitude = a.IsAnonymous && !includePrivate ? null : a.Latitude,
             Longitude = a.IsAnonymous && !includePrivate ? null : a.Longitude,
             Rating = a.CurrentRating,

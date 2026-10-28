@@ -600,7 +600,14 @@ test('conversation lifecycle preserves anonymity, visits, blocking, reports and 
   assert.equal((await req(`/community/renewals/${home.apartmentId}`,owner,'POST',{snooze:true})).status,204);assert.equal((await(await req('/community/renewals',owner)).json()).some(a=>a.apartmentId===home.apartmentId),false);
   await testQuery(POSTGRES_URL,'UPDATE "Apartments" SET "RenewalSnoozedUntil"=now()-interval \'1 day\' WHERE "ApartmentId"=$1',[home.apartmentId]);
   await req(`/community/renewals/${home.apartmentId}`,owner,'POST',{snooze:false});assert.equal((await(await req('/community/renewals',owner)).json()).some(a=>a.apartmentId===home.apartmentId),false);
+  const confirmedHome=await(await req(`/Apartment/${home.apartmentId}`,buyer)).json();
+  assert.ok(confirmedHome.lastConfirmedAt);assert.equal(confirmedHome.userId,'00000000-0000-0000-0000-000000000000');
+  const confirmedSearch=await(await req(`/Apartment/Search?city=${encodeURIComponent(home.city)}`,buyer)).json();
+  assert.equal(confirmedSearch.find(a=>a.apartmentId===home.apartmentId).lastConfirmedAt,confirmedHome.lastConfirmedAt);
   await req(`/Apartment/${home.apartmentId}/status`,owner,'PATCH',{status:'Rented'});assert.equal((await(await req(`/Apartment/Search?city=${encodeURIComponent(home.city)}`,buyer)).json()).some(a=>a.apartmentId===home.apartmentId),false);
+  assert.equal((await req(`/community/renewals/${home.apartmentId}`,owner,'POST',{snooze:false})).status,409);
+  assert.equal((await(await req(`/Apartment/${home.apartmentId}`,buyer)).json()).lastConfirmedAt,null);
+
   assert.equal((await req(`${root}/visits`,buyer,'POST',{action:'Propose',startsAt:date})).status,409);
 });
 
