@@ -15,7 +15,7 @@ export function MobileNavigation() {
   const unread = useQuery({queryKey:[...queryKeys.messages.all, 'unread-count'], enabled:authenticated,
     queryFn: async ({signal}) => (await dataClient.get<{count:number}>('/Message/unread-count',{signal})).data,
     staleTime:15000,refetchInterval:30000})
-  if (!authenticated) return null
+  if (!authenticated || location.pathname === '/admin' || location.pathname.startsWith('/admin/')) return null
   const items: {to:string;label:string;icon:MarketIconName}[] = [
     {to:'/',label:t('search'),icon:'search'}, {to:'/favorites',label:t('favorites'),icon:'heart'},
     {to:'/my-apartments?new=1',label:t('publish'),icon:'plus'}, {to:'/messages',label:t('messages'),icon:'message'},

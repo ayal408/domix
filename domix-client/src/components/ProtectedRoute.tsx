@@ -20,6 +20,7 @@ interface Props {
  */
 export default function ProtectedRoute({ children, policy, roles }: Props): ReactElement | null {
   const status = useAuthStore((state) => state.status)
+  const role = useAuthStore(state => state.user?.role)
   const can = useAuthStore((state) => state.can)
   const hasRole = useAuthStore((state) => state.hasRole)
   const location = useLocation()
@@ -30,7 +31,7 @@ export default function ProtectedRoute({ children, policy, roles }: Props): Reac
     return <Navigate to="/login" replace state={{ from: location }} />
   }
 
-  const authorized = (!policy || can(policy)) && (!roles || hasRole(...roles))
+  const authorized = (!policy || (!!role && can(policy))) && (!roles || (!!role && hasRole(...roles)))
   if (!authorized) return <Navigate to="/unauthorized" replace />
 
   return children

@@ -28,6 +28,7 @@ const AccountPage = lazyWithReload(() => import('@/features/account/AccountPage'
 const MessagesPage = lazyWithReload(() => import('@/features/messages/MessagesPage'))
 const MyApartmentsPage = lazyWithReload(() => import('@/features/apartments/MyApartmentsPage'))
 const MortgageCalculatorPage = lazyWithReload(() => import('@/features/mortgage/MortgageCalculatorPage'))
+const AdminDashboardPage = lazyWithReload(() => import('@/features/admin/AdminDashboardPage'))
 const AdminApartmentsPage = lazyWithReload(() => import('@/features/admin/AdminApartmentsPage'))
 const AdminSupportPage = lazyWithReload(() => import('@/features/admin/AdminSupportPage'))
 const AdminUsersPage = lazyWithReload(() => import('@/features/admin/AdminUsersPage'))
@@ -168,6 +169,7 @@ export default function App() {
               </ProtectedRoute>
             }
           >
+            <Route index element={<AdminDashboardPage />} />
             <Route path="apartments" element={<AdminApartmentsPage />} />
             <Route path="support" element={<AdminSupportPage />} />
             <Route path="reports" element={<ModerationPage />} />
