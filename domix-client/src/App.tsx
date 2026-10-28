@@ -35,6 +35,7 @@ const AdminAnalyticsPage = lazyWithReload(() => import('@/features/admin/AdminAn
 const AdminEmailPage = lazyWithReload(() => import('@/features/admin/AdminEmailPage'))
 const AdminNotificationsPage = lazyWithReload(() => import('@/features/admin/AdminNotificationsPage'))
 const FavoritesPage = lazyWithReload(() => import('@/features/apartments/FavoritesPage'))
+const RecentlyViewedPage = lazyWithReload(() => import('@/features/apartments/RecentlyViewedPage'))
 const ComparePage = lazyWithReload(() => import('@/features/apartments/ComparePage'))
 const SavedSearchesPage = lazyWithReload(() => import('@/features/account/SavedSearchesPage'))
 const LoginPage = lazyWithReload(() => import('@/features/auth/LoginPage'))
@@ -149,6 +150,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route path="recently-viewed" element={<ProtectedRoute><RecentlyViewedPage /></ProtectedRoute>} />
           <Route path="compare" element={<ComparePage />} />
           <Route
             path="saved-searches"

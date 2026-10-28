@@ -1,3 +1,4 @@
+import '@/features/apartments/catalog-tools.i18n'
 import { MarketIcon } from '@/components/ui/MarketIcon'
 import '@/features/apartments/marketplace.i18n'
 import { Menu, MenuButton, MenuItem, MenuItems } from '@headlessui/react'
@@ -46,6 +47,7 @@ export function Header() {
   ]
   if (can('ManagerOrAdmin')) primary.push({ to: '/admin/apartments', label: t('nav.admin') })
   const secondary: NavItem[] = [
+    {to:'/recently-viewed',label:t('catalogTools:recent')},
     {to:'/visits',label:t('returnTools:calendar')},{to:'/my-leads',label:t('returnTools:leads')},
     { to: '/my-apartments', label: t('nav.myApartments') }, { to: '/saved-searches', label: t('nav.savedSearches') },
     { to: '/map', label: t('nav.map') }, { to: '/compare', label: t('nav.compare') },
@@ -54,7 +56,7 @@ export function Header() {
   const avatar = base64ToImageSrc(user?.profileImageBase64)
   return <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md">
     <div className="mx-auto flex min-h-[72px] max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
-      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src="/domix-mark.svg" alt="" className="h-9 w-9" />{env.appName}<span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{market('tagline')}</span></NavLink>
+      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src="/domix-mark.svg" alt="" className="h-9 w-9" /><span className="bg-brand bg-clip-text text-transparent">{env.appName}</span><span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{market('tagline')}</span></NavLink>
       <div className="flex max-w-full flex-wrap items-center gap-1">
         <LanguageSwitcher /><ThemeSwitcher />
         {status === 'authenticated' && user ? <>
