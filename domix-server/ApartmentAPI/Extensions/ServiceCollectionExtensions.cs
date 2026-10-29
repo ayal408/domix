@@ -62,7 +62,7 @@ namespace serverApi.Extensions
                         ValidIssuer = jwtIssuer,
                         ValidAudience = jwtAudience,
                         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-                        ClockSkew = TimeSpan.Zero
+                        ClockSkew = TimeSpan.FromMinutes(1)
                     };
 
                     // The browser's WebSocket API can't set an Authorization header, so SignalR's
