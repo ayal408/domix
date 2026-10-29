@@ -47,6 +47,14 @@ namespace serverApi.Extensions
             if (string.IsNullOrWhiteSpace(internalServiceKey) || internalServiceKey.Length < 32)
                 throw new InvalidOperationException("Configuration Error: INTERNAL_SERVICE_KEY must be set and at least 32 characters.");
 
+            // A fresh install that copied .env.example verbatim otherwise starts fine and then answers
+            // every request with a bare 401/403 -- fail fast with the actual reason instead.
+            foreach (var (name, value) in new[] { ("JWT_SECRET", jwtKey), ("INTERNAL_SERVICE_KEY", internalServiceKey) })
+            {
+                if (System.Text.RegularExpressions.Regex.IsMatch(value, "change-me|SAME_LONG_RANDOM|THI_SHOULD_BE|ANOTHER_VERY_LONG_RANDOM", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+                    throw new InvalidOperationException($"Configuration Error: {name} still has the .env.example placeholder -- set a real random value, identical in auth-server/.env and domix-server/.env.");
+            }
+
             var jwtIssuer = configuration["Jwt:Issuer"] ?? "serverApi";
             var jwtAudience = configuration["Jwt:Audience"] ?? "serverApi";
 

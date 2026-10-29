@@ -4,7 +4,7 @@ const REFRESH_TOKEN_COOKIE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // matches REF
 export function setRefreshTokenCookie(res, refreshToken) {
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.COOKIE_SECURE ? process.env.COOKIE_SECURE === "true" : process.env.NODE_ENV === "production",
     sameSite: process.env.COOKIE_SAME_SITE || "strict",
     maxAge: REFRESH_TOKEN_COOKIE_MAX_AGE_MS
   });

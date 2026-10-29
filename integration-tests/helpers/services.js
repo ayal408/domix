@@ -42,7 +42,7 @@ export async function startServices({ postgresUrl, domixServerPort, authServerPo
       JWT_SECRET: jwtSecret,
       INTERNAL_SERVICE_KEY: internalServiceKey,
       DATA_SERVICE_URL: `http://localhost:${domixServerPort}`,
-      // The code's own default (30s) is meant for production token-refresh hygiene, not for
+      // The code's own default (5m) is kept short for production token-refresh hygiene, not for
       // a test suite that holds onto a token captured early and uses it minutes later.
       ACCESS_TOKEN_EXPIRES: "10m",
       BCRYPT_SALT_ROUNDS: "4", // fast hashing in tests; production uses a higher cost
