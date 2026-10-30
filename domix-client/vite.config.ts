@@ -42,14 +42,18 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: 'dist',
       sourcemap: mode !== 'production',
-      rollupOptions: {
+      rolldownOptions: {
         output: {
-          manualChunks(id) {
-            if (!id.includes('node_modules')) return
-            if (/[\\/](react|react-dom|react-router-dom)[\\/]/.test(id)) return 'react'
-            if (id.includes('@tanstack/react-query')) return 'query'
-            if (/[\\/](i18next|react-i18next|i18next-browser-languagedetector)[\\/]/.test(id)) return 'i18n'
-            if (/[\\/](react-hook-form|zod|@hookform)[\\/]/.test(id)) return 'forms'
+          // Each group also captures its modules' dependencies, so React must win on priority —
+          // otherwise it is pulled into whichever group first reaches it (e.g. `forms` via
+          // react-hook-form), and that chunk then loads on every page.
+          codeSplitting: {
+            groups: [
+              { name: 'react', test: /node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/, priority: 40 },
+              { name: 'query', test: /node_modules[\\/]@tanstack[\\/]/, priority: 30 },
+              { name: 'i18n', test: /node_modules[\\/](i18next|react-i18next|i18next-browser-languagedetector)[\\/]/, priority: 20 },
+              { name: 'forms', test: /node_modules[\\/](react-hook-form|zod|@hookform)[\\/]/, priority: 10 },
+            ],
           },
         },
       },
