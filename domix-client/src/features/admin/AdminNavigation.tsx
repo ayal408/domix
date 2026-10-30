@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { MarketIcon } from '@/components/ui/MarketIcon'
 import { useAuthStore } from '@/stores/auth.store'
-import { adminGroupsFor, activeAdminItem } from './adminNavigation'
+import { adminGroupsFor, activeAdminItem } from './adminNavigationConfig'
 import './admin-shell.i18n'
 
 export function AdminNavigation({mini=false,onNavigate,idPrefix}:{mini?:boolean;onNavigate?:()=>void;idPrefix:string}) {

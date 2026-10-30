@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/auth.store'
 import { MarketIcon } from '@/components/ui/MarketIcon'
 import { AdminNavigation } from './AdminNavigation'
-import { activeAdminItem } from './adminNavigation'
+import { activeAdminItem } from './adminNavigationConfig'
 import './email.i18n'
 import './admin-shell.i18n'
 

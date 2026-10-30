@@ -1,0 +1,52 @@
+envVarGroups:
+  - name: domix-shared-secrets-ayal408
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: INTERNAL_SERVICE_KEY
+        generateValue: true
+
+databases:
+  - name: domix-db-ayal408
+    plan: free
+    region: frankfurt
+    databaseName: domix
+    user: domix
+
+services:
+  - type: web
+    name: domix-api-ayal408
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./domix-server/Dockerfile
+    dockerContext: ./domix-server
+    healthCheckPath: /healthz/live
+    autoDeployTrigger: commit
+    envVars:
+      - fromGroup: domix-shared-secrets-ayal408
+      - key: DATABASE_URL
+        fromDatabase:
+          name: domix-db-ayal408
+          property: connectionString
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: CLIENT_APP_URL
+        value: https://domix-ayal408.vercel.app
+
+  - type: web
+    name: domix-auth-ayal408
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./auth-server/Dockerfile
+    dockerContext: ./auth-server
+    autoDeployTrigger: commit
+    envVars:
+      - fromGroup: domix-shared-secrets-ayal408
+      - key: DATA_SERVICE_URL
+        value: https://domix-api-ayal408.onrender.com
+      - key: NODE_ENV
+        value: production
+      - key: COOKIE_SAME_SITE
+        value: strict

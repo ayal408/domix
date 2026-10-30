@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 using serverApi.Data;
 using serverApi.Models;
 using serverApi.Security;
@@ -23,8 +24,10 @@ namespace serverApi.Extensions
             // process environment variables — read them directly rather than via
             // IConfiguration, since "DEFAULT_CONNECTION"/"JWT_SECRET" don't follow
             // the "Section__Key" shape ASP.NET Core's env-var provider expects.
-            var connectionString = Environment.GetEnvironmentVariable("DEFAULT_CONNECTION")
-                ?? configuration.GetConnectionString("DefaultConnection");
+            var connectionString = ResolveConnectionString(
+                Environment.GetEnvironmentVariable("DEFAULT_CONNECTION")
+                ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? configuration.GetConnectionString("DefaultConnection"));
 
             if (string.IsNullOrWhiteSpace(connectionString))
                 throw new InvalidOperationException("Configuration Error: DEFAULT_CONNECTION is not set.");
@@ -150,6 +153,40 @@ namespace serverApi.Extensions
             });
 
             return services;
+        }
+
+        private static string? ResolveConnectionString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return value;
+
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri)
+                || (uri.Scheme != "postgres" && uri.Scheme != "postgresql"))
+            {
+                return value;
+            }
+
+            var credentials = uri.UserInfo.Split(':', 2);
+            var builder = new NpgsqlConnectionStringBuilder
+            {
+                Host = uri.Host,
+                Port = uri.IsDefaultPort ? 5432 : uri.Port,
+                Database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/')),
+                Username = credentials.Length > 0 ? Uri.UnescapeDataString(credentials[0]) : string.Empty,
+                Password = credentials.Length > 1 ? Uri.UnescapeDataString(credentials[1]) : string.Empty
+            };
+
+            foreach (var pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2
+                    && Uri.UnescapeDataString(parts[0]).Equals("sslmode", StringComparison.OrdinalIgnoreCase)
+                    && Enum.TryParse<SslMode>(Uri.UnescapeDataString(parts[1]), true, out var sslMode))
+                {
+                    builder.SslMode = sslMode;
+                }
+            }
+
+            return builder.ConnectionString;
         }
 
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
