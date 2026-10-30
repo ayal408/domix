@@ -7,6 +7,18 @@ import dotenv from "dotenv";
 // insecure default JWT secret and a stale external API URL).
 dotenv.config();
 
+// A fresh install that copied .env.example verbatim (or skipped a .env) otherwise starts fine and
+// then fails every request with a bare 401/403 — fail fast with the actual reason instead.
+const PLACEHOLDER_SECRET = /change-me|SAME_LONG_RANDOM|THI_SHOULD_BE|ANOTHER_VERY_LONG_RANDOM/i;
+for (const name of ["JWT_SECRET", "INTERNAL_SERVICE_KEY"]) {
+  const value = process.env[name];
+  if (!value || value.length < 32) throw new Error(`${name} must be set (in auth-server/.env) and contain at least 32 characters.`);
+  if (PLACEHOLDER_SECRET.test(value)) throw new Error(`${name} still has the .env.example placeholder — set a real random value, identical in auth-server/.env and domix-server/.env.`);
+}
+if (process.env.NODE_ENV === "production" && process.env.COOKIE_SECURE !== "false") {
+  console.warn("NODE_ENV=production: the refresh-token cookie is Secure and is only sent over HTTPS. Over plain http every refresh returns 401 — serve via HTTPS or set COOKIE_SECURE=false.");
+}
+
 const { default: express } = await import("express");
 const { default: cookieParser } = await import("cookie-parser");
 const { default: authRoutes } = await import("./src/routes/authRoutes.js");
