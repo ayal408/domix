@@ -3,7 +3,26 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/domix",
+      "permanent": false
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/domix-api/healthz/:path*",
+      "destination": "https://domix-api-ayal408.onrender.com/healthz/:path*"
+    },
+    {
+      "source": "/domix-api/auth/:path*",
+      "destination": "https://domix-auth-ayal408.onrender.com/auth/:path*"
+    },
+    {
+      "source": "/domix-api/api/:path*",
+      "destination": "https://domix-api-ayal408.onrender.com/api/:path*"
+    },
     {
       "source": "/api/healthz/:path*",
       "destination": "https://domix-api-ayal408.onrender.com/healthz/:path*"
@@ -15,6 +34,34 @@
     {
       "source": "/api/:path*",
       "destination": "https://domix-api-ayal408.onrender.com/api/:path*"
+    },
+    {
+      "source": "/domix/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/domix/favicon.svg",
+      "destination": "/favicon.svg"
+    },
+    {
+      "source": "/domix/domix-mark.svg",
+      "destination": "/domix-mark.svg"
+    },
+    {
+      "source": "/domix/hero.png",
+      "destination": "/hero.png"
+    },
+    {
+      "source": "/domix/icons.svg",
+      "destination": "/icons.svg"
+    },
+    {
+      "source": "/domix",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/domix/:path*",
+      "destination": "/index.html"
     },
     {
       "source": "/(.*)",

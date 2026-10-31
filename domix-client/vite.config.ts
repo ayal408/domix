@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
   const apiTarget = env.DEV_API_TARGET || 'http://localhost:8080'
 
   return {
+    base: '/domix/',
     plugins: [react()],
     resolve: {
       alias: { '@': path.resolve(import.meta.dirname, 'src') },

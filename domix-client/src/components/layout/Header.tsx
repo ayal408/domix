@@ -59,7 +59,7 @@ export function Header() {
   const avatar = base64ToImageSrc(user?.profileImageBase64)
   return <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur-md">
     <div className="mx-auto flex min-h-[72px] max-w-7xl flex-wrap items-center justify-between gap-2 px-3 py-2 sm:px-6">
-      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src="/domix-mark.svg?v=purple-4" alt="" className="h-9 w-9" /><span className="bg-brand bg-clip-text text-transparent">{env.appName}</span><span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{inAdmin ? t('adminShell:workspace') : market('tagline')}</span></NavLink>
+      <NavLink to="/" className="flex shrink-0 items-center gap-2 text-xl font-extrabold tracking-tight text-foreground"><img src={`${import.meta.env.BASE_URL}domix-mark.svg?v=purple-4`} alt="" className="h-9 w-9" /><span className="bg-brand bg-clip-text text-transparent">{env.appName}</span><span className="ms-2 hidden border-s border-border ps-4 text-xs font-normal tracking-normal text-muted xl:inline">{inAdmin ? t('adminShell:workspace') : market('tagline')}</span></NavLink>
       <div className="flex max-w-full flex-wrap items-center gap-1">
         <LanguageSwitcher /><ThemeSwitcher />
         {status === 'authenticated' && user ? <>

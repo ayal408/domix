@@ -27,7 +27,7 @@ export function AdminLayout() {
   if(role!=='Admin'&&role!=='Manager')return <Navigate to="/unauthorized" replace/>
   return <div className="admin-workspace" data-collapsed={collapsed}>
     <aside className="admin-side-panel">
-      <div className="flex min-h-16 items-center justify-center gap-2 border-b border-border px-3"><img src="/domix-mark.svg?v=purple-4" alt="" className="h-8 w-8"/>{!collapsed&&<span className="text-sm font-bold">{t('workspace')}</span>}</div>
+      <div className="flex min-h-16 items-center justify-center gap-2 border-b border-border px-3"><img src={`${import.meta.env.BASE_URL}domix-mark.svg?v=purple-4`} alt="" className="h-8 w-8"/>{!collapsed&&<span className="text-sm font-bold">{t('workspace')}</span>}</div>
       <AdminNavigation mini={collapsed} idPrefix="admin-desktop"/>
       <button type="button" aria-label={t(collapsed?'expand':'collapse')} aria-expanded={!collapsed} onClick={()=>setCollapsed(value=>!value)} className="flex min-h-12 items-center justify-center gap-2 border-t border-border px-3 text-xs text-muted"><MarketIcon name="arrow" className={`h-4 w-4 ${collapsed?'rtl:rotate-180':'ltr:rotate-180'}`}/>{!collapsed&&t('collapse')}</button>
     </aside>
