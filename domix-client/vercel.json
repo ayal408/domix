@@ -5,6 +5,10 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
+      "source": "/api/healthz/:path*",
+      "destination": "https://domix-api-ayal408.onrender.com/healthz/:path*"
+    },
+    {
       "source": "/api/auth/:path*",
       "destination": "https://domix-auth-ayal408.onrender.com/auth/:path*"
     },
