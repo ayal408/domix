@@ -32,7 +32,11 @@ services:
       - key: ASPNETCORE_ENVIRONMENT
         value: Production
       - key: CLIENT_APP_URL
-        value: https://domix-ayal408.vercel.app
+        value: https://apps-ayal408.vercel.app/domix
+      - key: Gmail__RedirectUri
+        value: https://apps-ayal408.vercel.app/domix-api/api/email/gmail/callback
+      - key: Outlook__RedirectUri
+        value: https://apps-ayal408.vercel.app/domix-api/api/email/outlook/callback
 
   - type: web
     name: domix-auth-ayal408
