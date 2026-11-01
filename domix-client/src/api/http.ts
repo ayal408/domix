@@ -32,6 +32,11 @@ const COMMON_HEADERS = {
   'X-Requested-With': 'XMLHttpRequest',
 }
 
+// The two Render services sleep independently on the free plan. Authentication
+// may need to wake the auth service and then the data API, so the browser must
+// wait longer than the auth server's 60-second dependency timeout.
+const AUTH_REQUEST_TIMEOUT_MS = 75_000
+
 /**
  * Express auth service. Uses cookies: the refresh token is issued as an
  * httpOnly cookie, so `withCredentials` is mandatory for `/refresh` and
@@ -40,7 +45,7 @@ const COMMON_HEADERS = {
 export const authClient: AxiosInstance = axios.create({
   baseURL: env.authUrl,
   withCredentials: true,
-  timeout: 20_000,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: { ...COMMON_HEADERS, 'Content-Type': 'application/json' },
 })
 
@@ -62,7 +67,7 @@ export const dataClient: AxiosInstance = axios.create({
 const refreshClient: AxiosInstance = axios.create({
   baseURL: env.authUrl,
   withCredentials: true,
-  timeout: 20_000,
+  timeout: AUTH_REQUEST_TIMEOUT_MS,
   headers: COMMON_HEADERS,
 })
 

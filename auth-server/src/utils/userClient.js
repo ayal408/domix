@@ -8,7 +8,9 @@ if (!DATA_SERVICE_URL) throw new Error("DATA_SERVICE_URL must be configured.");
 // client in the codebase that's supposed to call them.
 const client = axios.create({
   baseURL: DATA_SERVICE_URL,
-  timeout: 15_000,
+  // Render's free services sleep independently. The auth service can wake first
+  // and then need to wait for the data API to cold-start before login succeeds.
+  timeout: 60_000,
   headers: { "X-Internal-Api-Key": process.env.INTERNAL_SERVICE_KEY || "" }
 });
 
