@@ -16,6 +16,10 @@
       "destination": "https://domix-api-ayal408.onrender.com/healthz/:path*"
     },
     {
+      "source": "/domix-api/auth-healthz",
+      "destination": "https://domix-auth-ayal408.onrender.com/healthz"
+    },
+    {
       "source": "/domix-api/auth/:path*",
       "destination": "https://domix-auth-ayal408.onrender.com/auth/:path*"
     },
