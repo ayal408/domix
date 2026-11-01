@@ -41,6 +41,7 @@ services:
     region: frankfurt
     dockerfilePath: ./auth-server/Dockerfile
     dockerContext: ./auth-server
+    healthCheckPath: /healthz
     autoDeployTrigger: commit
     envVars:
       - fromGroup: domix-shared-secrets-ayal408
