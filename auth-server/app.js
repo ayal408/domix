@@ -21,6 +21,13 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 
+app.get("/healthz", (_req, res) => {
+  res.json({
+    status: "ok",
+    commit: process.env.RENDER_GIT_COMMIT?.slice(0, 7) || "local"
+  });
+});
+
 app.use("/auth", authRoutes);
 
 const PORT = process.env.PORT || 5000;
