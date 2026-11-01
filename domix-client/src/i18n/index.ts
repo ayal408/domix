@@ -70,6 +70,7 @@ const en = {
     passwordMismatch: 'Passwords do not match',
     signedInAs: 'Signed in as {{name}}',
     orDivider: 'or',
+    googleLoading: 'Loading Google sign-in…',
     googleUnavailable: "Google sign-in isn't available right now.",
     verifyEmail: {
       title: 'Verify your email',
@@ -545,6 +546,7 @@ const he: typeof en = {
     passwordMismatch: 'הסיסמאות אינן תואמות',
     signedInAs: 'מחובר בתור {{name}}',
     orDivider: 'או',
+    googleLoading: 'טוען התחברות באמצעות Google…',
     googleUnavailable: 'ההתחברות עם Google אינה זמינה כרגע.',
     verifyEmail: {
       title: 'אימות כתובת האימייל',
@@ -1020,6 +1022,7 @@ const es: typeof en = {
     passwordMismatch: 'Las contraseñas no coinciden',
     signedInAs: 'Sesión iniciada como {{name}}',
     orDivider: 'o',
+    googleLoading: 'Cargando el acceso con Google…',
     googleUnavailable: 'El inicio de sesión con Google no está disponible en este momento.',
     verifyEmail: {
       title: 'Verifica tu correo electrónico',
@@ -1495,6 +1498,7 @@ const fr: typeof en = {
     passwordMismatch: 'Les mots de passe ne correspondent pas',
     signedInAs: 'Connecté en tant que {{name}}',
     orDivider: 'ou',
+    googleLoading: 'Chargement de la connexion Google…',
     googleUnavailable: "La connexion avec Google n'est pas disponible pour le moment.",
     verifyEmail: {
       title: 'Vérifiez votre e-mail',

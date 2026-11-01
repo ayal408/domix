@@ -42,7 +42,12 @@ export const usePresenceStore = create<PresenceState>((set) => ({
     if (connection) return
 
     connection = new signalR.HubConnectionBuilder()
-      .withUrl(`${env.apiUrl}/hubs/presence`, { accessTokenFactory: resolveAccessToken })
+      .withUrl(`${env.apiUrl}/hubs/presence`, {
+        accessTokenFactory: resolveAccessToken,
+        // Vercel rewrites do not reliably proxy WebSocket upgrades to Render.
+        // Long polling stays on the unified origin and sends the token in a header.
+        transport: signalR.HttpTransportType.LongPolling,
+      })
       .configureLogging({
         // SignalR messages can contain the full WebSocket URL and its bearer token.
         // Keep a generic warning, never provider-generated text or error objects.

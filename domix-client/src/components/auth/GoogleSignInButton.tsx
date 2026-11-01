@@ -23,6 +23,7 @@ export function GoogleSignInButton({ clientId, onIdToken, disabled }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [attempt, setAttempt] = useState(0)
   const [failed, setFailed] = useState(false)
+  const [loading, setLoading] = useState(true)
   const resolvedTheme = useThemeStore((state) => state.resolved)
   const onIdTokenRef = useRef(onIdToken)
   onIdTokenRef.current = onIdToken
@@ -35,6 +36,7 @@ export function GoogleSignInButton({ clientId, onIdToken, disabled }: Props) {
     let cancelled = false
     let resizeObserver: ResizeObserver | undefined
     setFailed(false)
+    setLoading(true)
 
     loadGoogleIdentityScript()
       .then(() => {
@@ -61,13 +63,14 @@ export function GoogleSignInButton({ clientId, onIdToken, disabled }: Props) {
           width,
           locale: i18n.language,
           })
+          setLoading(false)
         }
         render()
         resizeObserver = new ResizeObserver(render)
         resizeObserver.observe(container)
       })
       .catch(() => {
-        if (!cancelled) setFailed(true)
+        if (!cancelled) { setLoading(false); setFailed(true) }
       })
 
     return () => {
@@ -80,7 +83,8 @@ export function GoogleSignInButton({ clientId, onIdToken, disabled }: Props) {
 
   return (
     <div className="flex flex-col items-center gap-2">
-      <div ref={containerRef} className="flex w-full justify-center" style={{ colorScheme: 'light' }} />
+      <div ref={containerRef} className="flex min-h-10 w-full justify-center" style={{ colorScheme: 'light' }} />
+      {loading && <p aria-live="polite" className="text-sm text-muted">{t('auth.googleLoading')}</p>}
       {failed && <><p role="alert" className="text-sm text-muted">{t('auth.googleUnavailable')}</p><button type="button" className="text-sm text-primary underline" onClick={() => setAttempt((value) => value + 1)}>{t('common.retry')}</button></>}
     </div>
   )
