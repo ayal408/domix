@@ -39,6 +39,11 @@ export async function lookupUser(params) {
   }
 }
 
+export async function getGoogleClientId() {
+  const { data } = await client.get(`/api/config/google`);
+  return typeof data?.clientId === "string" ? data.clientId.trim() : "";
+}
+
 /**
  * The password hash never leaves the data API — this asks it to verify the
  * password itself and reports back only the outcome. Throws an Error whose

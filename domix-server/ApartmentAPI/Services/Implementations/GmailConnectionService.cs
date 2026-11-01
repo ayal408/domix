@@ -3,7 +3,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.Options;
 using serverApi.Models;
 
 namespace serverApi.Services.Implementations;
@@ -12,7 +11,7 @@ public record GmailAuthorization(Guid AdminId, string Verifier, string RedirectU
 
 /// <summary>Consent for mail sending is separate from signing in to DOMIX.</summary>
 public sealed class GmailConnectionService(
-    IMemoryCache cache, IHttpClientFactory clients, IOptions<GmailSettings> settings, IConfiguration configuration)
+    IMemoryCache cache, IHttpClientFactory clients, EmailConfigurationService settings, IConfiguration configuration)
 {
     private readonly object _stateLock = new();
     private static string Encode(byte[] data) => Convert.ToBase64String(data).TrimEnd('=').Replace('+', '-').Replace('/', '_');
@@ -20,14 +19,15 @@ public sealed class GmailConnectionService(
         ?? configuration["ClientAppUrl"] ?? "http://localhost").TrimEnd('/');
     public string RedirectUri => configuration["Gmail:RedirectUri"] ?? ClientUrl + "/api/email/gmail/callback";
 
-    public string Start(Guid adminId)
+    public async Task<string> StartAsync(Guid adminId, CancellationToken ct = default)
     {
+        var oauth = await settings.GetOAuthCredentialsAsync(ct);
         var state = Encode(RandomNumberGenerator.GetBytes(32));
         var verifier = Encode(RandomNumberGenerator.GetBytes(32));
         cache.Set("gmail-consent:" + state, new GmailAuthorization(adminId, verifier, RedirectUri), TimeSpan.FromMinutes(10));
         var parameters = new Dictionary<string, string>
         {
-            ["client_id"] = settings.Value.ClientId,
+            ["client_id"] = oauth.ClientId,
             ["redirect_uri"] = RedirectUri,
             ["response_type"] = "code",
             ["scope"] = "openid email https://www.googleapis.com/auth/gmail.send",
@@ -55,11 +55,12 @@ public sealed class GmailConnectionService(
 
     public async Task<(string Email, string RefreshToken)> CompleteAsync(GmailAuthorization pending, string code, CancellationToken ct)
     {
+        var oauth = await settings.GetOAuthCredentialsAsync(ct);
         using var client = clients.CreateClient("GmailConsent");
         using var form = new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            ["client_id"] = settings.Value.ClientId,
-            ["client_secret"] = settings.Value.ClientSecret,
+            ["client_id"] = oauth.ClientId,
+            ["client_secret"] = oauth.ClientSecret,
             ["code"] = code,
             ["code_verifier"] = pending.Verifier,
             ["redirect_uri"] = pending.RedirectUri,

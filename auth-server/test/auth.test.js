@@ -82,3 +82,21 @@ test('verified Google account receives a DOMIX session', async () => {
   try { const result = await service.googleLogin('test-token'); assert.ok(result.accessToken); assert.ok(result.refreshToken); }
   finally { OAuth2Client.prototype.verifyIdToken = original; }
 });
+test('Google login can load the client id configured by an administrator', async () => {
+  calls = [];
+  const configuredClientId = process.env.GOOGLE_CLIENT_ID;
+  delete process.env.GOOGLE_CLIENT_ID;
+  handler = (req, res) => json(res, 200, req.url.includes('/api/config/google')
+    ? { clientId: 'admin-configured-google-client' }
+    : { ...user, googleId: 'google-id', registrationMethod: 'Google' });
+  const original = OAuth2Client.prototype.verifyIdToken;
+  OAuth2Client.prototype.verifyIdToken = async () => ({ getPayload: () => ({ email: user.emailAddress, sub: 'google-id', email_verified: true }) });
+  try {
+    const result = await service.googleLogin('test-token');
+    assert.ok(result.accessToken);
+    assert.ok(calls[0].endsWith('/api/config/google'));
+  } finally {
+    process.env.GOOGLE_CLIENT_ID = configuredClientId;
+    OAuth2Client.prototype.verifyIdToken = original;
+  }
+});

@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button'
 import './auth.design.i18n'
 import './auth-design.css'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
-import { isGoogleAuthEnabled } from '@/config/env'
+import { useGoogleClientId } from '@/features/auth/useGoogleClientId'
 import { errorTranslationKey, toApiError } from '@/api/errors'
 
 export default function LoginPage() {
@@ -23,6 +23,7 @@ export default function LoginPage() {
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle)
   const [formError, setFormError] = useState<string | null>(null)
   const [googleError, setGoogleError] = useState<string | null>(null)
+  const googleClientId = useGoogleClientId()
 
   function redirectAfterSignIn() {
     navigate(authReturn(location.state), { replace: true })
@@ -116,14 +117,14 @@ export default function LoginPage() {
             {t('auth.loginButton')}
           </Button>
         </form>
-        {isGoogleAuthEnabled && (
+        {googleClientId && (
           <div className="mt-6 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs uppercase text-muted">{t('auth.orDivider')}</span>
               <div className="h-px flex-1 bg-border" />
             </div>
-            <GoogleSignInButton onIdToken={handleGoogleIdToken} />
+            <GoogleSignInButton clientId={googleClientId} onIdToken={handleGoogleIdToken} />
             {googleError && (
               <p role="alert" className="text-center text-sm font-medium text-danger">
                 {googleError}

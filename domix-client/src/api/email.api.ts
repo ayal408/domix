@@ -14,6 +14,8 @@ export interface EmailSettings {
   lastCheckedAt?: string | null
   connected: boolean
   oauthAvailable: boolean
+  googleClientId: string
+  googleClientSecretConfigured: boolean
   enabled: boolean
   updatedAt: string
 }
@@ -30,6 +32,9 @@ export const getEmailSettings = async (): Promise<EmailSettings> =>
   (await dataClient.get<EmailSettings>(apiEndpoints.email.settings())).data
 export const saveEmailSettings = async (input: EmailSettingsInput): Promise<EmailSettings> =>
   (await dataClient.put<EmailSettings>(apiEndpoints.email.settings(), input)).data
+export interface GoogleOAuthSettingsInput { clientId: string; clientSecret?: string }
+export const saveGoogleOAuthSettings = async (input: GoogleOAuthSettingsInput): Promise<EmailSettings> =>
+  (await dataClient.put<EmailSettings>('/email/oauth-settings', input)).data
 export const connectGmail = async (): Promise<{ authorizationUrl: string }> =>
   (await dataClient.post<{ authorizationUrl: string }>(apiEndpoints.email.connect())).data
 export const connectOutlook = async (): Promise<{ authorizationUrl: string }> =>

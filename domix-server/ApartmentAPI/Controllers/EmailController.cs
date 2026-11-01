@@ -21,12 +21,14 @@ public class EmailController(
     public async Task<IActionResult> GetSettings(CancellationToken ct)
     {
         var value = await settings.GetAsync(ct);
+        var googleOAuth = await settings.GetOAuthSummaryAsync(ct);
         return Ok(new
         {
             provider = value.Provider, outlookOAuthAvailable = outlook.Available, senderEmail = value.Email, value.SenderName, value.ReplyTo, value.Signature,
             value.TestSubject, value.TestBody, value.Enabled, value.UpdatedAt,
             connectionStatus = value.Enabled ? value.ConnectionStatus : "disconnected", value.LastCheckedAt,
-            connected = await settings.IsConnectedAsync(ct), oauthAvailable = settings.OAuthAvailable
+            connected = await settings.IsConnectedAsync(ct), oauthAvailable = await settings.OAuthAvailableAsync(ct),
+            googleClientId = googleOAuth.ClientId, googleClientSecretConfigured = googleOAuth.SecretConfigured
         });
     }
 
@@ -48,10 +50,24 @@ public class EmailController(
     }
 
     [HttpPost("gmail/connect")]
-    public IActionResult Connect()
+    public async Task<IActionResult> Connect(CancellationToken ct)
     {
-        if (!settings.OAuthAvailable) return Conflict(new { code = "EMAIL_NOT_CONFIGURED" });
-        return Ok(new { authorizationUrl = connection.Start(User.GetUserId()) });
+        if (!await settings.OAuthAvailableAsync(ct)) return Conflict(new { code = "EMAIL_NOT_CONFIGURED" });
+        return Ok(new { authorizationUrl = await connection.StartAsync(User.GetUserId(), ct) });
+    }
+
+    [HttpPut("oauth-settings")]
+    public async Task<IActionResult> SaveOAuthSettings(GoogleOAuthSettingsRequest input, CancellationToken ct)
+    {
+        try
+        {
+            await settings.SaveOAuthCredentialsAsync(input.ClientId, input.ClientSecret, ct);
+            return await GetSettings(ct);
+        }
+        catch (EmailNotConfiguredException ex) when (ex.Message == "EMAIL_INVALID_OAUTH_SETTINGS")
+        {
+            return BadRequest(new { code = ex.Message });
+        }
     }
 
     [AllowAnonymous]
@@ -167,4 +183,10 @@ public class EmailSettingsRequest
 public class TestEmailRequest
 {
     [Required, EmailAddress, StringLength(254)] public string Recipient { get; set; } = "";
+}
+
+public class GoogleOAuthSettingsRequest
+{
+    [Required, StringLength(500)] public string ClientId { get; set; } = "";
+    [StringLength(500)] public string? ClientSecret { get; set; }
 }

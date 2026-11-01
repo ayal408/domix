@@ -11,7 +11,8 @@ vi.mock('@/api/email.api')
 const settings: emailApi.EmailSettings = {
   senderEmail: 'system@example.com', senderName: 'DOMIX', replyTo: '', signature: '',
   testSubject: 'Test', testBody: 'Hello {{Email}}', connected: true, enabled: true,
-  oauthAvailable: true, updatedAt: '2026-10-06T00:00:00Z',
+  oauthAvailable: true, googleClientId: 'client.apps.googleusercontent.com', googleClientSecretConfigured: true,
+  updatedAt: '2026-10-06T00:00:00Z',
 }
 function open() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } })
@@ -25,6 +26,19 @@ beforeEach(async () => {
   vi.mocked(emailApi.getEmailOutbox).mockResolvedValue([])
 })
 describe('System sender administration', () => {
+  it('updates Google OAuth credentials without rendering the saved secret', async () => {
+    vi.mocked(emailApi.saveGoogleOAuthSettings).mockResolvedValue(settings)
+    open()
+    const secret = await screen.findByLabelText('Client Secret')
+    expect(secret).toHaveValue('')
+    const user = userEvent.setup()
+    await user.type(secret, 'new-secret')
+    await user.click(screen.getByRole('button', { name: 'Save Google credentials' }))
+    await waitFor(() => expect(emailApi.saveGoogleOAuthSettings).toHaveBeenCalled())
+    expect(vi.mocked(emailApi.saveGoogleOAuthSettings).mock.calls[0]?.[0]).toEqual({
+      clientId: 'client.apps.googleusercontent.com', clientSecret: 'new-secret',
+    })
+  })
   it('saves display settings without sending credentials or an editable account address', async () => {
     vi.mocked(emailApi.saveEmailSettings).mockResolvedValue({ ...settings, senderName: 'DOMIX Team' })
     open()

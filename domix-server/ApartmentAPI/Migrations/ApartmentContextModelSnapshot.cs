@@ -713,10 +713,16 @@ namespace domix_server.ApartmentAPI.Migrations
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("GoogleClientId")
+                        .HasColumnType("text");
+
                     b.Property<DateTime?>("LastCheckedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ProtectedRefreshToken")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProtectedGoogleClientSecret")
                         .HasColumnType("text");
 
                     b.Property<string>("Provider")

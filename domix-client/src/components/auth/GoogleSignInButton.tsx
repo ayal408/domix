@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { env, isGoogleAuthEnabled } from '@/config/env'
 import { useThemeStore } from '@/stores/theme.store'
 import { loadGoogleIdentityScript } from '@/lib/googleIdentity'
 
 interface Props {
+  clientId: string
   onIdToken: (idToken: string) => void
   disabled?: boolean
 }
@@ -18,7 +18,7 @@ interface Props {
  * Google mints its own DOM inside the container div, so the button is themed
  * once at render time rather than styled through Tailwind.
  */
-export function GoogleSignInButton({ onIdToken, disabled }: Props) {
+export function GoogleSignInButton({ clientId, onIdToken, disabled }: Props) {
   const { t, i18n } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [attempt, setAttempt] = useState(0)
@@ -28,7 +28,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
   onIdTokenRef.current = onIdToken
 
   useEffect(() => {
-    if (!isGoogleAuthEnabled || disabled) return
+    if (!clientId || disabled) return
     const container = containerRef.current
     if (!container) return
 
@@ -41,7 +41,7 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
         if (cancelled || !container || !window.google) return
 
         window.google.accounts.id.initialize({
-          client_id: env.googleClientId!,
+          client_id: clientId,
           callback: (response) => onIdTokenRef.current(response.credential),
         })
 
@@ -74,9 +74,9 @@ export function GoogleSignInButton({ onIdToken, disabled }: Props) {
       cancelled = true
       resizeObserver?.disconnect()
     }
-  }, [disabled, resolvedTheme, i18n.language, attempt])
+  }, [clientId, disabled, resolvedTheme, i18n.language, attempt])
 
-  if (!isGoogleAuthEnabled) return null
+  if (!clientId) return null
 
   return (
     <div className="flex flex-col items-center gap-2">

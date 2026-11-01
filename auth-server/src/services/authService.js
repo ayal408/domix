@@ -19,10 +19,9 @@ import {
   requestPasswordReset,
   resetPassword as resetPasswordApi,
   revokeRefreshToken,
-  consumeRefreshToken
+  consumeRefreshToken,
+  getGoogleClientId
 } from "../utils/userClient.js";
-
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 function generateUsername(email) {
   return `${email.split("@")[0]}_${Date.now()}`;
@@ -86,11 +85,13 @@ const passwordHash = await bcrypt.hash(password, parseInt(process.env.BCRYPT_SAL
 }
 
 export async function googleLogin(idToken) {
-  if (!process.env.GOOGLE_CLIENT_ID) throw new Error("GOOGLE_AUTH_NOT_CONFIGURED");
+  const googleClientId = process.env.GOOGLE_CLIENT_ID || await getGoogleClientId();
+  if (!googleClientId) throw new Error("GOOGLE_AUTH_NOT_CONFIGURED");
   if (typeof idToken !== "string" || !idToken) throw new Error("INVALID_GOOGLE_TOKEN");
+  const client = new OAuth2Client(googleClientId);
   const ticket = await client.verifyIdToken({
     idToken,
-    audience: process.env.GOOGLE_CLIENT_ID
+    audience: googleClientId
   });
 
   const payload = ticket.getPayload();

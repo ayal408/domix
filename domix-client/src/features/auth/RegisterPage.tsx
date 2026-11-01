@@ -10,7 +10,7 @@ import { InputField } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
-import { isGoogleAuthEnabled } from '@/config/env'
+import { useGoogleClientId } from '@/features/auth/useGoogleClientId'
 import { errorTranslationKey, toApiError } from '@/api/errors'
 
 export default function RegisterPage() {
@@ -21,6 +21,7 @@ export default function RegisterPage() {
   const signInWithGoogle = useAuthStore((state) => state.signInWithGoogle)
   const [formError, setFormError] = useState<string | null>(null)
   const [googleError, setGoogleError] = useState<string | null>(null)
+  const googleClientId = useGoogleClientId()
 
   async function handleGoogleIdToken(idToken: string) {
     setGoogleError(null)
@@ -102,14 +103,14 @@ export default function RegisterPage() {
             {t('auth.registerButton')}
           </Button>
         </form>
-        {isGoogleAuthEnabled && (
+        {googleClientId && (
           <div className="mt-6 flex flex-col gap-4">
             <div className="flex items-center gap-3">
               <div className="h-px flex-1 bg-border" />
               <span className="text-xs uppercase text-muted">{t('auth.orDivider')}</span>
               <div className="h-px flex-1 bg-border" />
             </div>
-            <GoogleSignInButton onIdToken={handleGoogleIdToken} />
+            <GoogleSignInButton clientId={googleClientId} onIdToken={handleGoogleIdToken} />
             {googleError && (
               <p role="alert" className="text-center text-sm font-medium text-danger">
                 {googleError}

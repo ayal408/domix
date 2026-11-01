@@ -15,6 +15,40 @@ import './email.i18n'
 const settingsKey = ['admin', 'email', 'settings']
 const historyKey = ['admin', 'email', 'history']
 
+function GoogleOAuthForm({ settings }: { settings: emailApi.EmailSettings }) {
+  const { t } = useTranslation('email')
+  const queryClient = useQueryClient()
+  const pushToast = useToastStore((s) => s.push)
+  const [clientId, setClientId] = useState(settings.googleClientId ?? '')
+  const [clientSecret, setClientSecret] = useState('')
+  const save = useMutation({ mutationFn: emailApi.saveGoogleOAuthSettings })
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    try {
+      const result = await save.mutateAsync({ clientId, clientSecret: clientSecret.trim() || undefined })
+      queryClient.setQueryData(settingsKey, result)
+      setClientSecret('')
+      pushToast({ variant: 'success', title: t('oauthSaved') })
+    } catch (error) {
+      pushToast({ variant: 'error', title: t(`errors.${toApiError(error).code}`, { defaultValue: t('error') }) })
+    }
+  }
+
+  return <form className="flex flex-col gap-4" onSubmit={submit}>
+    <div><h2 className="font-semibold">{t('oauthTitle')}</h2><p className="mt-1 text-sm text-muted">{t('oauthDescription')}</p></div>
+    <InputField label={t('clientId')} value={clientId} required maxLength={500} dir="ltr"
+      onChange={(event) => setClientId(event.target.value)} />
+    <InputField label={t('clientSecret')} value={clientSecret} type="password" autoComplete="new-password"
+      required={!settings.googleClientSecretConfigured} maxLength={500} dir="ltr"
+      placeholder={settings.googleClientSecretConfigured ? t('secretStored') : ''}
+      hint={settings.googleClientSecretConfigured ? t('secretHint') : undefined}
+      onChange={(event) => setClientSecret(event.target.value)} />
+    <p className="text-sm text-muted">{t('oauthChangeWarning')}</p>
+    <div><Button type="submit" loading={save.isPending}>{t('oauthSave')}</Button></div>
+  </form>
+}
+
 function SenderForm({ settings }: { settings: emailApi.EmailSettings }) {
   const { t } = useTranslation('email')
   const queryClient = useQueryClient()
@@ -108,6 +142,7 @@ export default function AdminEmailPage() {
     <div><h1 className="text-2xl font-bold text-foreground">{t('title')}</h1><p className="mt-1 text-sm text-muted">{t('subtitle')}</p></div>
     {settings.isLoading ? <Skeleton className="h-64 w-full" /> : settings.isError ?
       <Card className="p-6"><p role="alert">{t('error')}</p><Button onClick={() => void settings.refetch()}>{t('retry')}</Button></Card> : settings.data && <>
+      <Card className="p-6"><GoogleOAuthForm key={`${settings.data.googleClientId}-${settings.data.googleClientSecretConfigured}`} settings={settings.data} /></Card>
       <Card className="flex flex-col gap-4 p-6">
         <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="font-semibold">{t('account')}</h2><span className="text-sm text-muted">{t(settings.data.connected ? `connectionStates.${settings.data.connectionStatus ?? 'configured'}` : 'disconnected')}</span></div>
         {settings.data.lastCheckedAt && <p className="text-sm text-muted">{t('lastChecked')}: {formatDate(settings.data.lastCheckedAt, i18n.language)}</p>}

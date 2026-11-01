@@ -1,6 +1,6 @@
 namespace serverApi.Models;
 
-/// <summary>One system-wide sender. OAuth client keys remain in server configuration.</summary>
+/// <summary>One system-wide sender. OAuth secrets are encrypted before persistence.</summary>
 public class SystemEmailSettings
 {
     public int Id { get; set; } = 1;
@@ -11,6 +11,8 @@ public class SystemEmailSettings
     public string Signature { get; set; } = "";
     public string TestSubject { get; set; } = "בדיקת מערכת DOMIX";
     public string TestBody { get; set; } = "זוהי הודעת בדיקה ממערכת DOMIX.";
+    public string? GoogleClientId { get; set; }
+    public string? ProtectedGoogleClientSecret { get; set; }
     public string? ProtectedRefreshToken { get; set; }
     public bool Enabled { get; set; } = true;
     public string ConnectionStatus { get; set; } = "configured";

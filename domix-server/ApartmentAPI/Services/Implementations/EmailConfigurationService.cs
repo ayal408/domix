@@ -17,11 +17,12 @@ public sealed class EmailConfigurationService(
         var config = await GetAsync(ct);
         if (config.Provider != "gmail") throw new EmailNotConfiguredException("EMAIL_NOT_CONFIGURED");
         if (!config.Enabled) throw new EmailNotConfiguredException("EMAIL_DISCONNECTED");
+        var oauth = GetOAuthCredentials(config);
         var settings = new GmailSettings
         {
             Email = config.Email,
-            ClientId = defaults.Value.ClientId,
-            ClientSecret = defaults.Value.ClientSecret,
+            ClientId = oauth.ClientId,
+            ClientSecret = oauth.ClientSecret,
             RefreshToken = config.ProtectedRefreshToken is null
                 ? defaults.Value.RefreshToken : protector.Unprotect(config.ProtectedRefreshToken)
         };
@@ -62,8 +63,61 @@ public sealed class EmailConfigurationService(
             .ExecuteUpdateAsync(s => s.SetProperty(x => x.ProtectedRefreshToken, encrypted), ct);
     }
 
-    public bool OAuthAvailable => !string.IsNullOrWhiteSpace(defaults.Value.ClientId)
-        && !string.IsNullOrWhiteSpace(defaults.Value.ClientSecret);
+    public async Task<(string ClientId, bool SecretConfigured)> GetOAuthSummaryAsync(CancellationToken ct = default)
+    {
+        var config = await GetAsync(ct);
+        return (
+            string.IsNullOrWhiteSpace(config.GoogleClientId) ? defaults.Value.ClientId : config.GoogleClientId,
+            !string.IsNullOrWhiteSpace(config.ProtectedGoogleClientSecret) || !string.IsNullOrWhiteSpace(defaults.Value.ClientSecret)
+        );
+    }
+
+    public async Task<GmailSettings> GetOAuthCredentialsAsync(CancellationToken ct = default) =>
+        GetOAuthCredentials(await GetAsync(ct));
+
+    private GmailSettings GetOAuthCredentials(SystemEmailSettings config)
+    {
+        var clientId = string.IsNullOrWhiteSpace(config.GoogleClientId) ? defaults.Value.ClientId : config.GoogleClientId;
+        var clientSecret = config.ProtectedGoogleClientSecret is null
+            ? defaults.Value.ClientSecret : protector.UnprotectClientSecret(config.ProtectedGoogleClientSecret);
+        if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret))
+            throw new EmailNotConfiguredException("EMAIL_NOT_CONFIGURED");
+        return new GmailSettings { ClientId = clientId.Trim(), ClientSecret = clientSecret };
+    }
+
+    public async Task<bool> OAuthAvailableAsync(CancellationToken ct = default)
+    {
+        try { await GetOAuthCredentialsAsync(ct); return true; }
+        catch (InvalidOperationException) { return false; }
+        catch (System.Security.Cryptography.CryptographicException) { return false; }
+        catch (FormatException) { return false; }
+    }
+
+    public async Task SaveOAuthCredentialsAsync(string clientId, string? clientSecret, CancellationToken ct = default)
+    {
+        clientId = clientId.Trim();
+        clientSecret = clientSecret?.Trim();
+        if (string.IsNullOrWhiteSpace(clientId) || clientId.Length > 500 || clientSecret?.Length > 500)
+            throw new EmailNotConfiguredException("EMAIL_INVALID_OAUTH_SETTINGS");
+
+        var value = await GetAsync(ct);
+        var clientChanged = !string.Equals(value.GoogleClientId ?? defaults.Value.ClientId, clientId, StringComparison.Ordinal);
+        var secretChanged = !string.IsNullOrWhiteSpace(clientSecret);
+        if (!secretChanged && string.IsNullOrWhiteSpace(value.ProtectedGoogleClientSecret)
+            && string.IsNullOrWhiteSpace(defaults.Value.ClientSecret))
+            throw new EmailNotConfiguredException("EMAIL_INVALID_OAUTH_SETTINGS");
+
+        value.GoogleClientId = clientId;
+        if (secretChanged) value.ProtectedGoogleClientSecret = protector.ProtectClientSecret(clientSecret!);
+        if (clientChanged || secretChanged)
+        {
+            value.ProtectedRefreshToken = null;
+            value.Enabled = false;
+            value.ConnectionStatus = "disconnected";
+            value.LastCheckedAt = null;
+        }
+        await SaveAsync(value, ct);
+    }
 
     public async Task SaveAsync(SystemEmailSettings values, CancellationToken ct = default)
     {
